@@ -5,6 +5,11 @@ import {
   createSupportTicket,
   getStoreNavigation
 } from "../../../../lib/discord";
+import {
+  ensureMemberRole,
+  ensureTicketStaffAccess,
+  isStaffMember
+} from "../../../../lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,6 +149,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const actor = interaction.member?.user || interaction.user;
+    if (actor?.id && !actor?.bot) {
+      await ensureMemberRole(actor.id).catch((error) => {
+        console.error("Nao foi possivel sincronizar o cargo Membro", error);
+      });
+    }
+
     if (interaction.type === 2) {
       const name = interaction.data?.name;
 
@@ -234,6 +246,8 @@ export async function POST(request: Request) {
         }
 
         const ticket = await createSupportTicket(userId, username);
+        await ensureTicketStaffAccess(ticket.channelId);
+
         return json({
           type: 4,
           data: {
@@ -257,11 +271,20 @@ export async function POST(request: Request) {
           });
         }
 
+        const roleIds = Array.isArray(interaction.member?.roles)
+          ? interaction.member.roles
+          : [];
+        const staff = await isStaffMember(
+          roleIds,
+          interaction.member?.permissions
+        );
+
         await closeSupportTicket(
           channelId,
           userId,
-          interaction.member?.permissions
+          staff ? "8" : interaction.member?.permissions
         );
+        await ensureTicketStaffAccess(channelId);
 
         return json({
           type: 4,
