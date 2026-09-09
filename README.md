@@ -9,6 +9,7 @@ Versao cloud da NexusGames. Nao precisa de Node.js instalado no computador do us
 - Pagina `/admin` para registrar comandos e criar canais
 - Catalogo inicial sem pagamento real
 - Preparado para Supabase, Mercado Pago e fornecedor
+- Setup visual com categorias estilizadas, emojis e mensagens oficiais nos canais principais
 
 ## IDs ja configurados
 
