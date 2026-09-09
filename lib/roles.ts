@@ -4,9 +4,9 @@ const APPLICATION_ID = "1547332142776975400";
 const GUILD_ID = "1547332734794334319";
 
 const ADMINISTRATOR = 8n;
-const MANAGE_MESSAGES = 8192n;
 const VIEW_CHANNEL = 1024n;
 const SEND_MESSAGES = 2048n;
+const MANAGE_MESSAGES = 8192n;
 const EMBED_LINKS = 16384n;
 const ATTACH_FILES = 32768n;
 const READ_MESSAGE_HISTORY = 65536n;
@@ -83,54 +83,14 @@ type RoleDefinition = {
 };
 
 const roleDefinitions: RoleDefinition[] = [
-  {
-    name: ROLE_NAMES.owner,
-    permissions: ADMINISTRATOR,
-    color: 0xf1c40f,
-    hoist: true
-  },
-  {
-    name: ROLE_NAMES.admin,
-    permissions: ADMINISTRATOR,
-    color: 0xe74c3c,
-    hoist: true
-  },
-  {
-    name: ROLE_NAMES.support,
-    permissions: SUPPORT_BASE,
-    color: 0x3498db,
-    hoist: true
-  },
-  {
-    name: ROLE_NAMES.partner,
-    permissions: MEMBER_BASE,
-    color: 0x9b59b6,
-    hoist: false
-  },
-  {
-    name: ROLE_NAMES.affiliate,
-    permissions: MEMBER_BASE,
-    color: 0x2ecc71,
-    hoist: false
-  },
-  {
-    name: ROLE_NAMES.customer,
-    permissions: MEMBER_BASE,
-    color: 0x1abc9c,
-    hoist: false
-  },
-  {
-    name: ROLE_NAMES.member,
-    permissions: MEMBER_BASE,
-    color: 0x95a5a6,
-    hoist: false
-  },
-  {
-    name: ROLE_NAMES.bots,
-    permissions: MEMBER_BASE,
-    color: 0x5865f2,
-    hoist: false
-  }
+  { name: ROLE_NAMES.owner, permissions: ADMINISTRATOR, color: 0xf1c40f, hoist: true },
+  { name: ROLE_NAMES.admin, permissions: ADMINISTRATOR, color: 0xe74c3c, hoist: true },
+  { name: ROLE_NAMES.support, permissions: SUPPORT_BASE, color: 0x3498db, hoist: true },
+  { name: ROLE_NAMES.partner, permissions: MEMBER_BASE, color: 0x9b59b6, hoist: false },
+  { name: ROLE_NAMES.affiliate, permissions: MEMBER_BASE, color: 0x2ecc71, hoist: false },
+  { name: ROLE_NAMES.customer, permissions: MEMBER_BASE, color: 0x1abc9c, hoist: false },
+  { name: ROLE_NAMES.member, permissions: MEMBER_BASE, color: 0x95a5a6, hoist: false },
+  { name: ROLE_NAMES.bots, permissions: MEMBER_BASE, color: 0x5865f2, hoist: false }
 ];
 
 function botToken() {
@@ -204,7 +164,9 @@ async function ensureRoles() {
     }
 
     if (!role.managed && role.permissions !== definition.permissions.toString()) {
-      await updateRole(role.id, definition);
+      const updated = await updateRole(role.id, definition);
+      const index = roles.findIndex((candidate) => candidate.id === role!.id);
+      if (index >= 0) roles[index] = updated;
       result.push(`Permissoes atualizadas: ${definition.name}`);
     }
   }
@@ -232,16 +194,25 @@ function mergeOverwrite(
     (item) => item.id === incoming.id && item.type === incoming.type
   );
 
-  if (index >= 0) {
-    const current = overwrites[index];
-    overwrites[index] = {
-      ...current,
-      allow: (BigInt(current.allow || "0") | BigInt(incoming.allow || "0")).toString(),
-      deny: (BigInt(current.deny || "0") | BigInt(incoming.deny || "0")).toString()
-    };
-  } else {
+  if (index < 0) {
     overwrites.push(incoming);
+    return;
   }
+
+  const current = overwrites[index];
+  const incomingAllow = BigInt(incoming.allow || "0");
+  const incomingDeny = BigInt(incoming.deny || "0");
+  let allow = BigInt(current.allow || "0");
+  let deny = BigInt(current.deny || "0");
+
+  allow = (allow | incomingAllow) & ~incomingDeny;
+  deny = (deny | incomingDeny) & ~incomingAllow;
+
+  overwrites[index] = {
+    ...current,
+    allow: allow.toString(),
+    deny: deny.toString()
+  };
 }
 
 async function patchChannelOverwrites(
@@ -262,10 +233,9 @@ async function applyChannelPermissions(roles: DiscordRole[]) {
   const owner = roleByName(roles, ROLE_NAMES.owner);
   const admin = roleByName(roles, ROLE_NAMES.admin);
   const support = roleByName(roles, ROLE_NAMES.support);
-
   const staffAllow = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ATTACH_FILES | READ_MESSAGE_HISTORY;
 
-  const readOnlyChannels = new Set([
+  const readOnlyChannels = new Set<string>([
     "👋・bem-vindo",
     "📢・anuncios",
     "📖・como-comprar",
@@ -281,70 +251,33 @@ async function applyChannelPermissions(roles: DiscordRole[]) {
     "🎫・suporte"
   ]);
 
+  const ticketCategories = new Set<string>(["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦", "🎫 TICKETS"]);
+
   for (const channel of channels) {
     if (channel.type === 0 && readOnlyChannels.has(channel.name)) {
       await patchChannelOverwrites(channel, [
-        {
-          id: GUILD_ID,
-          type: 0,
-          allow: VIEW_CHANNEL.toString(),
-          deny: SEND_MESSAGES.toString()
-        },
-        {
-          id: owner.id,
-          type: 0,
-          allow: staffAllow.toString(),
-          deny: "0"
-        },
-        {
-          id: admin.id,
-          type: 0,
-          allow: staffAllow.toString(),
-          deny: "0"
-        },
-        {
-          id: support.id,
-          type: 0,
-          allow: staffAllow.toString(),
-          deny: "0"
-        }
+        { id: GUILD_ID, type: 0, allow: VIEW_CHANNEL.toString(), deny: SEND_MESSAGES.toString() },
+        { id: owner.id, type: 0, allow: staffAllow.toString(), deny: "0" },
+        { id: admin.id, type: 0, allow: staffAllow.toString(), deny: "0" },
+        { id: support.id, type: 0, allow: staffAllow.toString(), deny: "0" }
       ]);
     }
 
-    if (channel.type === 4 && ["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦", "🎫 TICKETS"].includes(channel.name)) {
+    if (channel.type === 4 && ticketCategories.has(channel.name)) {
       await patchChannelOverwrites(channel, [
-        {
-          id: GUILD_ID,
-          type: 0,
-          allow: "0",
-          deny: VIEW_CHANNEL.toString()
-        },
-        {
-          id: owner.id,
-          type: 0,
-          allow: TICKET_ALLOW.toString(),
-          deny: "0"
-        },
-        {
-          id: admin.id,
-          type: 0,
-          allow: TICKET_ALLOW.toString(),
-          deny: "0"
-        },
-        {
-          id: support.id,
-          type: 0,
-          allow: TICKET_ALLOW.toString(),
-          deny: "0"
-        }
+        { id: GUILD_ID, type: 0, allow: "0", deny: VIEW_CHANNEL.toString() },
+        { id: owner.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" },
+        { id: admin.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" },
+        { id: support.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" }
       ]);
     }
   }
 }
 
-async function backfillMemberRole(memberRoleId: string) {
+async function backfillRoles(memberRoleId: string, botsRoleId: string) {
   let after: string | undefined;
-  let assigned = 0;
+  let assignedMembers = 0;
+  let assignedBots = 0;
 
   for (let page = 0; page < 10; page += 1) {
     const query = new URLSearchParams({ limit: "1000" });
@@ -356,11 +289,20 @@ async function backfillMemberRole(memberRoleId: string) {
 
     for (const member of members) {
       const user = member.user;
-      if (!user?.id || user.bot || user.id === APPLICATION_ID) continue;
-      if (member.roles?.includes(memberRoleId)) continue;
+      if (!user?.id) continue;
 
-      await addRoleToMember(user.id, memberRoleId);
-      assigned += 1;
+      if (user.bot) {
+        if (!member.roles?.includes(botsRoleId)) {
+          await addRoleToMember(user.id, botsRoleId);
+          assignedBots += 1;
+        }
+        continue;
+      }
+
+      if (!member.roles?.includes(memberRoleId)) {
+        await addRoleToMember(user.id, memberRoleId);
+        assignedMembers += 1;
+      }
     }
 
     if (members.length < 1000) break;
@@ -368,7 +310,7 @@ async function backfillMemberRole(memberRoleId: string) {
     if (!after) break;
   }
 
-  return assigned;
+  return { assignedMembers, assignedBots };
 }
 
 export async function ensureRolesAndPermissions() {
@@ -379,16 +321,28 @@ export async function ensureRolesAndPermissions() {
   await addRoleToMember(guild.owner_id, ownerRole.id);
   result.push("Cargo de Dono vinculado ao proprietario do servidor");
 
+  const botsRole = roleByName(roles, ROLE_NAMES.bots);
+  try {
+    await addRoleToMember(APPLICATION_ID, botsRole.id);
+  } catch (error) {
+    console.error("Nao foi possivel atribuir o cargo Bots ao bot", error);
+  }
+
   await applyChannelPermissions(roles);
   result.push("Permissoes dos canais configuradas");
 
   const memberRole = roleByName(roles, ROLE_NAMES.member);
   try {
-    const assigned = await backfillMemberRole(memberRole.id);
-    if (assigned > 0) result.push(`Cargo Membro aplicado a ${assigned} usuario(s) existente(s)`);
+    const synced = await backfillRoles(memberRole.id, botsRole.id);
+    if (synced.assignedMembers > 0) {
+      result.push(`Cargo Membro aplicado a ${synced.assignedMembers} usuario(s)`);
+    }
+    if (synced.assignedBots > 0) {
+      result.push(`Cargo Bots aplicado a ${synced.assignedBots} bot(s)`);
+    }
   } catch (error) {
-    console.error("Nao foi possivel aplicar Membro aos usuarios existentes", error);
-    result.push("Cargo Membro criado; sincronizacao de membros sera feita quando o usuario interagir com o bot");
+    console.error("Nao foi possivel sincronizar todos os membros", error);
+    result.push("Cargos criados; Membro sera sincronizado quando o usuario interagir com o bot");
   }
 
   return result;
@@ -436,14 +390,13 @@ export async function isStaffMember(
   if ((permissions & ADMINISTRATOR) === ADMINISTRATOR) return true;
 
   const roles = await getRoles();
+  const staffNames = new Set<string>([
+    ROLE_NAMES.owner,
+    ROLE_NAMES.admin,
+    ROLE_NAMES.support
+  ]);
   const staffIds = new Set(
-    roles
-      .filter((role) =>
-        [ROLE_NAMES.owner, ROLE_NAMES.admin, ROLE_NAMES.support].includes(
-          role.name as (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES]
-        )
-      )
-      .map((role) => role.id)
+    roles.filter((role) => staffNames.has(role.name)).map((role) => role.id)
   );
 
   return roleIds.some((roleId) => staffIds.has(roleId));
