@@ -1,4 +1,5 @@
 import { ensureServerStructure, registerGuildCommands } from "../../../../lib/discord";
+import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
 import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
@@ -16,9 +17,10 @@ export async function POST(request: Request) {
 
     await registerGuildCommands();
 
+    const cleanupChanges = await normalizeOfficialMessages();
     const channelChanges = await ensureServerStructure();
     const roleChanges = await ensureRolesAndPermissions();
-    const changes = [...channelChanges, ...roleChanges];
+    const changes = [...cleanupChanges, ...channelChanges, ...roleChanges];
 
     return Response.json({
       ok: true,
