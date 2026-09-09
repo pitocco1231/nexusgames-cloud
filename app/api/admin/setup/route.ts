@@ -1,4 +1,5 @@
 import { ensureServerStructure, registerGuildCommands } from "../../../../lib/discord";
+import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,10 @@ export async function POST(request: Request) {
     }
 
     await registerGuildCommands();
-    const changes = await ensureServerStructure();
+
+    const channelChanges = await ensureServerStructure();
+    const roleChanges = await ensureRolesAndPermissions();
+    const changes = [...channelChanges, ...roleChanges];
 
     return Response.json({
       ok: true,
