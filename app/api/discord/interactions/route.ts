@@ -1,5 +1,10 @@
 import nacl from "tweetnacl";
 import { getProduct, products } from "../../../../lib/catalog";
+import {
+  closeSupportTicket,
+  createSupportTicket,
+  getStoreNavigation
+} from "../../../../lib/discord";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,8 +30,8 @@ function json(payload: unknown, status = 200) {
   return Response.json(payload, { status });
 }
 
-function shopPayload() {
-  const enabled = products.filter((p) => p.enabled);
+function purchaseCatalogPayload() {
+  const enabled = products.filter((product) => product.enabled);
 
   return {
     type: 4,
@@ -34,12 +39,14 @@ function shopPayload() {
       flags: 64,
       embeds: [
         {
-          title: "🛒 NexusGames",
+          color: 0x6d5dfb,
+          title: "🛒 Catálogo rápido NexusGames",
           description: [
-            "Escolha um produto abaixo.",
+            "Escolha um produto abaixo para iniciar a compra.",
             "",
-            "Antes do pagamento, o sistema vai validar disponibilidade, regiao e margem.",
-            "A entrega automatica sera ativada quando o fornecedor e o Pix estiverem conectados."
+            "Você também pode entrar diretamente nos canais da categoria em **🎮・PRODUTOS**.",
+            "",
+            "Antes do pagamento, o sistema validará disponibilidade, região e preço."
           ].join("\n")
         }
       ],
@@ -53,12 +60,66 @@ function shopPayload() {
               placeholder: "Escolha um produto",
               min_values: 1,
               max_values: 1,
-              options: enabled.map((p) => ({
-                label: p.name,
-                value: p.id,
-                description: p.description.slice(0, 90),
-                emoji: { name: p.emoji }
+              options: enabled.map((product) => ({
+                label: product.name,
+                value: product.id,
+                description: product.description.slice(0, 90),
+                emoji: { name: product.emoji }
               }))
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+async function storeNavigationPayload() {
+  const navigation = await getStoreNavigation();
+
+  return {
+    type: 4,
+    data: {
+      flags: 64,
+      embeds: [
+        {
+          color: 0x6d5dfb,
+          title: "🎮 Escolha sua categoria",
+          description: [
+            "A loja agora é organizada por canais. Clique na categoria que você procura:",
+            "",
+            ...navigation.map((item) => `${item.emoji} **${item.label}** → ${item.mention}`),
+            "",
+            "💡 Se preferir, use `/comprar` para abrir o catálogo rápido."
+          ].join("\n")
+        }
+      ]
+    }
+  };
+}
+
+function supportPayload() {
+  return {
+    type: 4,
+    data: {
+      flags: 64,
+      embeds: [
+        {
+          color: 0x6d5dfb,
+          title: "🎫 Suporte NexusGames",
+          description: "Clique abaixo para abrir um canal privado com a equipe da NexusGames."
+        }
+      ],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 1,
+              custom_id: "support:create-ticket",
+              label: "Abrir ticket",
+              emoji: { name: "🎫" }
             }
           ]
         }
@@ -82,83 +143,150 @@ export async function POST(request: Request) {
     return json({ type: 1 });
   }
 
-  if (interaction.type === 2) {
-    const name = interaction.data?.name;
+  try {
+    if (interaction.type === 2) {
+      const name = interaction.data?.name;
 
-    if (name === "loja" || name === "comprar") return json(shopPayload());
+      if (name === "loja") return json(await storeNavigationPayload());
+      if (name === "comprar") return json(purchaseCatalogPayload());
 
-    if (name === "pedidos") {
-      return json({
-        type: 4,
-        data: {
-          flags: 64,
-          content: "📦 O historico de pedidos sera conectado ao banco na proxima etapa."
-        }
-      });
-    }
-
-    if (name === "suporte") {
-      return json({
-        type: 4,
-        data: {
-          flags: 64,
-          content: "🎫 Use o canal **#suporte** da NexusGames."
-        }
-      });
-    }
-  }
-
-  if (interaction.type === 3) {
-    const customId = interaction.data?.custom_id;
-
-    if (customId === "product_select") {
-      const product = getProduct(interaction.data?.values?.[0]);
-      if (!product) {
-        return json({ type: 4, data: { flags: 64, content: "Produto nao encontrado." } });
+      if (name === "pedidos") {
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: "📦 O histórico de pedidos será conectado ao banco na próxima etapa."
+          }
+        });
       }
 
-      return json({
-        type: 7,
-        data: {
-          embeds: [
-            {
-              title: `${product.emoji} ${product.name}`,
-              description: [
-                product.description,
-                "",
-                "🔎 Preco e estoque serao consultados antes do checkout.",
-                "🔐 A key sera entregue somente de forma privada."
-              ].join("\n")
-            }
-          ],
-          components: [
-            {
-              type: 1,
-              components: [
-                {
-                  type: 2,
-                  style: 3,
-                  custom_id: `buy:${product.id}`,
-                  label: "Comprar"
-                }
-              ]
-            }
-          ]
-        }
-      });
+      if (name === "suporte") {
+        return json(supportPayload());
+      }
     }
 
-    if (typeof customId === "string" && customId.startsWith("buy:")) {
-      const product = getProduct(customId.slice(4));
-      return json({
-        type: 4,
-        data: {
-          flags: 64,
-          content: `🚧 Checkout de **${product?.name || "produto"}** preparado. O Pix e o fornecedor serao conectados na proxima etapa.`
+    if (interaction.type === 3) {
+      const customId = interaction.data?.custom_id;
+
+      if (customId === "product_select") {
+        const product = getProduct(interaction.data?.values?.[0]);
+        if (!product) {
+          return json({
+            type: 4,
+            data: { flags: 64, content: "Produto não encontrado." }
+          });
         }
-      });
+
+        return json({
+          type: 7,
+          data: {
+            embeds: [
+              {
+                color: 0x6d5dfb,
+                title: `${product.emoji} ${product.name}`,
+                description: [
+                  product.description,
+                  "",
+                  "🔎 Preço e estoque serão consultados antes do checkout.",
+                  "🔐 A key será entregue somente de forma privada."
+                ].join("\n")
+              }
+            ],
+            components: [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: 3,
+                    custom_id: `buy:${product.id}`,
+                    label: "Comprar",
+                    emoji: { name: "🛒" }
+                  }
+                ]
+              }
+            ]
+          }
+        });
+      }
+
+      if (typeof customId === "string" && customId.startsWith("buy:")) {
+        const product = getProduct(customId.slice(4));
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: `🚧 O checkout de **${product?.name || "produto"}** já está preparado no fluxo. O Pix e o fornecedor serão conectados na próxima etapa.`
+          }
+        });
+      }
+
+      if (customId === "support:create-ticket") {
+        const user = interaction.member?.user || interaction.user;
+        const userId = user?.id;
+        const username = user?.username || "cliente";
+
+        if (!userId) {
+          return json({
+            type: 4,
+            data: { flags: 64, content: "Não consegui identificar seu usuário." }
+          });
+        }
+
+        const ticket = await createSupportTicket(userId, username);
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: ticket.created
+              ? `✅ Ticket criado: <#${ticket.channelId}>`
+              : `🎫 Você já possui um ticket aberto: <#${ticket.channelId}>`
+          }
+        });
+      }
+
+      if (customId === "support:close-ticket") {
+        const user = interaction.member?.user || interaction.user;
+        const userId = user?.id;
+        const channelId = interaction.channel_id;
+
+        if (!userId || !channelId) {
+          return json({
+            type: 4,
+            data: { flags: 64, content: "Não foi possível fechar este ticket." }
+          });
+        }
+
+        await closeSupportTicket(
+          channelId,
+          userId,
+          interaction.member?.permissions
+        );
+
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: "🔒 Ticket fechado com sucesso. O canal foi arquivado para a administração."
+          }
+        });
+      }
     }
+  } catch (error) {
+    console.error("NexusGames interaction error", error);
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+
+    return json({
+      type: 4,
+      data: {
+        flags: 64,
+        content: `❌ Não foi possível concluir esta ação. ${message}`
+      }
+    });
   }
 
-  return json({ type: 4, data: { flags: 64, content: "Comando ainda nao implementado." } });
+  return json({
+    type: 4,
+    data: { flags: 64, content: "Comando ainda não implementado." }
+  });
 }
