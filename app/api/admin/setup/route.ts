@@ -1,4 +1,5 @@
 import { ensureServerStructure, registerGuildCommands } from "../../../../lib/discord";
+import { registerPanelCommand } from "../../../../lib/panelEditor";
 import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
 import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
     }
 
     await registerGuildCommands();
+    await registerPanelCommand();
 
     const cleanupChanges = await normalizeOfficialMessages();
     const channelChanges = await ensureServerStructure();
