@@ -6,6 +6,7 @@ import {
   createSupportTicket,
   getStoreNavigation
 } from "../../../../lib/discord";
+import { maybeHandlePanelInteraction } from "../../../../lib/panelEditor";
 import {
   createSandboxPixOrder,
   getPixDetails,
@@ -339,6 +340,11 @@ export async function POST(request: Request) {
 
   if (interaction.type === 1) {
     return json({ type: 1 });
+  }
+
+  const panelInteraction = await maybeHandlePanelInteraction(interaction);
+  if (panelInteraction) {
+    return json(panelInteraction);
   }
 
   const earlyCustomId = interaction.type === 3 ? interaction.data?.custom_id : null;
