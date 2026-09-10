@@ -4,6 +4,7 @@ const DISCORD_API = "https://discord.com/api/v10";
 const APPLICATION_ID = "1547332142776975400";
 const GUILD_ID = "1547332734794334319";
 const PANEL_COLOR = 0x7c3aed;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function botToken() {
   const value = process.env.DISCORD_BOT_TOKEN;
@@ -28,6 +29,22 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   }
 
   if (response.status === 204) return null;
+  return response.json();
+}
+
+async function discordMultipart(path: string, method: "POST" | "PATCH", form: FormData) {
+  const response = await fetch(`${DISCORD_API}${path}`, {
+    method,
+    headers: { Authorization: `Bot ${botToken()}` },
+    body: form,
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Discord API ${response.status}: ${text.slice(0, 500)}`);
+  }
+
   return response.json();
 }
 
@@ -105,7 +122,7 @@ function panelModal(channelId: string, actorId: string) {
               style: 1,
               required: false,
               max_length: 256,
-              placeholder: "Deixe vazio para manter o titulo atual"
+              placeholder: "Vazio = manter o titulo atual"
             }
           ]
         },
@@ -119,7 +136,7 @@ function panelModal(channelId: string, actorId: string) {
               style: 2,
               required: false,
               max_length: 4000,
-              placeholder: "Deixe vazio para manter o texto atual"
+              placeholder: "Vazio = manter o texto atual"
             }
           ]
         },
@@ -129,11 +146,11 @@ function panelModal(channelId: string, actorId: string) {
             {
               type: 4,
               custom_id: "panel_image",
-              label: "Link direto da imagem (opcional)",
+              label: "Link da imagem (opcional)",
               style: 1,
               required: false,
               max_length: 2000,
-              placeholder: "https://...jpg ou https://...png"
+              placeholder: "Cole um link direto HTTPS de JPG, PNG, WEBP ou GIF"
             }
           ]
         },
@@ -147,7 +164,7 @@ function panelModal(channelId: string, actorId: string) {
               style: 1,
               required: false,
               max_length: 30,
-              placeholder: "Vazio = editar o painel mais recente do bot"
+              placeholder: "Vazio = painel mais recente do bot"
             }
           ]
         }
@@ -158,15 +175,93 @@ function panelModal(channelId: string, actorId: string) {
 
 function validateImageUrl(value: string) {
   if (!value || value.toLowerCase() === "remover") return;
+
   let url: URL;
   try {
     url = new URL(value);
   } catch {
     throw new Error("O link da imagem nao e uma URL valida.");
   }
+
   if (url.protocol !== "https:") {
-    throw new Error("Use um link HTTPS direto para a imagem.");
+    throw new Error("Use um link HTTPS para a imagem.");
   }
+
+  const host = url.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "0.0.0.0" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host.endsWith(".local") ||
+    host.startsWith("10.") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("169.254.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  ) {
+    throw new Error("Esse endereco de imagem nao e permitido.");
+  }
+}
+
+function detectImageType(bytes: Uint8Array, contentType: string) {
+  const type = contentType.split(";")[0].trim().toLowerCase();
+  if (type === "image/jpeg" || type === "image/jpg") return { type: "image/jpeg", ext: "jpg" };
+  if (type === "image/png") return { type: "image/png", ext: "png" };
+  if (type === "image/webp") return { type: "image/webp", ext: "webp" };
+  if (type === "image/gif") return { type: "image/gif", ext: "gif" };
+
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { type: "image/jpeg", ext: "jpg" };
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+  ) {
+    return { type: "image/png", ext: "png" };
+  }
+  if (
+    bytes.length >= 12 &&
+    String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...bytes.slice(8, 12)) === "WEBP"
+  ) {
+    return { type: "image/webp", ext: "webp" };
+  }
+  if (bytes.length >= 6) {
+    const header = String.fromCharCode(...bytes.slice(0, 6));
+    if (header === "GIF87a" || header === "GIF89a") return { type: "image/gif", ext: "gif" };
+  }
+
+  throw new Error("O link nao retornou uma imagem JPG, PNG, WEBP ou GIF valida.");
+}
+
+async function downloadImage(url: string) {
+  const response = await fetch(url, {
+    redirect: "follow",
+    cache: "no-store",
+    headers: {
+      Accept: "image/avif,image/webp,image/png,image/jpeg,image/gif,*/*;q=0.8",
+      "User-Agent": "NexusGamesBot/1.0"
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nao consegui baixar a imagem (HTTP ${response.status}).`);
+  }
+
+  const announcedSize = Number(response.headers.get("content-length") || 0);
+  if (announcedSize > MAX_IMAGE_BYTES) {
+    throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
+  }
+
+  const buffer = await response.arrayBuffer();
+  if (buffer.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
+  }
+
+  const bytes = new Uint8Array(buffer);
+  const detected = detectImageType(bytes, response.headers.get("content-type") || "");
+  return { bytes, ...detected };
 }
 
 async function editDeferred(interactionToken: string, data: Record<string, unknown>) {
@@ -191,6 +286,13 @@ type DiscordMessage = {
   author?: { id?: string; bot?: boolean };
   embeds?: Array<Record<string, any>>;
   components?: Array<Record<string, unknown>>;
+  attachments?: Array<{
+    id: string;
+    filename?: string;
+    url?: string;
+    proxy_url?: string;
+    content_type?: string;
+  }>;
 };
 
 async function findTargetMessage(channelId: string, messageId?: string) {
@@ -225,41 +327,77 @@ async function applyPanelConfiguration(params: {
     const title = params.title || String(currentEmbed.title || "NexusGames");
     const description = params.description || String(currentEmbed.description || "");
     const removeImage = params.imageUrl.toLowerCase() === "remover";
-    const image = params.imageUrl && !removeImage
-      ? { url: params.imageUrl }
-      : removeImage
-        ? undefined
-        : currentEmbed.image?.url
-          ? { url: currentEmbed.image.url }
-          : undefined;
-
-    const embed: Record<string, unknown> = {
-      color: Number(currentEmbed.color || PANEL_COLOR),
-      title,
-      description,
-      ...(image ? { image } : {}),
-      footer: currentEmbed.footer || { text: `NexusGames • painel:${params.channelId}` }
-    };
+    const hasNewImage = Boolean(params.imageUrl && !removeImage);
 
     let editedId: string;
-    if (target) {
-      const updated = (await discordFetch(`/channels/${params.channelId}/messages/${target.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          allowed_mentions: { parse: [] },
-          embeds: [embed]
-        })
-      })) as DiscordMessage;
+
+    if (hasNewImage) {
+      const downloaded = await downloadImage(params.imageUrl);
+      const filename = `nexusgames-panel-${Date.now()}.${downloaded.ext}`;
+      const embed: Record<string, unknown> = {
+        color: Number(currentEmbed.color || PANEL_COLOR),
+        title,
+        description,
+        image: { url: `attachment://${filename}` },
+        footer: currentEmbed.footer || { text: `NexusGames • painel:${params.channelId}` }
+      };
+
+      const payload: Record<string, unknown> = {
+        allowed_mentions: { parse: [] },
+        embeds: [embed],
+        attachments: [{ id: 0, filename }],
+        ...(target?.components ? { components: target.components } : {})
+      };
+
+      const form = new FormData();
+      form.append("payload_json", JSON.stringify(payload));
+      form.append(
+        "files[0]",
+        new Blob([downloaded.bytes], { type: downloaded.type }),
+        filename
+      );
+
+      const updated = (await discordMultipart(
+        target
+          ? `/channels/${params.channelId}/messages/${target.id}`
+          : `/channels/${params.channelId}/messages`,
+        target ? "PATCH" : "POST",
+        form
+      )) as DiscordMessage;
       editedId = updated.id;
     } else {
-      const created = (await discordFetch(`/channels/${params.channelId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({
-          allowed_mentions: { parse: [] },
-          embeds: [embed]
-        })
-      })) as DiscordMessage;
-      editedId = created.id;
+      const preservedImage = !removeImage && currentEmbed.image?.url
+        ? { url: currentEmbed.image.url }
+        : undefined;
+
+      const embed: Record<string, unknown> = {
+        color: Number(currentEmbed.color || PANEL_COLOR),
+        title,
+        description,
+        ...(preservedImage ? { image: preservedImage } : {}),
+        footer: currentEmbed.footer || { text: `NexusGames • painel:${params.channelId}` }
+      };
+
+      const payload: Record<string, unknown> = {
+        allowed_mentions: { parse: [] },
+        embeds: [embed],
+        ...(removeImage ? { attachments: [] } : {}),
+        ...(target?.components ? { components: target.components } : {})
+      };
+
+      if (target) {
+        const updated = (await discordFetch(`/channels/${params.channelId}/messages/${target.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload)
+        })) as DiscordMessage;
+        editedId = updated.id;
+      } else {
+        const created = (await discordFetch(`/channels/${params.channelId}/messages`, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        })) as DiscordMessage;
+        editedId = created.id;
+      }
     }
 
     await editDeferred(params.interactionToken, {
@@ -267,13 +405,13 @@ async function applyPanelConfiguration(params: {
         "✅ **Painel atualizado.**",
         `Canal: <#${params.channelId}>`,
         `Mensagem: \`${editedId}\``,
-        params.imageUrl && !removeImage
-          ? "🖼️ A imagem foi vinculada ao embed."
+        hasNewImage
+          ? "🖼️ A imagem foi baixada pelo bot e exibida dentro do embed, sem anexo solto."
           : removeImage
-            ? "🗑️ A imagem foi removida."
-            : "📝 Texto/painel atualizado mantendo a imagem atual.",
+            ? "🗑️ A imagem e os anexos antigos foram removidos."
+            : "📝 Texto atualizado mantendo a imagem atual.",
         "",
-        "Dica: para a imagem carregar com maior confiabilidade, use um link direto HTTPS de JPG/PNG ou um link do CDN do Discord."
+        "Se um link nao for realmente uma imagem, o bot agora avisa antes de alterar o painel."
       ].join("\n"),
       embeds: [],
       components: []
