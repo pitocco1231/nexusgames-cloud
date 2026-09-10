@@ -1,4 +1,5 @@
 import { ensureServerStructure, registerGuildCommands } from "../../../../lib/discord";
+import { applyFuturisticTheme } from "../../../../lib/futuristicTheme";
 import { registerPanelCommand } from "../../../../lib/panelEditor";
 import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
 import { ensureRolesAndPermissions } from "../../../../lib/roles";
@@ -22,11 +23,12 @@ export async function POST(request: Request) {
     const cleanupChanges = await normalizeOfficialMessages();
     const channelChanges = await ensureServerStructure();
     const roleChanges = await ensureRolesAndPermissions();
-    const changes = [...cleanupChanges, ...channelChanges, ...roleChanges];
+    const themeChanges = await applyFuturisticTheme();
+    const changes = [...cleanupChanges, ...channelChanges, ...roleChanges, ...themeChanges];
 
     return Response.json({
       ok: true,
-      message: "NexusGames configurada com sucesso no Discord.",
+      message: "NexusGames configurada com o tema futurista no Discord.",
       changes
     });
   } catch (error) {
