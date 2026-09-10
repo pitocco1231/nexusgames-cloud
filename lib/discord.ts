@@ -4,7 +4,7 @@ export const applicationId = "1547332142776975400";
 export const guildId = "1547332734794334319";
 
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
-const assetUrl = (name: string) => `${STORE_URL}/assets/${name}`;
+const assetUrl = (name: string) => `${STORE_URL}/assets/${name}?v=20260910-3`;
 
 const VIEW_CHANNEL = 1024n;
 const SEND_MESSAGES = 2048n;
@@ -124,9 +124,9 @@ function productPanel(
     [
       description,
       "",
-      "✅ estoque consultado antes do pagamento",
-      "✅ região validada",
-      "✅ entrega privada",
+      "✅ categoria disponível para pedido",
+      "🔎 preço, região e estoque serão confirmados antes do pagamento real",
+      "🔐 entrega privada após confirmação",
       "",
       "Clique abaixo para iniciar sua compra."
     ].join("\n"),
@@ -146,20 +146,6 @@ function productPanel(
         ]
       }
     ]
-  );
-}
-
-function comingSoonPanel(
-  title: string,
-  description: string,
-  marker: string,
-  imageName: string
-): Record<string, unknown> {
-  return panel(
-    title,
-    `${description}\n\n🚧 **Em breve na NexusGames.**`,
-    marker,
-    imageName
   );
 }
 
@@ -208,7 +194,7 @@ const serverStructure: StoreGroup[] = [
       {
         name: "👾・roblox",
         aliases: ["🟥・roblox", "roblox"],
-        topic: "👾 Produtos Roblox autorizados para revenda."
+        topic: "👾 Produtos Roblox disponíveis para pedido."
       },
       {
         name: "🔮・valorant",
@@ -233,7 +219,7 @@ const serverStructure: StoreGroup[] = [
       {
         name: "💠・playstation",
         aliases: ["🔵・playstation", "playstation"],
-        topic: "💠 Produtos PlayStation compativeis."
+        topic: "💠 Produtos PlayStation disponíveis para pedido."
       }
     ]
   },
@@ -283,8 +269,8 @@ const officialMessages: OfficialMessage[] = [
         "",
         "### 🚀 Por onde começar",
         "**1.** Entre diretamente no canal do produto que você quer em **🎮・PRODUTOS**.",
-        "**2.** Confira a disponibilidade e clique em **Comprar**.",
-        "**3.** O sistema valida estoque, região e preço antes do checkout.",
+        "**2.** Confira a categoria e clique em **Comprar**.",
+        "**3.** Antes do pagamento real, o sistema confirma preço, região e disponibilidade.",
         "**4.** Após a confirmação do pagamento, a entrega será feita de forma privada.",
         "**5.** O comando `/loja` continua disponível como atalho para todas as categorias.",
         "",
@@ -346,7 +332,7 @@ const officialMessages: OfficialMessage[] = [
         "### 🛒 Passo a passo",
         "**1. Escolha a categoria** — entre em Roblox, Valorant, Steam, Minecraft, Xbox ou PlayStation.",
         "**2. Escolha o produto** — use o botão disponível dentro do canal.",
-        "**3. Validação automática** — o sistema consulta disponibilidade, região e preço do fornecedor.",
+        "**3. Validação** — preço, disponibilidade e região serão confirmados antes do pagamento real.",
         "**4. Pagamento** — quando habilitado, será criado um Pix exclusivo para o pedido.",
         "**5. Confirmação** — o pagamento é validado antes de qualquer entrega.",
         "**6. Compra no fornecedor** — a key é solicitada somente após a confirmação.",
@@ -406,7 +392,7 @@ const officialMessages: OfficialMessage[] = [
     marker: "product-steam-v1",
     payload: productPanel(
       "💳 Steam",
-      "Steam Wallet e produtos para PC. O preço e o estoque serão verificados antes do checkout.",
+      "Steam Wallet e produtos para PC.",
       "buy:steam-wallet",
       "Comprar Steam Wallet",
       "product-steam-v1",
@@ -418,7 +404,7 @@ const officialMessages: OfficialMessage[] = [
     marker: "product-minecraft-v1",
     payload: productPanel(
       "🪻 Minecraft",
-      "Minecraft Java + Bedrock. Região e disponibilidade serão validadas antes da compra.",
+      "Minecraft Java + Bedrock e produtos relacionados.",
       "buy:minecraft-java-bedrock",
       "Comprar Minecraft",
       "product-minecraft-v1",
@@ -430,7 +416,7 @@ const officialMessages: OfficialMessage[] = [
     marker: "product-xbox-v1",
     payload: productPanel(
       "🎮 Xbox / Game Pass",
-      "Códigos Xbox e Game Pass compatíveis com a região do comprador.",
+      "Xbox, Game Pass e produtos digitais relacionados.",
       "buy:xbox-gamepass",
       "Comprar Xbox / Game Pass",
       "product-xbox-v1",
@@ -440,9 +426,11 @@ const officialMessages: OfficialMessage[] = [
   {
     channelName: "👾・roblox",
     marker: "product-roblox-v1",
-    payload: comingSoonPanel(
+    payload: productPanel(
       "👾 Roblox / Robux",
-      "Essa categoria será liberada quando houver um fornecedor autorizado e SKU compatível para revenda.",
+      "Produtos Roblox disponíveis para pedido.",
+      "buy:roblox",
+      "Comprar Roblox",
       "product-roblox-v1",
       "roblox"
     )
@@ -450,9 +438,11 @@ const officialMessages: OfficialMessage[] = [
   {
     channelName: "🔮・valorant",
     marker: "product-valorant-v1",
-    payload: comingSoonPanel(
+    payload: productPanel(
       "🔮 Valorant Points",
-      "Essa categoria será liberada quando a integração com um fornecedor autorizado estiver pronta.",
+      "Valorant Points disponíveis para pedido.",
+      "buy:valorant-points",
+      "Comprar Valorant Points",
       "product-valorant-v1",
       "valorant"
     )
@@ -460,9 +450,11 @@ const officialMessages: OfficialMessage[] = [
   {
     channelName: "💠・playstation",
     marker: "product-playstation-v1",
-    payload: comingSoonPanel(
+    payload: productPanel(
       "💠 PlayStation",
-      "Gift cards e produtos PlayStation serão adicionados após validação de fornecedor e região.",
+      "Produtos PlayStation disponíveis para pedido.",
+      "buy:playstation-gift-card",
+      "Comprar PlayStation",
       "product-playstation-v1",
       "playstation"
     )
