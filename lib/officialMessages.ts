@@ -48,64 +48,69 @@ type DiscordMessage = {
 
 type ManagedPanel = {
   channelNames: string[];
-  title: string;
+  titles: string[];
   marker: string;
 };
 
 const managedPanels: ManagedPanel[] = [
   {
-    channelNames: ["👋・bem-vindo", "bem-vindo"],
-    title: "👋 Bem-vindo à NexusGames",
+    channelNames: ["✨・bem-vindo", "👋・bem-vindo", "bem-vindo"],
+    titles: ["✨ Bem-vindo à NexusGames", "👋 Bem-vindo à NexusGames"],
     marker: "welcome-v2"
   },
   {
-    channelNames: ["📢・anuncios", "anuncios", "anúncios"],
-    title: "📢 Anúncios oficiais",
+    channelNames: ["📣・anuncios", "📢・anuncios", "anuncios", "anúncios"],
+    titles: ["📣 Anúncios oficiais", "📢 Anúncios oficiais"],
     marker: "announcements-v1"
   },
   {
-    channelNames: ["⭐・avaliacoes", "avaliacoes", "avaliações"],
-    title: "⭐ Avaliações da comunidade",
+    channelNames: ["💜・avaliacoes", "⭐・avaliacoes", "avaliacoes", "avaliações"],
+    titles: ["💜 Avaliações da comunidade", "⭐ Avaliações da comunidade"],
     marker: "reviews-v1"
   },
   {
-    channelNames: ["📖・como-comprar", "como-comprar"],
-    title: "📖 Como comprar na NexusGames",
+    channelNames: ["🛍️・como-comprar", "📖・como-comprar", "como-comprar"],
+    titles: ["🛍️ Como comprar na NexusGames", "📖 Como comprar na NexusGames"],
     marker: "how-to-buy-v2"
   },
   {
-    channelNames: ["🎫・suporte", "suporte"],
-    title: "🎫 Central de Suporte NexusGames",
+    channelNames: ["⚡・ofertas", "🔥・ofertas", "ofertas"],
+    titles: ["⚡ Ofertas NexusGames"],
+    marker: "offers-v1"
+  },
+  {
+    channelNames: ["🎟️・suporte", "🎫・suporte", "suporte"],
+    titles: ["🎟️ Central de Suporte NexusGames", "🎫 Central de Suporte NexusGames"],
     marker: "support-panel-v1"
   },
   {
     channelNames: ["💳・steam", "steam"],
-    title: "💳 Steam",
+    titles: ["💳 Steam"],
     marker: "product-steam-v1"
   },
   {
-    channelNames: ["⛏️・minecraft", "minecraft"],
-    title: "⛏️ Minecraft",
+    channelNames: ["🪻・minecraft", "⛏️・minecraft", "minecraft"],
+    titles: ["🪻 Minecraft", "⛏️ Minecraft"],
     marker: "product-minecraft-v1"
   },
   {
-    channelNames: ["🟢・xbox", "xbox"],
-    title: "🟢 Xbox / Game Pass",
+    channelNames: ["🎮・xbox", "🟢・xbox", "xbox"],
+    titles: ["🎮 Xbox / Game Pass", "🟢 Xbox / Game Pass"],
     marker: "product-xbox-v1"
   },
   {
-    channelNames: ["🟥・roblox", "roblox"],
-    title: "🟥 Roblox / Robux",
+    channelNames: ["👾・roblox", "🟥・roblox", "roblox"],
+    titles: ["👾 Roblox / Robux", "🟥 Roblox / Robux"],
     marker: "product-roblox-v1"
   },
   {
-    channelNames: ["🔫・valorant", "valorant"],
-    title: "🔫 Valorant Points",
+    channelNames: ["🔮・valorant", "🔫・valorant", "valorant"],
+    titles: ["🔮 Valorant Points", "🔫 Valorant Points"],
     marker: "product-valorant-v1"
   },
   {
-    channelNames: ["🔵・playstation", "playstation"],
-    title: "🔵 PlayStation",
+    channelNames: ["💠・playstation", "🔵・playstation", "playstation"],
+    titles: ["💠 PlayStation", "🔵 PlayStation"],
     marker: "product-playstation-v1"
   }
 ];
@@ -116,7 +121,7 @@ function isManagedMessage(message: DiscordMessage, panel: ManagedPanel) {
   return Boolean(
     message.embeds?.some((embed) => {
       const footer = embed.footer?.text || "";
-      return embed.title === panel.title || footer.startsWith("NexusGames • canal:");
+      return panel.titles.includes(embed.title || "") || footer.startsWith("NexusGames • canal:");
     })
   );
 }
@@ -162,9 +167,7 @@ export async function normalizeOfficialMessages() {
     }
 
     if (managed.length > 1) {
-      changes.push(
-        `Duplicadas removidas em #${channel.name}: ${managed.length - 1}`
-      );
+      changes.push(`Duplicadas removidas em #${channel.name}: ${managed.length - 1}`);
     }
   }
 
