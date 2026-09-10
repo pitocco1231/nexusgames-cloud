@@ -236,19 +236,19 @@ async function applyChannelPermissions(roles: DiscordRole[]) {
   const staffAllow = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ATTACH_FILES | READ_MESSAGE_HISTORY;
 
   const readOnlyChannels = new Set<string>([
-    "👋・bem-vindo",
-    "📢・anuncios",
-    "📖・como-comprar",
-    "🔥・ofertas",
-    "🟥・roblox",
-    "🔫・valorant",
+    "✨・bem-vindo",
+    "📣・anuncios",
+    "🛍️・como-comprar",
+    "⚡・ofertas",
+    "👾・roblox",
+    "🔮・valorant",
     "💳・steam",
-    "⛏️・minecraft",
-    "🟢・xbox",
-    "🔵・playstation",
+    "🪻・minecraft",
+    "🎮・xbox",
+    "💠・playstation",
     "📦・meus-pedidos",
-    "🎟️・cupons",
-    "🎫・suporte"
+    "🎫・cupons",
+    "🎟️・suporte"
   ]);
 
   const ticketCategories = new Set<string>(["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦", "🎫 TICKETS"]);
