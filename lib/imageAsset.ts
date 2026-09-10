@@ -1,3 +1,5 @@
+import sharp from "sharp";
+
 export function imageAssetResponse(base64: string, contentType = "image/webp") {
   return new Response(Buffer.from(base64, "base64"), {
     status: 200,
@@ -13,6 +15,18 @@ export function jpegAssetResponse(base64: string) {
   return imageAssetResponse(base64, "image/jpeg");
 }
 
-export function webpAssetResponse(base64: string) {
-  return imageAssetResponse(base64, "image/webp");
+export async function webpAssetResponse(base64: string) {
+  const source = Buffer.from(base64, "base64");
+  const jpeg = await sharp(source)
+    .jpeg({ quality: 92, chromaSubsampling: "4:4:4", progressive: true })
+    .toBuffer();
+
+  return new Response(jpeg, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Disposition": "inline; filename=\"nexusgames-banner.jpg\""
+    }
+  });
 }
