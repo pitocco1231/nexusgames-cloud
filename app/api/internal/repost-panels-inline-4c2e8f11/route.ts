@@ -12,12 +12,10 @@ function botToken(){ const v=process.env.DISCORD_BOT_TOKEN; if(!v) throw new Err
 async function discordJson(path:string){ const r=await fetch(`${DISCORD_API}${path}`,{headers:{Authorization:`Bot ${botToken()}`},cache:"no-store"}); if(!r.ok) throw new Error(`Discord GET ${r.status}: ${await r.text()}`); return r.json(); }
 
 async function postInline(channelId:string, oldMessageId:string|null, config:PanelConfig){
-  const ir=await fetch(`${STORE_URL}/assets/${config.imageName}?inline=20260910-3`,{cache:"no-store"});
-  if(!ir.ok) throw new Error(`Banner ${config.imageName} HTTP ${ir.status}`);
+  const ir=await fetch(`${STORE_URL}/assets-jpg/${config.imageName}?inline-jpg=20260910-4`,{cache:"no-store"});
+  if(!ir.ok) throw new Error(`Banner JPG ${config.imageName} HTTP ${ir.status}`);
   const bytes=await ir.arrayBuffer();
-  const sourceType=ir.headers.get("content-type")||"image/webp";
-  const ext=sourceType.includes("png")?"png":sourceType.includes("jpeg")||sourceType.includes("jpg")?"jpg":"webp";
-  const filename=`NexusGames-${config.imageName}-inline.${ext}`;
+  const filename=`NexusGames-${config.imageName}-final.jpg`;
   const payload:any={
     allowed_mentions:{parse:[]},
     attachments:[{id:0,filename,description:`Banner ${config.title} - NexusGames`}],
@@ -26,7 +24,7 @@ async function postInline(channelId:string, oldMessageId:string|null, config:Pan
   };
   const form=new FormData();
   form.append("payload_json",JSON.stringify(payload));
-  form.append("files[0]",new Blob([bytes],{type:sourceType}),filename);
+  form.append("files[0]",new Blob([bytes],{type:"image/jpeg"}),filename);
   const r=await fetch(`${DISCORD_API}/channels/${channelId}/messages`,{method:"POST",headers:{Authorization:`Bot ${botToken()}`},body:form,cache:"no-store"});
   const text=await r.text();
   if(!r.ok) throw new Error(`Discord POST ${r.status}: ${text.slice(0,500)}`);
