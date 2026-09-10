@@ -18,7 +18,7 @@ export async function GET(_request: Request, context: { params: Promise<{ name: 
     .jpeg({ quality: 94, chromaSubsampling: "4:4:4", mozjpeg: true })
     .toBuffer();
 
-  return new Response(output, {
+  return new Response(new Uint8Array(output), {
     status: 200,
     headers: {
       "Content-Type": "image/jpeg",
