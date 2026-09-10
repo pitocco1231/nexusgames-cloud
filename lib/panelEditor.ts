@@ -1,10 +1,11 @@
 import { after } from "next/server";
+import sharp from "sharp";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const APPLICATION_ID = "1547332142776975400";
 const GUILD_ID = "1547332734794334319";
 const PANEL_COLOR = 0x7c3aed;
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
 function botToken() {
   const value = process.env.DISCORD_BOT_TOKEN;
@@ -12,7 +13,7 @@ function botToken() {
   return value;
 }
 
-async function discordFetch(path: string, init: RequestInit = {}) {
+async function discordJson(path: string, init: RequestInit = {}) {
   const response = await fetch(`${DISCORD_API}${path}`, {
     ...init,
     headers: {
@@ -64,7 +65,7 @@ export const panelCommand = {
 };
 
 export async function registerPanelCommand() {
-  return discordFetch(`/applications/${APPLICATION_ID}/guilds/${GUILD_ID}/commands`, {
+  return discordJson(`/applications/${APPLICATION_ID}/guilds/${GUILD_ID}/commands`, {
     method: "POST",
     body: JSON.stringify(panelCommand)
   });
@@ -77,13 +78,10 @@ function actorFrom(interaction: any) {
 function hasPanelPermission(interaction: any) {
   try {
     const permissions = BigInt(interaction?.member?.permissions || "0");
-    const ADMINISTRATOR = 8n;
-    const MANAGE_GUILD = 32n;
-    const MANAGE_MESSAGES = 8192n;
     return (
-      (permissions & ADMINISTRATOR) === ADMINISTRATOR ||
-      (permissions & MANAGE_GUILD) === MANAGE_GUILD ||
-      (permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES
+      (permissions & 8n) === 8n ||
+      (permissions & 32n) === 32n ||
+      (permissions & 8192n) === 8192n
     );
   } catch {
     return false;
@@ -150,7 +148,7 @@ function panelModal(channelId: string, actorId: string) {
               style: 1,
               required: false,
               max_length: 2000,
-              placeholder: "Cole um link direto HTTPS de JPG, PNG, WEBP ou GIF"
+              placeholder: "HTTPS da imagem; o bot converte e incorpora no painel"
             }
           ]
         },
@@ -183,9 +181,7 @@ function validateImageUrl(value: string) {
     throw new Error("O link da imagem nao e uma URL valida.");
   }
 
-  if (url.protocol !== "https:") {
-    throw new Error("Use um link HTTPS para a imagem.");
-  }
+  if (url.protocol !== "https:") throw new Error("Use um link HTTPS para a imagem.");
 
   const host = url.hostname.toLowerCase();
   if (
@@ -203,65 +199,42 @@ function validateImageUrl(value: string) {
   }
 }
 
-function detectImageType(bytes: Uint8Array, contentType: string) {
-  const type = contentType.split(";")[0].trim().toLowerCase();
-  if (type === "image/jpeg" || type === "image/jpg") return { type: "image/jpeg", ext: "jpg" };
-  if (type === "image/png") return { type: "image/png", ext: "png" };
-  if (type === "image/webp") return { type: "image/webp", ext: "webp" };
-  if (type === "image/gif") return { type: "image/gif", ext: "gif" };
-
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return { type: "image/jpeg", ext: "jpg" };
-  }
-  if (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
-  ) {
-    return { type: "image/png", ext: "png" };
-  }
-  if (
-    bytes.length >= 12 &&
-    String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
-    String.fromCharCode(...bytes.slice(8, 12)) === "WEBP"
-  ) {
-    return { type: "image/webp", ext: "webp" };
-  }
-  if (bytes.length >= 6) {
-    const header = String.fromCharCode(...bytes.slice(0, 6));
-    if (header === "GIF87a" || header === "GIF89a") return { type: "image/gif", ext: "gif" };
-  }
-
-  throw new Error("O link nao retornou uma imagem JPG, PNG, WEBP ou GIF valida.");
-}
-
-async function downloadImage(url: string) {
+async function downloadAndConvertToJpeg(url: string) {
   const response = await fetch(url, {
     redirect: "follow",
     cache: "no-store",
     headers: {
-      Accept: "image/avif,image/webp,image/png,image/jpeg,image/gif,*/*;q=0.8",
-      "User-Agent": "NexusGamesBot/1.0"
+      Accept: "image/*,*/*;q=0.8",
+      "User-Agent": "NexusGamesBot/2.0"
     },
     signal: AbortSignal.timeout(15000)
   });
 
-  if (!response.ok) {
-    throw new Error(`Nao consegui baixar a imagem (HTTP ${response.status}).`);
+  if (!response.ok) throw new Error(`Nao consegui baixar a imagem (HTTP ${response.status}).`);
+
+  const announced = Number(response.headers.get("content-length") || 0);
+  if (announced > MAX_SOURCE_BYTES) throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
+
+  const source = Buffer.from(await response.arrayBuffer());
+  if (source.byteLength > MAX_SOURCE_BYTES) throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
+
+  let jpg: Buffer;
+  try {
+    jpg = await sharp(source, { animated: false })
+      .rotate()
+      .resize({ width: 1600, height: 1000, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#111111" })
+      .jpeg({ quality: 91, progressive: false, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+  } catch {
+    throw new Error("O link nao retornou uma imagem valida que eu consiga converter.");
   }
 
-  const announcedSize = Number(response.headers.get("content-length") || 0);
-  if (announcedSize > MAX_IMAGE_BYTES) {
-    throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
+  if (!jpg.length || jpg[0] !== 0xff || jpg[1] !== 0xd8 || jpg[2] !== 0xff) {
+    throw new Error("Falha ao converter a imagem para JPEG.");
   }
 
-  const buffer = await response.arrayBuffer();
-  if (buffer.byteLength > MAX_IMAGE_BYTES) {
-    throw new Error("A imagem e grande demais. Use uma imagem de ate 8 MB.");
-  }
-
-  const bytes = new Uint8Array(buffer);
-  const detected = detectImageType(bytes, response.headers.get("content-type") || "");
-  return { bytes, ...detected };
+  return jpg;
 }
 
 async function editDeferred(interactionToken: string, data: Record<string, unknown>) {
@@ -290,25 +263,89 @@ type DiscordMessage = {
     id: string;
     filename?: string;
     url?: string;
-    proxy_url?: string;
     content_type?: string;
   }>;
 };
 
 async function findTargetMessage(channelId: string, messageId?: string) {
   if (messageId) {
-    const message = (await discordFetch(`/channels/${channelId}/messages/${messageId}`)) as DiscordMessage;
+    const message = (await discordJson(`/channels/${channelId}/messages/${messageId}`)) as DiscordMessage;
     if (!message?.author?.bot) throw new Error("A mensagem informada nao pertence a um bot.");
     return message;
   }
 
-  const recent = (await discordFetch(`/channels/${channelId}/messages?limit=50`)) as DiscordMessage[];
-  return recent.find(
-    (message) =>
-      message.author?.bot &&
-      Array.isArray(message.embeds) &&
-      message.embeds.length > 0
-  ) || null;
+  const recent = (await discordJson(`/channels/${channelId}/messages?limit=50`)) as DiscordMessage[];
+  return (
+    recent.find(
+      (message) =>
+        message.author?.bot &&
+        Array.isArray(message.embeds) &&
+        message.embeds.some((embed) => String(embed?.footer?.text || "").startsWith("NexusGames • canal:"))
+    ) ||
+    recent.find(
+      (message) => message.author?.bot && Array.isArray(message.embeds) && message.embeds.length > 0
+    ) ||
+    null
+  );
+}
+
+function buildEmbed(currentEmbed: Record<string, any>, title: string, description: string, imageUrl?: string) {
+  return {
+    color: Number(currentEmbed.color || PANEL_COLOR),
+    title: title || String(currentEmbed.title || "NexusGames"),
+    description: description || String(currentEmbed.description || ""),
+    ...(imageUrl ? { image: { url: imageUrl } } : {}),
+    footer: currentEmbed.footer || { text: "NexusGames • painel" }
+  };
+}
+
+async function createInlineImagePanel(params: {
+  channelId: string;
+  target: DiscordMessage | null;
+  currentEmbed: Record<string, any>;
+  title: string;
+  description: string;
+  imageUrl: string;
+}) {
+  const jpg = await downloadAndConvertToJpeg(params.imageUrl);
+  const filename = `nexusgames-banner-${Date.now()}.jpg`;
+  const embed = buildEmbed(params.currentEmbed, params.title, params.description, `attachment://${filename}`);
+
+  const payload: Record<string, unknown> = {
+    allowed_mentions: { parse: [] },
+    embeds: [embed],
+    attachments: [{ id: 0, filename, description: "Banner NexusGames" }],
+    ...(params.target?.components?.length ? { components: params.target.components } : {})
+  };
+
+  const bytes = new Uint8Array(jpg.byteLength);
+  bytes.set(jpg);
+  const form = new FormData();
+  form.append("payload_json", JSON.stringify(payload));
+  form.append("files[0]", new Blob([bytes.buffer], { type: "image/jpeg" }), filename);
+
+  // Criamos uma NOVA mensagem. Isso evita o comportamento inconsistente do Discord
+  // ao substituir anexos em mensagens antigas via PATCH.
+  const created = (await discordMultipart(
+    `/channels/${params.channelId}/messages`,
+    "POST",
+    form
+  )) as DiscordMessage;
+
+  const returnedImage = String(created.embeds?.[0]?.image?.url || "");
+  const returnedType = String(created.attachments?.[0]?.content_type || "");
+  if (!returnedImage || !returnedType.startsWith("image/")) {
+    await discordJson(`/channels/${params.channelId}/messages/${created.id}`, { method: "DELETE" }).catch(() => null);
+    throw new Error("O Discord recebeu o arquivo, mas nao confirmou a imagem dentro do embed. Nada foi substituido.");
+  }
+
+  if (params.target?.id && params.target.id !== created.id) {
+    await discordJson(`/channels/${params.channelId}/messages/${params.target.id}`, {
+      method: "DELETE"
+    });
+  }
+
+  return created;
 }
 
 async function applyPanelConfiguration(params: {
@@ -323,95 +360,58 @@ async function applyPanelConfiguration(params: {
     validateImageUrl(params.imageUrl);
     const target = await findTargetMessage(params.channelId, params.messageId || undefined);
     const currentEmbed = (target?.embeds?.[0] || {}) as Record<string, any>;
-
-    const title = params.title || String(currentEmbed.title || "NexusGames");
-    const description = params.description || String(currentEmbed.description || "");
     const removeImage = params.imageUrl.toLowerCase() === "remover";
     const hasNewImage = Boolean(params.imageUrl && !removeImage);
 
-    let editedId: string;
+    let updated: DiscordMessage;
 
     if (hasNewImage) {
-      const downloaded = await downloadImage(params.imageUrl);
-      const filename = `nexusgames-panel-${Date.now()}.${downloaded.ext}`;
-      const embed: Record<string, unknown> = {
-        color: Number(currentEmbed.color || PANEL_COLOR),
-        title,
-        description,
-        image: { url: `attachment://${filename}` },
-        footer: currentEmbed.footer || { text: `NexusGames • painel:${params.channelId}` }
-      };
-
-      const payload: Record<string, unknown> = {
-        allowed_mentions: { parse: [] },
-        embeds: [embed],
-        attachments: [{ id: 0, filename }],
-        ...(target?.components ? { components: target.components } : {})
-      };
-
-      const form = new FormData();
-      form.append("payload_json", JSON.stringify(payload));
-      form.append(
-        "files[0]",
-        new Blob([downloaded.bytes], { type: downloaded.type }),
-        filename
-      );
-
-      const updated = (await discordMultipart(
-        target
-          ? `/channels/${params.channelId}/messages/${target.id}`
-          : `/channels/${params.channelId}/messages`,
-        target ? "PATCH" : "POST",
-        form
-      )) as DiscordMessage;
-      editedId = updated.id;
+      updated = await createInlineImagePanel({
+        channelId: params.channelId,
+        target,
+        currentEmbed,
+        title: params.title,
+        description: params.description,
+        imageUrl: params.imageUrl
+      });
     } else {
       const preservedImage = !removeImage && currentEmbed.image?.url
-        ? { url: currentEmbed.image.url }
+        ? String(currentEmbed.image.url)
         : undefined;
-
-      const embed: Record<string, unknown> = {
-        color: Number(currentEmbed.color || PANEL_COLOR),
-        title,
-        description,
-        ...(preservedImage ? { image: preservedImage } : {}),
-        footer: currentEmbed.footer || { text: `NexusGames • painel:${params.channelId}` }
-      };
-
+      const embed = buildEmbed(currentEmbed, params.title, params.description, preservedImage);
       const payload: Record<string, unknown> = {
         allowed_mentions: { parse: [] },
         embeds: [embed],
         ...(removeImage ? { attachments: [] } : {}),
-        ...(target?.components ? { components: target.components } : {})
+        ...(target?.components?.length ? { components: target.components } : {})
       };
 
       if (target) {
-        const updated = (await discordFetch(`/channels/${params.channelId}/messages/${target.id}`, {
+        updated = (await discordJson(`/channels/${params.channelId}/messages/${target.id}`, {
           method: "PATCH",
           body: JSON.stringify(payload)
         })) as DiscordMessage;
-        editedId = updated.id;
       } else {
-        const created = (await discordFetch(`/channels/${params.channelId}/messages`, {
+        updated = (await discordJson(`/channels/${params.channelId}/messages`, {
           method: "POST",
           body: JSON.stringify(payload)
         })) as DiscordMessage;
-        editedId = created.id;
       }
     }
 
+    const confirmedImage = String(updated.embeds?.[0]?.image?.url || "");
     await editDeferred(params.interactionToken, {
       content: [
-        "✅ **Painel atualizado.**",
+        "✅ **Painel atualizado e verificado pelo Discord.**",
         `Canal: <#${params.channelId}>`,
-        `Mensagem: \`${editedId}\``,
+        `Mensagem: \`${updated.id}\``,
         hasNewImage
-          ? "🖼️ A imagem foi baixada pelo bot e exibida dentro do embed, sem anexo solto."
+          ? confirmedImage
+            ? "🖼️ O Discord confirmou o banner dentro do embed. A mensagem antiga foi removida."
+            : "⚠️ O painel foi atualizado, mas o Discord nao retornou a imagem no embed."
           : removeImage
-            ? "🗑️ A imagem e os anexos antigos foram removidos."
-            : "📝 Texto atualizado mantendo a imagem atual.",
-        "",
-        "Se um link nao for realmente uma imagem, o bot agora avisa antes de alterar o painel."
+            ? "🗑️ Imagem e anexos removidos."
+            : "📝 Texto atualizado mantendo a imagem atual."
       ].join("\n"),
       embeds: [],
       components: []
@@ -439,10 +439,7 @@ export async function maybeHandlePanelInteraction(interaction: any) {
 
     const channelId = String(optionValue(interaction, "canal") || "");
     if (!channelId) {
-      return {
-        type: 4,
-        data: { flags: 64, content: "❌ Selecione um canal valido." }
-      };
+      return { type: 4, data: { flags: 64, content: "❌ Selecione um canal valido." } };
     }
 
     return panelModal(channelId, actor.id);
@@ -461,10 +458,7 @@ export async function maybeHandlePanelInteraction(interaction: any) {
     }
 
     if (!interaction.token) {
-      return {
-        type: 4,
-        data: { flags: 64, content: "❌ Nao foi possivel concluir esta configuracao." }
-      };
+      return { type: 4, data: { flags: 64, content: "❌ Nao foi possivel concluir esta configuracao." } };
     }
 
     const params = {
