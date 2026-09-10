@@ -666,7 +666,8 @@ export async function createSupportTicket(userId: string, username: string) {
   }
 
   const safeUser = username
-    .normalize("NFD")n    .replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
