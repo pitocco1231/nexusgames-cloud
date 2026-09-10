@@ -1,4 +1,5 @@
 import nacl from "tweetnacl";
+import { after } from "next/server";
 import { getProduct, products } from "../../../../lib/catalog";
 import {
   closeSupportTicket,
@@ -32,6 +33,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PUBLIC_KEY_ENV = "DISCORD_PUBLIC_KEY";
+const APPLICATION_ID = "1547332142776975400";
+const DISCORD_API = "https://discord.com/api/v10";
 
 function hexToBytes(hex: string) {
   return Uint8Array.from(Buffer.from(hex, "hex"));
@@ -191,7 +194,7 @@ function mercadoPagoStatusText(order: MercadoPagoOrder) {
   return `ℹ️ ${status}${detail ? ` / ${detail}` : ""}`;
 }
 
-function pixSandboxPayload(orderNumber: string, providerOrder: MercadoPagoOrder) {
+function pixSandboxMessageData(orderNumber: string, providerOrder: MercadoPagoOrder) {
   const pix = getPixDetails(providerOrder);
   const components: Array<Record<string, unknown>> = [];
 
@@ -214,24 +217,30 @@ function pixSandboxPayload(orderNumber: string, providerOrder: MercadoPagoOrder)
   });
 
   return {
+    embeds: [
+      {
+        color: 0x00a650,
+        title: "🧪 Pix Sandbox Mercado Pago",
+        description: [
+          `Pedido NexusGames: **${orderNumber}**`,
+          `Valor de teste: **R$ ${MERCADO_PAGO_SANDBOX_AMOUNT_BRL.toFixed(2).replace(".", ",")}**`,
+          `Status: **${mercadoPagoStatusText(providerOrder)}**`,
+          "",
+          "⚠️ Este checkout é somente de teste e não movimenta dinheiro real.",
+          "No teste oficial do Pix, o Mercado Pago atualiza a order automaticamente para aprovada."
+        ].join("\n")
+      }
+    ],
+    components: [{ type: 1, components }]
+  };
+}
+
+function pixSandboxPayload(orderNumber: string, providerOrder: MercadoPagoOrder) {
+  return {
     type: 4,
     data: {
       flags: 64,
-      embeds: [
-        {
-          color: 0x00a650,
-          title: "🧪 Pix Sandbox Mercado Pago",
-          description: [
-            `Pedido NexusGames: **${orderNumber}**`,
-            `Valor de teste: **R$ ${MERCADO_PAGO_SANDBOX_AMOUNT_BRL.toFixed(2).replace(".", ",")}**`,
-            `Status: **${mercadoPagoStatusText(providerOrder)}**`,
-            "",
-            "⚠️ Este checkout é somente de teste e não movimenta dinheiro real.",
-            "No teste oficial do Pix, o Mercado Pago atualiza a order automaticamente para aprovada."
-          ].join("\n")
-        }
-      ],
-      components: [{ type: 1, components }]
+      ...pixSandboxMessageData(orderNumber, providerOrder)
     }
   };
 }
@@ -244,6 +253,77 @@ async function syncAndGrantCustomer(providerOrder: MercadoPagoOrder) {
     });
   }
   return synced;
+}
+
+async function editDeferredInteraction(
+  interactionToken: string,
+  data: Record<string, unknown>
+) {
+  const response = await fetch(
+    `${DISCORD_API}/webhooks/${APPLICATION_ID}/${interactionToken}/messages/@original`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Discord webhook ${response.status}: ${text.slice(0, 300)}`);
+  }
+}
+
+async function processDeferredPix(params: {
+  customId: string;
+  userId: string;
+  interactionToken: string;
+}) {
+  const isCreate = params.customId.startsWith("pix-test:");
+  const prefix = isCreate ? "pix-test:" : "pix-refresh:";
+  const orderNumber = params.customId.slice(prefix.length);
+
+  try {
+    const localOrder = await findDiscordOrderByNumber(params.userId, orderNumber);
+    if (!localOrder?.id) throw new Error("Pedido não encontrado.");
+
+    const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
+    let providerOrder: MercadoPagoOrder;
+
+    if (isCreate) {
+      if (payment?.provider_payment_id) {
+        providerOrder = await getSandboxOrder(payment.provider_payment_id);
+      } else {
+        providerOrder = await createSandboxPixOrder({
+          localOrderId: localOrder.id,
+          orderNumber: localOrder.order_number
+        });
+        await attachMercadoPagoSandboxOrder({ localOrder, providerOrder });
+      }
+    } else {
+      if (!payment?.provider_payment_id) {
+        throw new Error("Este pedido ainda não possui um Pix de teste.");
+      }
+      providerOrder = await getSandboxOrder(payment.provider_payment_id);
+    }
+
+    await syncAndGrantCustomer(providerOrder);
+    await editDeferredInteraction(
+      params.interactionToken,
+      pixSandboxMessageData(localOrder.order_number, providerOrder)
+    );
+  } catch (error) {
+    console.error("NexusGames deferred Pix error", error);
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não foi possível concluir o Pix de teste. ${message}`,
+      embeds: [],
+      components: []
+    }).catch((editError) => {
+      console.error("Nao foi possivel editar a resposta adiada do Discord", editError);
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -259,6 +339,30 @@ export async function POST(request: Request) {
 
   if (interaction.type === 1) {
     return json({ type: 1 });
+  }
+
+  const earlyCustomId = interaction.type === 3 ? interaction.data?.custom_id : null;
+  if (
+    typeof earlyCustomId === "string" &&
+    (earlyCustomId.startsWith("pix-test:") || earlyCustomId.startsWith("pix-refresh:"))
+  ) {
+    const user = interaction.member?.user || interaction.user;
+    if (!user?.id || !interaction.token) {
+      return json({
+        type: 4,
+        data: { flags: 64, content: "❌ Não consegui identificar esta operação." }
+      });
+    }
+
+    after(async () => {
+      await processDeferredPix({
+        customId: earlyCustomId,
+        userId: user.id,
+        interactionToken: interaction.token
+      });
+    });
+
+    return json({ type: 5, data: { flags: 64 } });
   }
 
   try {
@@ -409,60 +513,6 @@ export async function POST(request: Request) {
             ]
           }
         });
-      }
-
-      if (typeof customId === "string" && customId.startsWith("pix-test:")) {
-        const user = interaction.member?.user || interaction.user;
-        const orderNumber = customId.slice("pix-test:".length);
-        if (!user?.id) {
-          return json({ type: 4, data: { flags: 64, content: "❌ Usuário não identificado." } });
-        }
-
-        const localOrder = await findDiscordOrderByNumber(user.id, orderNumber);
-        if (!localOrder?.id) {
-          return json({ type: 4, data: { flags: 64, content: "❌ Pedido não encontrado." } });
-        }
-
-        const existingPayment = await getMercadoPagoPaymentForOrder(localOrder.id);
-        let providerOrder: MercadoPagoOrder;
-
-        if (existingPayment?.provider_payment_id) {
-          providerOrder = await getSandboxOrder(existingPayment.provider_payment_id);
-        } else {
-          providerOrder = await createSandboxPixOrder({
-            localOrderId: localOrder.id,
-            orderNumber: localOrder.order_number
-          });
-          await attachMercadoPagoSandboxOrder({ localOrder, providerOrder });
-        }
-
-        await syncAndGrantCustomer(providerOrder);
-        return json(pixSandboxPayload(localOrder.order_number, providerOrder));
-      }
-
-      if (typeof customId === "string" && customId.startsWith("pix-refresh:")) {
-        const user = interaction.member?.user || interaction.user;
-        const orderNumber = customId.slice("pix-refresh:".length);
-        if (!user?.id) {
-          return json({ type: 4, data: { flags: 64, content: "❌ Usuário não identificado." } });
-        }
-
-        const localOrder = await findDiscordOrderByNumber(user.id, orderNumber);
-        if (!localOrder?.id) {
-          return json({ type: 4, data: { flags: 64, content: "❌ Pedido não encontrado." } });
-        }
-
-        const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
-        if (!payment?.provider_payment_id) {
-          return json({
-            type: 4,
-            data: { flags: 64, content: "❌ Este pedido ainda não possui um Pix de teste." }
-          });
-        }
-
-        const providerOrder = await getSandboxOrder(payment.provider_payment_id);
-        await syncAndGrantCustomer(providerOrder);
-        return json(pixSandboxPayload(localOrder.order_number, providerOrder));
       }
 
       if (customId === "support:create-ticket") {
