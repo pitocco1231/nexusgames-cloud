@@ -21,7 +21,7 @@ export async function webpAssetResponse(base64: string) {
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4", progressive: true })
     .toBuffer();
 
-  return new Response(jpeg, {
+  return new Response(new Uint8Array(jpeg), {
     status: 200,
     headers: {
       "Content-Type": "image/jpeg",
