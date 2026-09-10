@@ -4,7 +4,7 @@ export const applicationId = "1547332142776975400";
 export const guildId = "1547332734794334319";
 
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
-const assetUrl = (name: string) => `${STORE_URL}/assets/${name}?v=20260910-3`;
+const assetUrl = (name: string) => `${STORE_URL}/assets/${name}?v=20260910-4`;
 
 const VIEW_CHANNEL = 1024n;
 const SEND_MESSAGES = 2048n;
@@ -666,8 +666,7 @@ export async function createSupportTicket(userId: string, username: string) {
   }
 
   const safeUser = username
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD")n    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
