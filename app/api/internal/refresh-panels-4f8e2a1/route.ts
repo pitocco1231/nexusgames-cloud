@@ -1,5 +1,5 @@
-import { ensureServerStructure } from "../../../../../lib/discord";
-import { normalizeOfficialMessages } from "../../../../../lib/officialMessages";
+import { ensureServerStructure } from "../../../../lib/discord";
+import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
