@@ -6,13 +6,25 @@ import {
   getStoreNavigation
 } from "../../../../lib/discord";
 import {
+  createSandboxPixOrder,
+  getPixDetails,
+  getSandboxOrder,
+  MERCADO_PAGO_SANDBOX_AMOUNT_BRL,
+  type MercadoPagoOrder
+} from "../../../../lib/mercadopago";
+import {
   ensureMemberRole,
   ensureTicketStaffAccess,
+  grantCustomerRole,
   isStaffMember
 } from "../../../../lib/roles";
 import {
+  attachMercadoPagoSandboxOrder,
   createDiscordOrder,
+  findDiscordOrderByNumber,
+  getMercadoPagoPaymentForOrder,
   listDiscordOrders,
+  syncMercadoPagoOrder,
   type NexusOrder
 } from "../../../../lib/supabase";
 
@@ -56,7 +68,7 @@ function purchaseCatalogPayload() {
             "",
             "Você também pode entrar diretamente nos canais da categoria em **🎮・PRODUTOS**.",
             "",
-            "Antes do pagamento, o sistema validará disponibilidade, região e preço."
+            "Antes do pagamento real, o sistema validará disponibilidade, região e preço."
           ].join("\n")
         }
       ],
@@ -146,7 +158,9 @@ function statusLabel(status: string) {
     PURCHASING: "🔵 Comprando no fornecedor",
     DELIVERED: "✅ Entregue",
     FAILED: "❌ Falhou",
-    MANUAL_REVIEW: "🛠️ Em análise"
+    MANUAL_REVIEW: "🛠️ Em análise",
+    REFUNDED: "↩️ Reembolsado",
+    CANCELLED: "⚫ Cancelado"
   };
   return labels[status] || status;
 }
@@ -160,6 +174,76 @@ function orderLine(order: NexusOrder) {
     `**${order.order_number}** • ${product?.emoji || "🎮"} ${product?.name || order.product_id}`,
     `${statusLabel(order.status)} • ${price}`
   ].join("\n");
+}
+
+function mercadoPagoStatusText(order: MercadoPagoOrder) {
+  const payment = order.transactions?.payments?.[0];
+  const status = order.status || payment?.status || "unknown";
+  const detail = order.status_detail || payment?.status_detail || "";
+
+  if (status === "processed" && detail === "accredited") return "✅ Aprovado no sandbox";
+  if (status === "action_required") return "⏳ Aguardando simulação do Pix";
+  if (status === "processing") return "🔄 Processando";
+  if (status === "expired") return "⌛ Expirado";
+  if (status === "canceled") return "⚫ Cancelado";
+  if (status === "failed") return "❌ Falhou";
+  if (status === "refunded") return "↩️ Reembolsado";
+  return `ℹ️ ${status}${detail ? ` / ${detail}` : ""}`;
+}
+
+function pixSandboxPayload(orderNumber: string, providerOrder: MercadoPagoOrder) {
+  const pix = getPixDetails(providerOrder);
+  const components: Array<Record<string, unknown>> = [];
+
+  if (pix.ticketUrl) {
+    components.push({
+      type: 2,
+      style: 5,
+      label: "Abrir Pix de teste",
+      url: pix.ticketUrl,
+      emoji: { name: "🧪" }
+    });
+  }
+
+  components.push({
+    type: 2,
+    style: 1,
+    custom_id: `pix-refresh:${orderNumber}`,
+    label: "Atualizar status",
+    emoji: { name: "🔄" }
+  });
+
+  return {
+    type: 4,
+    data: {
+      flags: 64,
+      embeds: [
+        {
+          color: 0x00a650,
+          title: "🧪 Pix Sandbox Mercado Pago",
+          description: [
+            `Pedido NexusGames: **${orderNumber}**`,
+            `Valor de teste: **R$ ${MERCADO_PAGO_SANDBOX_AMOUNT_BRL.toFixed(2).replace(".", ",")}**`,
+            `Status: **${mercadoPagoStatusText(providerOrder)}**`,
+            "",
+            "⚠️ Este checkout é somente de teste e não movimenta dinheiro real.",
+            "No teste oficial do Pix, o Mercado Pago atualiza a order automaticamente para aprovada."
+          ].join("\n")
+        }
+      ],
+      components: [{ type: 1, components }]
+    }
+  };
+}
+
+async function syncAndGrantCustomer(providerOrder: MercadoPagoOrder) {
+  const synced = await syncMercadoPagoOrder(providerOrder);
+  if (synced?.isPaid && synced.discordUserId) {
+    await grantCustomerRole(synced.discordUserId).catch((error) => {
+      console.error("Nao foi possivel aplicar o cargo Cliente", error);
+    });
+  }
+  return synced;
 }
 
 export async function POST(request: Request) {
@@ -244,7 +328,7 @@ export async function POST(request: Request) {
                 description: [
                   product.description,
                   "",
-                  "🔎 Preço e estoque serão consultados antes do checkout.",
+                  "🔎 Preço e estoque serão consultados antes do checkout real.",
                   "🔐 A key será entregue somente de forma privada."
                 ].join("\n")
               }
@@ -304,15 +388,81 @@ export async function POST(request: Request) {
                   `${product.emoji} **${product.name}**`,
                   `Pedido: **${result.order.order_number}**`,
                   "",
-                  "💰 Valor: **cotação pendente**",
-                  "🔒 Nenhum pagamento foi cobrado ainda.",
-                  "",
-                  "O Pix será liberado somente depois da validação de preço e estoque. Use `/pedidos` para acompanhar."
+                  "🔒 Nenhum pagamento real será cobrado nesta fase.",
+                  "🧪 O próximo botão gera o Pix oficial de teste do Mercado Pago."
                 ].join("\n")
+              }
+            ],
+            components: [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: 1,
+                    custom_id: `pix-test:${result.order.order_number}`,
+                    label: "Gerar Pix de teste",
+                    emoji: { name: "🧪" }
+                  }
+                ]
               }
             ]
           }
         });
+      }
+
+      if (typeof customId === "string" && customId.startsWith("pix-test:")) {
+        const user = interaction.member?.user || interaction.user;
+        const orderNumber = customId.slice("pix-test:".length);
+        if (!user?.id) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Usuário não identificado." } });
+        }
+
+        const localOrder = await findDiscordOrderByNumber(user.id, orderNumber);
+        if (!localOrder?.id) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Pedido não encontrado." } });
+        }
+
+        const existingPayment = await getMercadoPagoPaymentForOrder(localOrder.id);
+        let providerOrder: MercadoPagoOrder;
+
+        if (existingPayment?.provider_payment_id) {
+          providerOrder = await getSandboxOrder(existingPayment.provider_payment_id);
+        } else {
+          providerOrder = await createSandboxPixOrder({
+            localOrderId: localOrder.id,
+            orderNumber: localOrder.order_number
+          });
+          await attachMercadoPagoSandboxOrder({ localOrder, providerOrder });
+        }
+
+        await syncAndGrantCustomer(providerOrder);
+        return json(pixSandboxPayload(localOrder.order_number, providerOrder));
+      }
+
+      if (typeof customId === "string" && customId.startsWith("pix-refresh:")) {
+        const user = interaction.member?.user || interaction.user;
+        const orderNumber = customId.slice("pix-refresh:".length);
+        if (!user?.id) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Usuário não identificado." } });
+        }
+
+        const localOrder = await findDiscordOrderByNumber(user.id, orderNumber);
+        if (!localOrder?.id) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Pedido não encontrado." } });
+        }
+
+        const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
+        if (!payment?.provider_payment_id) {
+          return json({
+            type: 4,
+            data: { flags: 64, content: "❌ Este pedido ainda não possui um Pix de teste." }
+          });
+        }
+
+        const providerOrder = await getSandboxOrder(payment.provider_payment_id);
+        await syncAndGrantCustomer(providerOrder);
+        return json(pixSandboxPayload(localOrder.order_number, providerOrder));
       }
 
       if (customId === "support:create-ticket") {
