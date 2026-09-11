@@ -42,10 +42,9 @@ function buttons() {
     {
       type: 1,
       components: [
-        { type: 2, style: 3, custom_id: "buy:mlbb-br-78-8", label: "86 💎 • R$ 7,90" },
-        { type: 2, style: 3, custom_id: "buy:mlbb-br-156-16", label: "172 💎 • R$ 14,90" },
+        { type: 2, style: 2, custom_id: "buy:mlbb-br-234-23", label: "257 💎 • R$ 18,90" },
         { type: 2, style: 3, custom_id: "buy:mlbb-br-310-34", label: "344 💎 • R$ 23,90" },
-        { type: 2, style: 3, custom_id: "buy:mlbb-br-465-51", label: "516 💎 • R$ 36,90" }
+        { type: 2, style: 3, custom_id: "buy:mlbb-br-465-51", label: "516 💎 • R$ 34,90" }
       ]
     }
   ];
@@ -61,10 +60,9 @@ function productPanel(marker: string) {
         description: [
           "**Diamantes direto na sua conta, sem pedir sua senha.**",
           "",
-          "🔥 **86 diamantes (78+8)** — R$ 7,90",
-          "🔥 **172 diamantes (156+16)** — R$ 14,90",
-          "⭐ **344 diamantes (310+34)** — R$ 23,90",
-          "👑 **516 diamantes (465+51)** — R$ 36,90",
+          "🟣 **257 diamantes (234+23)** — R$ 18,90",
+          "⭐ **344 diamantes (310+34)** — R$ 23,90 • **RECOMENDADO**",
+          "👑 **516 diamantes (465+51)** — R$ 34,90 • **MELHOR VALOR**",
           "",
           "### Como funciona",
           "**1.** Escolha o pacote abaixo.",
@@ -73,7 +71,7 @@ function productPanel(marker: string) {
           "**4.** Após o Pix aprovado, a recarga é enviada automaticamente.",
           "",
           "🔐 **Nunca pedimos sua senha.**",
-          "🇧🇷 Oferta exclusiva para recarga compatível com Brasil."
+          "🇧🇷 Pacotes compatíveis com contas Mobile Legends do Brasil."
         ].join("\n"),
         footer: { text: `NexusGames • canal:${marker}` }
       }
@@ -92,14 +90,15 @@ function offerPanel(marker: string, channelId: string) {
         description: [
           "A NexusGames abriu as recargas de **Mobile Legends Brasil**.",
           "",
-          "👑 **516 diamantes por R$ 36,90**",
+          "👑 **516 diamantes por R$ 34,90**",
           "⭐ **344 diamantes por R$ 23,90**",
+          "🟣 **257 diamantes por R$ 18,90**",
           "",
           "✅ validação da conta antes de pagar",
           "✅ sem senha — somente Player ID + Zone ID",
           "✅ entrega automática após confirmação do pagamento",
           "",
-          `Veja todos os pacotes em <#${channelId}> ou compre direto pelos botões abaixo.`
+          `Veja os detalhes em <#${channelId}> ou compre direto pelos botões abaixo.`
         ].join("\n"),
         footer: { text: `NexusGames • canal:${marker}` }
       }
