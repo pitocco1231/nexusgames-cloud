@@ -33,7 +33,7 @@ export async function GET() {
         }
       },
       webhookUrl: "https://nexusgames-cloud-main.vercel.app/api/mercado-pago/webhook",
-      note: "Nenhum segredo e exposto por este endpoint."
+      note: "Credenciais sao verificadas apenas por presenca; nenhum segredo e exposto por este endpoint."
     },
     {
       status: 200,
