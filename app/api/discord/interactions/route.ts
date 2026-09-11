@@ -37,6 +37,20 @@ function withQrAttachment(payload: Record<string, any>, qrBase64: string) {
   return form;
 }
 
+function shouldPauseNewPix(body: string) {
+  if (process.env.NEXUS_REAL_FULFILLMENT_ENABLED === "true") return false;
+  try {
+    const interaction = JSON.parse(body) as Record<string, any>;
+    const customId = String(interaction.data?.custom_id || "");
+    return (
+      customId.startsWith("cart:pix:") ||
+      customId.startsWith("cart:pix-modal:")
+    );
+  } catch {
+    return false;
+  }
+}
+
 const nexusGlobal = globalThis as NexusGlobal;
 if (!nexusGlobal.__nexusPixFetchPatched) {
   const originalFetch = globalThis.fetch.bind(globalThis);
@@ -85,5 +99,16 @@ if (!nexusGlobal.__nexusPixFetchPatched) {
 }
 
 export async function POST(request: Request) {
+  const clone = request.clone();
+  const body = await clone.text();
+  if (shouldPauseNewPix(body)) {
+    return Response.json({
+      type: 4,
+      data: {
+        flags: 64,
+        content: "⚠️ Checkout temporariamente pausado enquanto a entrega automática do fornecedor é finalizada. Nenhum pagamento foi criado."
+      }
+    });
+  }
   return handleDiscordInteraction(request);
 }
