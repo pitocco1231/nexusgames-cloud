@@ -3,6 +3,8 @@ import { createHmac, timingSafeEqual } from "crypto";
 const MERCADO_PAGO_API = "https://api.mercadopago.com";
 const TEST_AMOUNT = "50.00";
 
+export type MercadoPagoMode = "sandbox" | "production";
+
 export type MercadoPagoOrder = {
   id: string;
   external_reference?: string;
@@ -16,6 +18,7 @@ export type MercadoPagoOrder = {
       amount?: string;
       status?: string;
       status_detail?: string;
+      date_of_expiration?: string;
       payment_method?: {
         id?: string;
         type?: string;
@@ -27,21 +30,41 @@ export type MercadoPagoOrder = {
   };
 };
 
-function testAccessToken() {
-  const value = process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN;
+function accessToken(mode: MercadoPagoMode) {
+  const envName = mode === "production"
+    ? "MERCADO_PAGO_ACCESS_TOKEN"
+    : "MERCADO_PAGO_TEST_ACCESS_TOKEN";
+  const value = process.env[envName];
+
   if (!value) {
-    throw new Error(
-      "Mercado Pago Sandbox ainda não está configurado. Adicione MERCADO_PAGO_TEST_ACCESS_TOKEN na Vercel."
-    );
+    throw new Error(`${envName} nao configurado na Vercel.`);
   }
+
   return value;
 }
 
-async function mercadoPagoRequest<T>(path: string, init: RequestInit = {}) {
+function webhookSecret(mode: MercadoPagoMode) {
+  const envName = mode === "production"
+    ? "MERCADO_PAGO_WEBHOOK_SECRET"
+    : "MERCADO_PAGO_TEST_WEBHOOK_SECRET";
+  const value = process.env[envName];
+
+  if (!value) {
+    throw new Error(`${envName} nao configurado na Vercel.`);
+  }
+
+  return value;
+}
+
+async function mercadoPagoRequest<T>(
+  mode: MercadoPagoMode,
+  path: string,
+  init: RequestInit = {}
+) {
   const response = await fetch(`${MERCADO_PAGO_API}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${testAccessToken()}`,
+      Authorization: `Bearer ${accessToken(mode)}`,
       Accept: "application/json",
       "Content-Type": "application/json",
       ...(init.headers || {})
@@ -51,7 +74,7 @@ async function mercadoPagoRequest<T>(path: string, init: RequestInit = {}) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Mercado Pago ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(`Mercado Pago ${response.status}: ${text.slice(0, 500)}`);
   }
 
   return (await response.json()) as T;
@@ -61,6 +84,18 @@ export function isMercadoPagoTestConfigured() {
   return Boolean(process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN);
 }
 
+export function isMercadoPagoProductionConfigured() {
+  return Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+}
+
+export function isMercadoPagoWebhookConfigured(mode: MercadoPagoMode) {
+  return Boolean(
+    mode === "production"
+      ? process.env.MERCADO_PAGO_WEBHOOK_SECRET
+      : process.env.MERCADO_PAGO_TEST_WEBHOOK_SECRET
+  );
+}
+
 export function getPixDetails(order: MercadoPagoOrder) {
   const payment = order.transactions?.payments?.[0];
   return {
@@ -68,17 +103,33 @@ export function getPixDetails(order: MercadoPagoOrder) {
     transactionStatus: payment?.status || null,
     transactionStatusDetail: payment?.status_detail || null,
     ticketUrl: payment?.payment_method?.ticket_url || null,
-    qrCode: payment?.payment_method?.qr_code || null
+    qrCode: payment?.payment_method?.qr_code || null,
+    qrCodeBase64: payment?.payment_method?.qr_code_base64 || null,
+    expiresAt: payment?.date_of_expiration || null
   };
 }
 
-export async function createSandboxPixOrder(params: {
+export async function createPixOrder(params: {
+  mode: MercadoPagoMode;
   localOrderId: string;
   orderNumber: string;
+  amountBrl: number;
+  payerEmail: string;
+  sandboxAutoApprove?: boolean;
 }) {
-  // O fluxo sandbox oficial do Mercado Pago usa R$ 50,00 e first_name=APRO.
-  // Não reutilizar este método em produção.
-  return mercadoPagoRequest<MercadoPagoOrder>("/v1/orders", {
+  if (!Number.isFinite(params.amountBrl) || params.amountBrl <= 0) {
+    throw new Error("Valor do Pix invalido.");
+  }
+
+  const amount = params.amountBrl.toFixed(2);
+  const payer: Record<string, string> = { email: params.payerEmail };
+
+  // O teste oficial de Pix do Mercado Pago usa first_name=APRO.
+  if (params.mode === "sandbox" && params.sandboxAutoApprove) {
+    payer.first_name = "APRO";
+  }
+
+  return mercadoPagoRequest<MercadoPagoOrder>(params.mode, "/v1/orders", {
     method: "POST",
     headers: {
       "X-Idempotency-Key": params.localOrderId
@@ -86,19 +137,18 @@ export async function createSandboxPixOrder(params: {
     body: JSON.stringify({
       type: "online",
       external_reference: params.orderNumber,
-      total_amount: TEST_AMOUNT,
-      payer: {
-        email: "test_user_br@testuser.com",
-        first_name: "APRO"
-      },
+      processing_mode: "automatic",
+      total_amount: amount,
+      payer,
       transactions: {
         payments: [
           {
-            amount: TEST_AMOUNT,
+            amount,
             payment_method: {
               id: "pix",
               type: "bank_transfer"
-            }
+            },
+            expiration_time: "PT30M"
           }
         ]
       }
@@ -106,10 +156,32 @@ export async function createSandboxPixOrder(params: {
   });
 }
 
-export async function getSandboxOrder(providerOrderId: string) {
+export async function getMercadoPagoOrder(
+  providerOrderId: string,
+  mode: MercadoPagoMode
+) {
   return mercadoPagoRequest<MercadoPagoOrder>(
+    mode,
     `/v1/orders/${encodeURIComponent(providerOrderId)}`
   );
+}
+
+export async function createSandboxPixOrder(params: {
+  localOrderId: string;
+  orderNumber: string;
+}) {
+  return createPixOrder({
+    mode: "sandbox",
+    localOrderId: params.localOrderId,
+    orderNumber: params.orderNumber,
+    amountBrl: Number(TEST_AMOUNT),
+    payerEmail: "test_user_br@testuser.com",
+    sandboxAutoApprove: true
+  });
+}
+
+export async function getSandboxOrder(providerOrderId: string) {
+  return getMercadoPagoOrder(providerOrderId, "sandbox");
 }
 
 function parseSignature(value: string) {
@@ -126,18 +198,13 @@ function parseSignature(value: string) {
   return { ts, v1 };
 }
 
-export function verifyMercadoPagoTestWebhook(params: {
+export function verifyMercadoPagoWebhook(params: {
+  mode: MercadoPagoMode;
   signature: string;
   requestId: string;
   dataId: string;
 }) {
-  const secret = process.env.MERCADO_PAGO_TEST_WEBHOOK_SECRET;
-  if (!secret) {
-    throw new Error(
-      "MERCADO_PAGO_TEST_WEBHOOK_SECRET ainda não está configurado na Vercel."
-    );
-  }
-
+  const secret = webhookSecret(params.mode);
   const { ts, v1 } = parseSignature(params.signature);
   if (!ts || !v1 || !params.requestId || !params.dataId) return false;
 
@@ -152,6 +219,14 @@ export function verifyMercadoPagoTestWebhook(params: {
   if (expectedBuffer.length !== receivedBuffer.length) return false;
 
   return timingSafeEqual(expectedBuffer, receivedBuffer);
+}
+
+export function verifyMercadoPagoTestWebhook(params: {
+  signature: string;
+  requestId: string;
+  dataId: string;
+}) {
+  return verifyMercadoPagoWebhook({ mode: "sandbox", ...params });
 }
 
 export const MERCADO_PAGO_SANDBOX_AMOUNT_BRL = Number(TEST_AMOUNT);
