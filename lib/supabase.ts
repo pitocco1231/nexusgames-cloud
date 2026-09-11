@@ -16,6 +16,7 @@ export type NexusOrder = {
   status: string;
   created_at: string;
   paid_at?: string | null;
+  fulfillment_data?: Record<string, unknown>;
 };
 
 export type NexusPayment = {
@@ -85,7 +86,7 @@ async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
 }
 
 const ORDER_SELECT =
-  "id,user_id,order_number,product_id,quantity,unit_price_brl,total_price_brl,status,created_at,paid_at";
+  "id,user_id,order_number,product_id,quantity,unit_price_brl,total_price_brl,status,created_at,paid_at,fulfillment_data";
 
 export async function checkDatabaseConnection() {
   await supabaseRequest<Array<{ id: string }>>("products?select=id&limit=1");
@@ -128,6 +129,7 @@ export async function createDiscordOrder(params: {
   discordUsername?: string | null;
   productId: string;
   interactionId: string;
+  fulfillmentData?: Record<string, unknown>;
 }) {
   const idempotencyKey = `discord:${params.interactionId}`;
   const existing = await findOrderByIdempotencyKey(idempotencyKey);
@@ -149,6 +151,7 @@ export async function createDiscordOrder(params: {
         unit_price_brl: 0,
         total_price_brl: 0,
         status: "CREATED",
+        fulfillment_data: params.fulfillmentData || {},
         idempotency_key: idempotencyKey
       })
     });
@@ -157,7 +160,6 @@ export async function createDiscordOrder(params: {
     if (!order) throw new Error("Não foi possível criar o pedido.");
     return { order, created: true };
   } catch (error) {
-    // Se o Discord reenviar a mesma interação, a chave única evita pedido duplicado.
     const duplicate = await findOrderByIdempotencyKey(idempotencyKey);
     if (duplicate) return { order: duplicate, created: false };
     throw error;
