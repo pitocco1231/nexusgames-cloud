@@ -52,7 +52,7 @@ async function discord(path: string, init: RequestInit = {}) {
   return response.json();
 }
 
-export async function POST() {
+async function runRefresh() {
   const channels = (await discord(`/guilds/${GUILD_ID}/channels`)) as Channel[];
   const results: Array<Record<string, unknown>> = [];
 
@@ -119,5 +119,13 @@ export async function POST() {
     });
   }
 
-  return Response.json({ ok: true, version: VERSION, guildIcon, results }, { status: 200 });
+  return { ok: true, version: VERSION, guildIcon, results };
+}
+
+export async function POST() {
+  return Response.json(await runRefresh(), { status: 200 });
+}
+
+export async function GET() {
+  return Response.json(await runRefresh(), { status: 200 });
 }
