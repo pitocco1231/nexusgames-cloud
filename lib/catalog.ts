@@ -301,8 +301,11 @@ const legacyCategoryIds: Record<string, string> = {
   "playstation-gift-card": "playstation"
 };
 
-export function getProduct(id: string) {
-  return products.find((product) => product.id === id);
+export function getProduct(id: string): Product | ProductOption | undefined {
+  return (
+    products.find((product) => product.id === id) ||
+    productOptions.find((option) => option.id === id)
+  );
 }
 
 export function getProductOption(id: string) {
@@ -316,7 +319,8 @@ export function getProductOptions(categoryId: string) {
 }
 
 export function resolveCategoryId(id: string) {
-  if (getProduct(id)) return id;
+  const category = products.find((product) => product.id === id);
+  if (category) return category.id;
   const option = getProductOption(id);
   if (option) return option.categoryId;
   return legacyCategoryIds[id] || null;
