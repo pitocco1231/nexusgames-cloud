@@ -1,7 +1,7 @@
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
-const ASSET_VERSION = "20260910-platform-v6";
+const ASSET_VERSION = "20260910-premium-v7";
 const NEON = 0x8b5cf6;
 
 type DiscordChannel = { id: string; name: string; type: number; topic?: string | null };
