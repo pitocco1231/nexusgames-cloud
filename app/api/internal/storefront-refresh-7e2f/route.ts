@@ -1,8 +1,8 @@
-import { enableRuntimeCatalog } from "../../../../../lib/catalogRuntime";
-import { professionalizeStorefront } from "../../../../../lib/professionalDiscord";
-import { refreshLiveProductPanels } from "../../../../../lib/liveProductPanels";
-import { syncShop2TopupCatalog } from "../../../../../lib/supplierCatalog";
-import { ensureRolesAndPermissions } from "../../../../../lib/roles";
+import { enableRuntimeCatalog } from "../../../../lib/catalogRuntime";
+import { professionalizeStorefront } from "../../../../lib/professionalDiscord";
+import { refreshLiveProductPanels } from "../../../../lib/liveProductPanels";
+import { syncShop2TopupCatalog } from "../../../../lib/supplierCatalog";
+import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
