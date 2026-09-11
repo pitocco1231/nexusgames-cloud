@@ -170,6 +170,7 @@ function hasPhrase(haystack: string, phrase: string) {
 
 function shop2TopupBrandMatches(option: ProductOption, haystack: string) {
   const brands: Record<string, string[]> = {
+    "mobile-legends": ["mobile legends", "mlbb", "diamonds"],
     roblox: ["roblox", "robux"],
     valorant: ["valorant", "riot"],
     steam: ["steam"],
@@ -217,12 +218,12 @@ function shop2TopupMatchScore(option: ProductOption, product: Shop2TopupSubcateg
     new Set(tokens.flatMap((token) => numericTokens(token)))
   );
   const productNumbers = new Set(numericTokens(haystack));
-  if (requiredNumbers.length && !requiredNumbers.some((token) => productNumbers.has(token))) {
+  if (requiredNumbers.length && !requiredNumbers.every((token) => productNumbers.has(token))) {
     return -999;
   }
 
   const region = shop2TopupRegionScore(option, product);
-  if (region <= -50) return -999;
+  if (region <= -50 || (option.regionHint && region <= 0)) return -999;
 
   let score = 10 + region;
   for (const token of tokens) {
@@ -282,6 +283,13 @@ async function upsertShop2TopupOffer(params: {
     last_cost: params.cost,
     stock_status: "in_stock",
     enabled: true,
+    metadata: {
+      category_id: params.product.category_id,
+      category_name: params.product.category_name || null,
+      fulfillment_type: params.product.fulfillment_type || null,
+      returns_voucher: Boolean(params.product.returns_voucher),
+      supplier_name: params.product.name
+    },
     last_checked_at: now,
     updated_at: now
   };
