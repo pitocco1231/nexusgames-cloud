@@ -33,6 +33,15 @@ function token() {
   return value;
 }
 
+function matchesChannel(actual: string, expected: string) {
+  const normalized = actual
+    .toLowerCase()
+    .replaceAll("・", "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-");
+  return normalized === expected || normalized.endsWith(`-${expected}`);
+}
+
 async function discord(path: string, init: RequestInit = {}) {
   const response = await fetch(`${DISCORD_API}${path}`, {
     ...init,
@@ -58,7 +67,7 @@ async function runRefresh() {
 
   for (const panel of PANELS) {
     try {
-      const channel = channels.find((item) => item.type === 0 && item.name === panel.channel);
+      const channel = channels.find((item) => item.type === 0 && matchesChannel(item.name, panel.channel));
       if (!channel) {
         results.push({ channel: panel.channel, ok: false, reason: "channel_not_found" });
         continue;
@@ -71,7 +80,7 @@ async function runRefresh() {
       );
 
       if (!message) {
-        results.push({ channel: panel.channel, ok: false, reason: "panel_not_found" });
+        results.push({ channel: panel.channel, ok: false, reason: "panel_not_found", actualName: channel.name });
         continue;
       }
 
@@ -93,7 +102,7 @@ async function runRefresh() {
         })
       });
 
-      results.push({ channel: panel.channel, ok: true, messageId: message.id });
+      results.push({ channel: panel.channel, actualName: channel.name, ok: true, messageId: message.id });
     } catch (error) {
       results.push({
         channel: panel.channel,
