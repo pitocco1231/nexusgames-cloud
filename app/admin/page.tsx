@@ -10,23 +10,15 @@ export default function AdminSetupPage() {
   async function runSetup() {
     setLoading(true);
     setResult("");
-
     try {
       const response = await fetch("/api/admin/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ secret })
       });
-
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || "Falha no setup");
-
-      setResult(
-        [
-          data.message,
-          ...(data.changes?.length ? data.changes : ["Nenhuma alteracao era necessaria."])
-        ].join("\n")
-      );
+      setResult([data.message, ...(data.changes?.length ? data.changes : ["Nenhuma alteração era necessária."])].join("\n"));
     } catch (error) {
       setResult(error instanceof Error ? `Erro: ${error.message}` : "Erro desconhecido");
     } finally {
@@ -37,30 +29,44 @@ export default function AdminSetupPage() {
   async function syncSupplier() {
     setLoading(true);
     setResult("");
-
     try {
       const response = await fetch("/api/supplier/sync", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          "Content-Type": "application/json"
-        }
+        headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }
       });
-
       const data = await response.json();
       if (!response.ok || !data.ok) {
         const missing = Array.isArray(data.required) ? ` Faltando: ${data.required.join(", ")}` : "";
         throw new Error(`${data.reason || "Falha ao sincronizar fornecedor"}.${missing}`);
       }
+      setResult([
+        "SHOP2TOPUP sincronizada com sucesso.",
+        `Produtos lidos: ${data.scanned}`,
+        `Opções NexusGames: ${data.options}`,
+        `Correspondências encontradas: ${data.matched}`
+      ].join("\n"));
+    } catch (error) {
+      setResult(error instanceof Error ? `Erro: ${error.message}` : "Erro desconhecido");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      setResult(
-        [
-          "SHOP2TOPUP sincronizada com sucesso.",
-          `Produtos lidos: ${data.scanned}`,
-          `Opcoes NexusGames: ${data.options}`,
-          `Correspondencias encontradas: ${data.matched}`
-        ].join("\n")
-      );
+  async function launchMlbb() {
+    setLoading(true);
+    setResult("");
+    try {
+      const response = await fetch("/api/admin/mlbb-launch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "Falha ao lançar Mobile Legends");
+      setResult([
+        "🔥 Mobile Legends publicado no Discord.",
+        ...(Array.isArray(data.changes) ? data.changes : []),
+        data.channelId ? `Canal: ${data.channelId}` : ""
+      ].filter(Boolean).join("\n"));
     } catch (error) {
       setResult(error instanceof Error ? `Erro: ${error.message}` : "Erro desconhecido");
     } finally {
@@ -73,9 +79,7 @@ export default function AdminSetupPage() {
       <section className="adminCard">
         <span className="eyebrow">NEXUSGAMES CLOUD</span>
         <h1>Painel NexusGames</h1>
-        <p>
-          Atualize o Discord e sincronize o catálogo do fornecedor sem precisar instalar nada no computador.
-        </p>
+        <p>Controle o Discord, o catálogo do fornecedor e as campanhas da loja sem instalar nada no computador.</p>
 
         <label htmlFor="secret">Senha de setup</label>
         <input
@@ -86,12 +90,16 @@ export default function AdminSetupPage() {
           placeholder="Digite a senha configurada na Vercel"
         />
 
-        <button onClick={runSetup} disabled={loading || !secret}>
-          {loading ? "Processando..." : "Atualizar Discord e produtos"}
+        <button onClick={launchMlbb} disabled={loading || !secret}>
+          {loading ? "Processando..." : "🔥 Publicar oferta Mobile Legends"}
         </button>
 
         <button onClick={syncSupplier} disabled={loading || !secret}>
           {loading ? "Processando..." : "Sincronizar SHOP2TOPUP"}
+        </button>
+
+        <button onClick={runSetup} disabled={loading || !secret}>
+          {loading ? "Processando..." : "Atualizar estrutura completa do Discord"}
         </button>
 
         {result && <pre className="setupResult">{result}</pre>}
