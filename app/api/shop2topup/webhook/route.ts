@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { after } from "next/server";
-import { settleShop2TopupOrder } from "../../../../lib/fulfillment";
+import { settleShop2TopupOrder } from "../../../../lib/fulfillmentWithCart";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,8 +33,6 @@ export async function POST(request: Request) {
 
   const event = String(payload.event || headerEvent || "");
 
-  // Permite apenas o teste inicial do painel antes de o segredo ser salvo na Vercel.
-  // Nenhum estado da loja é alterado neste caminho.
   if (!secret && event === "webhook.test") {
     return Response.json({ ok: true, test: true, webhookSecretConfigured: false });
   }
