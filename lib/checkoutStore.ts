@@ -46,7 +46,7 @@ export async function getBestSupplierOffer(productId: string) {
   const rows = await request<SupplierOffer[]>(
     `supplier_products?select=id,product_id,supplier_name,supplier_sku,region,currency,last_cost,stock_status,enabled&product_id=eq.${encodeURIComponent(
       productId
-    )}&enabled=eq.true&stock_status=eq.in_stock&last_cost=not.is.null&order=last_cost.asc&limit=1`
+    )}&supplier_name=eq.shop2topup&enabled=eq.true&stock_status=eq.in_stock&last_cost=not.is.null&order=last_cost.asc&limit=1`
   );
   return rows?.[0] || null;
 }
