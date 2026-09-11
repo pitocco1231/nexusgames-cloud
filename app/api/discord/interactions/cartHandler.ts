@@ -71,6 +71,7 @@ function money(value: number) {
 function realPaymentsReady() {
   return (
     process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
+    process.env.NEXUS_REAL_FULFILLMENT_ENABLED === "true" &&
     isMercadoPagoProductionConfigured() &&
     isMercadoPagoWebhookConfigured("production")
   );
@@ -142,7 +143,8 @@ async function liveCatalogPayload() {
           "",
           "✅ só aparecem produtos com oferta ativa no fornecedor",
           "💰 usamos a oferta de menor custo sincronizada",
-          "🔐 ao comprar, um carrinho privado é criado só para você"
+          "🔐 ao comprar, um carrinho privado é criado só para você",
+          "⚡ produto, validação, Pix e entrega ficam no mesmo checkout"
         ].join("\n")
       }],
       components: [{
@@ -187,8 +189,8 @@ async function liveCategoryData(categoryId: string) {
         "### Produtos disponíveis agora",
         ...rows.map((row) => `• **${displayLabel(row)}**`),
         "",
-        "🛒 Ao clicar, abrimos um carrinho privado estilo ticket.",
-        "⚡ Preço e estoque são reconfirmados antes do Pix."
+        "🛒 Clique em comprar e abriremos um checkout privado para você.",
+        "⚡ Preço, região e estoque são reconfirmados antes do pagamento."
       ].join("\n")
     }],
     components: chunkRows(rows.slice(0, 25)).map((row) => ({
@@ -210,11 +212,12 @@ function cartWaitingPayload(option: ProductOption, price: number) {
       color: 0x7c3aed,
       title: "🛒 Carrinho NexusGames",
       description: [
+        "### Resumo da compra",
         `${option.emoji} **${option.name}**`,
-        `Preço atual: **${money(price)}**`,
+        `Total: **${money(price)}**`,
         "",
-        "Status: **aguardando dados da conta**",
-        "Informe Player ID + Zone ID para validarmos a conta antes de gerar o Pix.",
+        "**Próxima etapa:** validar a conta que receberá a recarga.",
+        "Clique em **Informar dados** e envie apenas Player ID + Zone ID.",
         "",
         "🔐 Nunca pedimos sua senha do jogo."
       ].join("\n")
@@ -223,8 +226,8 @@ function cartWaitingPayload(option: ProductOption, price: number) {
       {
         type: 1,
         components: [
-          { type: 2, style: 1, custom_id: `cart:topup:${option.id}`, label: "Informar Player ID", emoji: { name: "🎮" } },
-          { type: 2, style: 4, custom_id: "cart:cancel", label: "Cancelar", emoji: { name: "✖️" } }
+          { type: 2, style: 3, custom_id: `cart:topup:${option.id}`, label: "Informar dados", emoji: { name: "🎮" } },
+          { type: 2, style: 4, custom_id: "cart:cancel", label: "Cancelar carrinho", emoji: { name: "✖️" } }
         ]
       }
     ]
@@ -244,28 +247,29 @@ function checkoutPayload(params: {
       color: 0x57f287,
       title: "✅ Checkout confirmado",
       description: [
+        "### Revise antes de pagar",
         `${params.option.emoji} **${params.option.name}**`,
-        params.playerName ? `Jogador: **${params.playerName}**` : null,
+        params.playerName ? `Conta validada: **${params.playerName}**` : null,
         params.playerId ? `Player ID: **${params.playerId}**` : null,
         params.zoneId ? `Zone ID: **${params.zoneId}**` : null,
         `Pedido: **${params.orderNumber}**`,
         `Total: **${money(params.salePrice)}**`,
         "",
-        "✅ oferta de menor custo disponível selecionada",
-        "✅ estoque/região validados",
+        "✅ preço e estoque reconfirmados",
+        "✅ região compatível validada",
         params.option.fulfillmentType === "direct_topup"
-          ? "💎 recarga direta após confirmação do pagamento"
-          : "🔑 código entregue de forma privada após confirmação",
+          ? "💎 a recarga será enviada para a conta acima após o pagamento"
+          : "🔑 o código será entregue de forma privada após o pagamento",
         "",
         realPaymentsReady()
-          ? "Clique em **Gerar Pix** para continuar."
-          : "⚠️ Pagamentos reais estão temporariamente bloqueados."
+          ? "Se os dados estiverem corretos, clique em **Finalizar no Pix**."
+          : "⚠️ Checkout em pré-lançamento: o Pix real será liberado junto com a entrega automática."
       ].filter(Boolean).join("\n")
     }],
     components: [{
       type: 1,
       components: [
-        ...(realPaymentsReady() ? [{ type: 2, style: 3, custom_id: `cart:pix:${params.orderNumber}`, label: `Gerar Pix ${money(params.salePrice)}`, emoji: { name: "💠" } }] : []),
+        ...(realPaymentsReady() ? [{ type: 2, style: 3, custom_id: `cart:pix:${params.orderNumber}`, label: `Finalizar no Pix • ${money(params.salePrice)}`, emoji: { name: "💠" } }] : []),
         { type: 2, style: 4, custom_id: "cart:cancel", label: "Cancelar pedido", emoji: { name: "✖️" } }
       ]
     }]
@@ -277,7 +281,7 @@ function topupModal(option: ProductOption) {
     type: 9,
     data: {
       custom_id: `cart:topup-modal:${option.id}`,
-      title: "Dados do Mobile Legends",
+      title: "Validar conta Mobile Legends",
       components: [
         { type: 1, components: [{ type: 4, custom_id: "player_id", label: "Player ID", style: 1, min_length: 3, max_length: 20, required: true, placeholder: "Ex.: 123456789" }] },
         { type: 1, components: [{ type: 4, custom_id: "zone_id", label: "Zone ID", style: 1, min_length: 3, max_length: 20, required: true, placeholder: "Ex.: 1234" }] }
@@ -291,10 +295,10 @@ function pixEmailModal(orderNumber: string) {
     type: 9,
     data: {
       custom_id: `cart:pix-modal:${orderNumber}`,
-      title: "Gerar Pix NexusGames",
+      title: "Finalizar pagamento Pix",
       components: [{
         type: 1,
-        components: [{ type: 4, custom_id: "payer_email", label: "Seu e-mail", style: 1, min_length: 5, max_length: 180, required: true, placeholder: "voce@email.com" }]
+        components: [{ type: 4, custom_id: "payer_email", label: "E-mail para o recibo", style: 1, min_length: 5, max_length: 180, required: true, placeholder: "voce@email.com" }]
       }]
     }
   };
@@ -318,7 +322,7 @@ function pixPanel(orderNumber: string, providerOrder: MercadoPagoOrder) {
   const amount = Number(providerOrder.total_amount || providerOrder.transactions?.payments?.[0]?.amount || 0);
   const actions: Array<Record<string, unknown>> = [];
   if (pix.ticketUrl) actions.push({ type: 2, style: 5, label: "Abrir Pix", url: pix.ticketUrl, emoji: { name: "💠" } });
-  actions.push({ type: 2, style: 1, custom_id: `cart:pix-refresh:${orderNumber}`, label: "Atualizar status", emoji: { name: "🔄" } });
+  actions.push({ type: 2, style: 1, custom_id: `cart:pix-refresh:${orderNumber}`, label: "Atualizar pagamento", emoji: { name: "🔄" } });
   actions.push({ type: 2, style: 4, custom_id: "cart:cancel", label: "Fechar carrinho", emoji: { name: "🔒" } });
   return {
     embeds: [{
@@ -331,8 +335,8 @@ function pixPanel(orderNumber: string, providerOrder: MercadoPagoOrder) {
         pix.expiresAt ? `Expira em: **${pix.expiresAt}**` : null,
         pix.qrCode ? `\n**Pix Copia e Cola:**\n\`${pix.qrCode}\`` : null,
         "",
-        "📱 O QR Code abaixo pode ser escaneado diretamente pelo aplicativo do banco.",
-        "A entrega só começa quando o Mercado Pago confirmar o pagamento."
+        "📱 Escaneie o QR Code abaixo ou use o copia e cola.",
+        "⚡ Assim que o Mercado Pago aprovar, o carrinho avança automaticamente para a entrega."
       ].filter(Boolean).join("\n")
     }],
     components: [{ type: 1, components: actions }]
@@ -360,6 +364,15 @@ async function processCreateCart(params: {
     const option = live.option;
     const cart = await createCartChannel({ userId: params.userId, username: params.username, optionId: option.id });
 
+    if (cart.existingOrder) {
+      await editDeferredInteraction(params.interactionToken, {
+        content: `🛒 Você já possui um pedido aberto. Finalize ou feche o carrinho atual antes de iniciar outro: <#${cart.channelId}>`,
+        embeds: [],
+        components: []
+      });
+      return;
+    }
+
     if (option.fulfillmentType === "direct_topup") {
       await upsertCartPanel(cart.channelId, "main", cartWaitingPayload(option, live.salePriceBrl));
     } else {
@@ -376,7 +389,7 @@ async function processCreateCart(params: {
     }
 
     await editDeferredInteraction(params.interactionToken, {
-      content: `🛒 Seu carrinho privado está pronto: <#${cart.channelId}>`,
+      content: `🛒 Checkout privado criado: <#${cart.channelId}>`,
       embeds: [],
       components: []
     });
@@ -436,7 +449,7 @@ async function processTopup(params: {
       playerId: params.playerId,
       zoneId: params.zoneId
     }));
-    await editDeferredInteraction(params.interactionToken, { content: "✅ Conta validada. O checkout foi atualizado no seu carrinho.", embeds: [], components: [] });
+    await editDeferredInteraction(params.interactionToken, { content: "✅ Conta validada. Revise os dados e finalize a compra pelo carrinho.", embeds: [], components: [] });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro inesperado";
     await editDeferredInteraction(params.interactionToken, { content: `❌ Não consegui validar essa conta. ${message}`, embeds: [], components: [] }).catch(() => null);
@@ -454,7 +467,7 @@ async function processPix(params: {
   try {
     const context = await assertCartOwner(params.channelId, params.userId);
     if (context.orderNumber && context.orderNumber !== params.orderNumber) throw new Error("Pedido não corresponde a este carrinho.");
-    if (!realPaymentsReady()) throw new Error("Pagamentos reais estão temporariamente desabilitados.");
+    if (!realPaymentsReady()) throw new Error("Pagamento real ainda não está liberado para este checkout.");
     const localOrder = await findDiscordOrderByNumber(params.userId, params.orderNumber);
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
     const amount = Number(localOrder.total_price_brl || 0);
@@ -487,7 +500,7 @@ async function processPix(params: {
     await upsertCartPanel(params.channelId, `pix-${params.orderNumber}`, pixPanel(params.orderNumber, providerOrder), pix.qrCodeBase64);
     if (synced?.isPaid) await notifyCartStatus({ orderNumber: params.orderNumber, status: "paid" }).catch(() => null);
     await editDeferredInteraction(params.interactionToken, {
-      content: params.refresh ? "🔄 Status atualizado no carrinho." : "💠 Pix gerado no carrinho. Confira o QR Code e o copia e cola.",
+      content: params.refresh ? "🔄 Pagamento atualizado no carrinho." : "💠 Pix gerado. Pague pelo QR Code ou copia e cola dentro do carrinho.",
       embeds: [],
       components: []
     });
