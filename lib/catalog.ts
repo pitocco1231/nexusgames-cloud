@@ -7,6 +7,8 @@ export type ProductOption = {
   description: string;
   supplierSearch: string[];
   regionHint?: string;
+  fulfillmentType?: "code" | "direct_topup";
+  targetSalePriceBrl?: number;
   enabled: boolean;
 };
 
@@ -20,31 +22,10 @@ export type Product = {
 
 export const products: Product[] = [
   {
-    id: "roblox",
-    name: "Roblox / Robux",
-    emoji: "👾",
-    description: "Robux e gift cards Roblox. O sistema valida região, estoque e preço antes do checkout.",
-    enabled: true
-  },
-  {
-    id: "valorant",
-    name: "Valorant",
-    emoji: "🔮",
-    description: "Gift cards e créditos Valorant/Riot com validação de região antes da compra.",
-    enabled: true
-  },
-  {
-    id: "steam",
-    name: "Steam",
-    emoji: "💳",
-    description: "Steam Wallet e produtos para PC com cotação automática no fornecedor.",
-    enabled: true
-  },
-  {
-    id: "minecraft",
-    name: "Minecraft",
-    emoji: "🪻",
-    description: "Minecraft Java + Bedrock e Minecoins, conforme disponibilidade do fornecedor.",
+    id: "mobile-legends",
+    name: "🔥 Mobile Legends",
+    emoji: "💎",
+    description: "Diamantes MLBB Brasil com entrega direta por Player ID + Zone ID e preço agressivo.",
     enabled: true
   },
   {
@@ -60,10 +41,90 @@ export const products: Product[] = [
     emoji: "💠",
     description: "Gift cards PlayStation Store/PSN com região compatível confirmada antes do pagamento.",
     enabled: true
+  },
+  {
+    id: "roblox",
+    name: "Roblox / Robux",
+    emoji: "👾",
+    description: "Robux e gift cards Roblox. O sistema valida região, estoque e preço antes do checkout.",
+    enabled: false
+  },
+  {
+    id: "valorant",
+    name: "Valorant",
+    emoji: "🔮",
+    description: "Gift cards e créditos Valorant/Riot com validação de região antes da compra.",
+    enabled: false
+  },
+  {
+    id: "steam",
+    name: "Steam",
+    emoji: "💳",
+    description: "Steam Wallet e produtos para PC com cotação automática no fornecedor.",
+    enabled: false
+  },
+  {
+    id: "minecraft",
+    name: "Minecraft",
+    emoji: "🪻",
+    description: "Minecraft Java + Bedrock e Minecoins, conforme disponibilidade do fornecedor.",
+    enabled: false
   }
 ];
 
 export const productOptions: ProductOption[] = [
+  {
+    id: "mlbb-br-78-8",
+    categoryId: "mobile-legends",
+    name: "Mobile Legends — 86 Diamantes (78 + 8)",
+    label: "86 💎 (78+8) — R$ 7,90",
+    emoji: "💎",
+    description: "Recarga direta MLBB Brasil. Entrega pelo Player ID e Zone ID.",
+    supplierSearch: ["diamonds", "78", "8"],
+    regionHint: "BR",
+    fulfillmentType: "direct_topup",
+    targetSalePriceBrl: 7.9,
+    enabled: true
+  },
+  {
+    id: "mlbb-br-156-16",
+    categoryId: "mobile-legends",
+    name: "Mobile Legends — 172 Diamantes (156 + 16)",
+    label: "172 💎 (156+16) — R$ 14,90",
+    emoji: "💎",
+    description: "Recarga direta MLBB Brasil. Entrega pelo Player ID e Zone ID.",
+    supplierSearch: ["diamonds", "156", "16"],
+    regionHint: "BR",
+    fulfillmentType: "direct_topup",
+    targetSalePriceBrl: 14.9,
+    enabled: true
+  },
+  {
+    id: "mlbb-br-310-34",
+    categoryId: "mobile-legends",
+    name: "Mobile Legends — 344 Diamantes (310 + 34)",
+    label: "344 💎 (310+34) — R$ 23,90",
+    emoji: "💎",
+    description: "Recarga direta MLBB Brasil. Melhor equilíbrio entre preço e margem.",
+    supplierSearch: ["diamonds", "310", "34"],
+    regionHint: "BR",
+    fulfillmentType: "direct_topup",
+    targetSalePriceBrl: 23.9,
+    enabled: true
+  },
+  {
+    id: "mlbb-br-465-51",
+    categoryId: "mobile-legends",
+    name: "Mobile Legends — 516 Diamantes (465 + 51)",
+    label: "516 💎 (465+51) — R$ 36,90",
+    emoji: "💎",
+    description: "Recarga direta MLBB Brasil. Oferta principal da NexusGames.",
+    supplierSearch: ["diamonds", "465", "51"],
+    regionHint: "BR",
+    fulfillmentType: "direct_topup",
+    targetSalePriceBrl: 36.9,
+    enabled: true
+  },
   {
     id: "roblox-400-robux",
     categoryId: "roblox",
@@ -73,7 +134,7 @@ export const productOptions: ProductOption[] = [
     description: "Opção de entrada para Roblox. Pode ser atendida por código/gift card compatível.",
     supplierSearch: ["roblox", "400", "robux"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "roblox-800-robux",
@@ -84,7 +145,7 @@ export const productOptions: ProductOption[] = [
     description: "Pacote intermediário de Robux, sujeito à disponibilidade regional.",
     supplierSearch: ["roblox", "800", "robux"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "roblox-1700-robux",
@@ -95,7 +156,7 @@ export const productOptions: ProductOption[] = [
     description: "Pacote maior de Robux, com melhor oferta selecionada no fornecedor.",
     supplierSearch: ["roblox", "1700", "robux"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "roblox-4500-robux",
@@ -106,7 +167,7 @@ export const productOptions: ProductOption[] = [
     description: "Pacote alto de Robux para clientes que buscam maior saldo.",
     supplierSearch: ["roblox", "4500", "robux"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "valorant-giftcard-50",
@@ -117,7 +178,7 @@ export const productOptions: ProductOption[] = [
     description: "Gift card Riot/Valorant de valor equivalente, quando disponível para a região.",
     supplierSearch: ["valorant", "riot", "50"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "valorant-giftcard-100",
@@ -128,7 +189,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito Riot/Valorant com validação automática de região.",
     supplierSearch: ["valorant", "riot", "100"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "valorant-giftcard-200",
@@ -139,7 +200,7 @@ export const productOptions: ProductOption[] = [
     description: "Opção de maior valor para Riot/Valorant, conforme estoque do fornecedor.",
     supplierSearch: ["valorant", "riot", "200"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "steam-wallet-50",
@@ -150,7 +211,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito Steam Wallet. Região será confirmada antes do pagamento real.",
     supplierSearch: ["steam", "wallet", "50"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "steam-wallet-100",
@@ -161,7 +222,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito Steam Wallet de R$ 100, sujeito à disponibilidade regional.",
     supplierSearch: ["steam", "wallet", "100"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "steam-wallet-200",
@@ -172,7 +233,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito Steam Wallet de maior valor, com melhor custo disponível no fornecedor.",
     supplierSearch: ["steam", "wallet", "200"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "minecraft-java-bedrock",
@@ -182,7 +243,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Minecraft Java + Bedrock para PC, com região e ativação validadas.",
     supplierSearch: ["minecraft", "java", "bedrock", "pc"],
-    enabled: true
+    enabled: false
   },
   {
     id: "minecraft-minecoins-1720",
@@ -192,7 +253,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Minecoins para conteúdo do Minecraft Marketplace, conforme região disponível.",
     supplierSearch: ["minecraft", "minecoins", "1720"],
-    enabled: true
+    enabled: false
   },
   {
     id: "minecraft-minecoins-3500",
@@ -202,7 +263,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Pacote maior de Minecoins, sujeito ao catálogo atual do fornecedor.",
     supplierSearch: ["minecraft", "minecoins", "3500"],
-    enabled: true
+    enabled: false
   },
   {
     id: "xbox-giftcard-50",
@@ -213,6 +274,7 @@ export const productOptions: ProductOption[] = [
     description: "Saldo Xbox/Microsoft com região validada antes do checkout.",
     supplierSearch: ["xbox", "gift card", "50"],
     regionHint: "BR",
+    fulfillmentType: "code",
     enabled: true
   },
   {
@@ -224,6 +286,7 @@ export const productOptions: ProductOption[] = [
     description: "Saldo Xbox/Microsoft de R$ 100, conforme estoque regional.",
     supplierSearch: ["xbox", "gift card", "100"],
     regionHint: "BR",
+    fulfillmentType: "code",
     enabled: true
   },
   {
@@ -234,7 +297,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🎮",
     description: "Assinatura Game Pass Ultimate por 1 mês. A região do código será validada.",
     supplierSearch: ["xbox", "game pass ultimate", "1 month"],
-    enabled: true
+    enabled: false
   },
   {
     id: "xbox-gamepass-ultimate-3m",
@@ -244,7 +307,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🎮",
     description: "Assinatura Game Pass Ultimate por 3 meses, conforme disponibilidade.",
     supplierSearch: ["xbox", "game pass ultimate", "3 month"],
-    enabled: true
+    enabled: false
   },
   {
     id: "playstation-giftcard-30",
@@ -255,7 +318,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito PlayStation Store com região compatível confirmada antes da compra.",
     supplierSearch: ["playstation", "psn", "30"],
     regionHint: "BR",
-    enabled: true
+    enabled: false
   },
   {
     id: "playstation-giftcard-60",
@@ -266,6 +329,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito PlayStation Store de R$ 60, conforme estoque regional.",
     supplierSearch: ["playstation", "psn", "60"],
     regionHint: "BR",
+    fulfillmentType: "code",
     enabled: true
   },
   {
@@ -277,6 +341,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito PlayStation Store de R$ 100, com validação de região.",
     supplierSearch: ["playstation", "psn", "100"],
     regionHint: "BR",
+    fulfillmentType: "code",
     enabled: true
   },
   {
@@ -288,6 +353,7 @@ export const productOptions: ProductOption[] = [
     description: "Crédito PlayStation Store de maior valor, sujeito ao catálogo do fornecedor.",
     supplierSearch: ["playstation", "psn", "250"],
     regionHint: "BR",
+    fulfillmentType: "code",
     enabled: true
   }
 ];
