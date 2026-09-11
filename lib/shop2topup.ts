@@ -49,6 +49,16 @@ type ErrorEnvelope = {
   };
 };
 
+type Envelope<T> = {
+  success?: boolean;
+  data?: T | Record<string, unknown>;
+  account?: Shop2TopupAccount;
+  categories?: Shop2TopupCategory[];
+  subcategories?: Shop2TopupSubcategory[];
+  price?: Shop2TopupPrice;
+  requirements?: Array<Record<string, unknown>>;
+};
+
 function apiKey() {
   const key = process.env.S2T_KEY?.trim();
   if (!key) throw new Error("S2T_KEY não configurada na Vercel.");
@@ -90,38 +100,53 @@ async function s2tRequest<T>(path: string, init: RequestInit = {}) {
   return payload as T;
 }
 
+function nestedRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 export async function getShop2TopupAccount() {
-  const payload = await s2tRequest<{ success: boolean; account: Shop2TopupAccount }>("/account");
-  return payload.account;
+  const payload = await s2tRequest<Envelope<Shop2TopupAccount>>("/account");
+  const data = nestedRecord(payload.data);
+  return (payload.account || data?.account || payload.data || {}) as Shop2TopupAccount;
 }
 
 export async function listShop2TopupCategories() {
-  const payload = await s2tRequest<{ success: boolean; categories?: Shop2TopupCategory[] }>(
-    "/catalog/categories"
-  );
-  return payload.categories || [];
+  const payload = await s2tRequest<Envelope<Shop2TopupCategory[]>>("/catalog/categories");
+  const data = nestedRecord(payload.data);
+  const rows = payload.categories || data?.categories || payload.data;
+  return Array.isArray(rows) ? (rows as Shop2TopupCategory[]) : [];
 }
 
 export async function listShop2TopupSubcategories(categoryId?: number) {
   const query = categoryId ? `?categoryId=${encodeURIComponent(String(categoryId))}` : "";
-  const payload = await s2tRequest<{
-    success: boolean;
-    subcategories?: Shop2TopupSubcategory[];
-  }>(`/catalog/subcategories${query}`);
-  return payload.subcategories || [];
+  const payload = await s2tRequest<Envelope<Shop2TopupSubcategory[]>>(
+    `/catalog/subcategories${query}`
+  );
+  const data = nestedRecord(payload.data);
+  const rows = payload.subcategories || data?.subcategories || payload.data;
+  return Array.isArray(rows) ? (rows as Shop2TopupSubcategory[]) : [];
 }
 
 export async function getShop2TopupPrice(itemId: number | string) {
-  const payload = await s2tRequest<{ success: boolean; price: Shop2TopupPrice }>(
+  const payload = await s2tRequest<Envelope<Shop2TopupPrice>>(
     `/catalog/subcategory/${encodeURIComponent(String(itemId))}/price`
   );
-  return payload.price;
+  const data = nestedRecord(payload.data);
+  return (payload.price || data?.price || payload.data) as Shop2TopupPrice;
 }
 
 export async function getShop2TopupRequirements(categoryId: number | string) {
-  return s2tRequest<{ success: boolean; requirements?: Array<Record<string, unknown>> }>(
+  const payload = await s2tRequest<Envelope<Array<Record<string, unknown>>>>(
     `/catalog/category/${encodeURIComponent(String(categoryId))}/requirements`
   );
+  const data = nestedRecord(payload.data);
+  const rows = payload.requirements || data?.requirements || payload.data;
+  return {
+    success: payload.success !== false,
+    requirements: Array.isArray(rows) ? rows : []
+  };
 }
 
 export async function validateShop2TopupPlayer(params: {
