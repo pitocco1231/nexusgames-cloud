@@ -1,5 +1,6 @@
 import { after } from "next/server";
-import { fulfillPaidOrder } from "../../../../lib/fulfillment";
+import { notifyCartStatus } from "../../../../lib/cart";
+import { fulfillPaidOrder } from "../../../../lib/fulfillmentWithCart";
 import {
   getMercadoPagoOrder,
   verifyMercadoPagoWebhook,
@@ -11,17 +12,42 @@ import { syncMercadoPagoOrder } from "../../../../lib/supabase";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type MercadoPagoData = { id?: string };
 type MercadoPagoWebhookBody = {
   type?: string;
   live_mode?: boolean;
-  data?: { id?: string };
+  data?: MercadoPagoData | MercadoPagoData[];
 };
+
+function bodyDataId(body: MercadoPagoWebhookBody) {
+  if (Array.isArray(body.data)) return String(body.data[0]?.id || "");
+  return String(body.data?.id || "");
+}
 
 async function processOrder(dataId: string, mode: MercadoPagoMode) {
   try {
-    // A notificacao apenas sinaliza a mudanca. O estado confiavel e relido na API.
     const providerOrder = await getMercadoPagoOrder(dataId, mode);
     const synced = await syncMercadoPagoOrder(providerOrder);
+
+    if (synced?.order?.order_number) {
+      if (synced.isPaid) {
+        await notifyCartStatus({
+          orderNumber: synced.order.order_number,
+          status: "paid"
+        }).catch(() => null);
+      } else if (["CANCELLED", "FAILED"].includes(String(synced.order.status || ""))) {
+        await notifyCartStatus({
+          orderNumber: synced.order.order_number,
+          status: "failed",
+          details: `Status do pagamento: ${synced.order.status}`
+        }).catch(() => null);
+      } else if (String(synced.order.status || "") === "REFUNDED") {
+        await notifyCartStatus({
+          orderNumber: synced.order.order_number,
+          status: "refunded"
+        }).catch(() => null);
+      }
+    }
 
     if (synced?.isPaid && synced.discordUserId) {
       await grantCustomerRole(synced.discordUserId).catch((error) => {
@@ -62,8 +88,9 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, ignored: true }, { status: 200 });
   }
 
-  const dataId = queryDataId || body.data?.id || "";
-  if (!dataId || (body.data?.id && body.data.id !== dataId)) {
+  const payloadDataId = bodyDataId(body);
+  const dataId = queryDataId || payloadDataId;
+  if (!dataId || (payloadDataId && payloadDataId !== dataId)) {
     return Response.json({ ok: false, reason: "invalid_data_id" }, { status: 400 });
   }
 
@@ -91,7 +118,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: false }, { status: 500 });
   }
 
-  // ACK imediato; sincronizacao, cargo Cliente e fulfillment rodam depois.
   after(() => processOrder(dataId, mode));
   return Response.json({ ok: true, accepted: true, mode }, { status: 200 });
 }
