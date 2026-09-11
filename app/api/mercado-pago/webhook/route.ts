@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { fulfillPaidOrder } from "../../../../lib/fulfillment";
 import {
   getMercadoPagoOrder,
   verifyMercadoPagoWebhook,
@@ -27,6 +28,15 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
         console.error("NexusGames: falha ao aplicar cargo Cliente apos Pix", error);
       });
     }
+
+    if (synced?.isPaid && synced.order?.id) {
+      await fulfillPaidOrder(synced.order.id).catch((error) => {
+        console.error(
+          "NexusGames: pagamento aprovado, mas fulfillment automatico falhou",
+          error instanceof Error ? error.message : error
+        );
+      });
+    }
   } catch (error) {
     console.error(
       `NexusGames: falha no processamento assincrono do webhook ${mode}`,
@@ -48,7 +58,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, reason: "invalid_json" }, { status: 400 });
   }
 
-  if (body.type && body.type !== "order") {
+  if (body.type && !["order", "orders"].includes(body.type)) {
     return Response.json({ ok: true, ignored: true }, { status: 200 });
   }
 
@@ -81,7 +91,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false }, { status: 500 });
   }
 
-  // ACK imediato; sincronizacao e consulta ao Mercado Pago rodam depois.
+  // ACK imediato; sincronizacao, cargo Cliente e fulfillment rodam depois.
   after(() => processOrder(dataId, mode));
   return Response.json({ ok: true, accepted: true, mode }, { status: 200 });
 }
