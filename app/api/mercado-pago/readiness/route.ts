@@ -21,8 +21,9 @@ export async function GET() {
       pix: {
         sandbox: {
           token: sandboxToken,
+          qrGenerationReady: sandboxToken,
           webhookSignature: sandboxWebhook,
-          ready: sandboxToken && sandboxWebhook
+          automaticNotificationReady: sandboxToken && sandboxWebhook
         },
         production: {
           token: productionToken,
