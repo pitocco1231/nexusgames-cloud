@@ -1,4 +1,4 @@
-import { POST as handleDiscordInteraction } from "./handler";
+import { POST as handleDiscordInteraction } from "./cartHandler";
 import { getCachedPixQr } from "../../../../lib/mercadopago";
 
 export const runtime = "nodejs";
