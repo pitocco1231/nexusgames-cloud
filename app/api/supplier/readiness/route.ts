@@ -1,27 +1,32 @@
-import {
-  codesWholesaleMode,
-  getCodesWholesaleAccount,
-  isCodesWholesaleConfigured
-} from "../../../../lib/codeswholesale";
 import { productOptions } from "../../../../lib/catalog";
+import {
+  getShop2TopupAccount,
+  isShop2TopupConfigured
+} from "../../../../lib/shop2topup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const configured = isCodesWholesaleConfigured();
+  const configured = isShop2TopupConfigured();
   const url = new URL(request.url);
   const liveCheck = url.searchParams.get("check") === "1";
 
   let connection: "not_configured" | "configured" | "connected" | "error" = configured
     ? "configured"
     : "not_configured";
+  let account: { enabled?: boolean; verified?: boolean; clientType?: string } | null = null;
   let error: string | null = null;
 
   if (configured && liveCheck) {
     try {
-      await getCodesWholesaleAccount();
+      const remote = await getShop2TopupAccount();
       connection = "connected";
+      account = {
+        enabled: remote.enabled,
+        verified: remote.verified,
+        clientType: remote.client_type
+      };
     } catch (cause) {
       connection = "error";
       error = cause instanceof Error ? cause.message : "Erro ao consultar fornecedor";
@@ -31,10 +36,10 @@ export async function GET(request: Request) {
   return Response.json(
     {
       ok: true,
-      supplier: "codeswholesale",
-      mode: codesWholesaleMode(),
+      supplier: "shop2topup",
       configured,
       connection,
+      account,
       catalogOptions: productOptions.filter((item) => item.enabled).length,
       error
     },
