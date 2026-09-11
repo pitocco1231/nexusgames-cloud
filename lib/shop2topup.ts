@@ -153,6 +153,26 @@ export async function validateShop2TopupPlayer(params: {
   subCategoryId: number;
   requirements: Record<string, unknown>;
 }) {
+  const playerId = String(params.requirements.player_id || "");
+  const zoneId = String(params.requirements.zone_id || "");
+  const safeTestBypass =
+    process.env.NEXUS_REAL_FULFILLMENT_ENABLED !== "true" &&
+    playerId === "999999999" &&
+    zoneId === "9999";
+
+  if (safeTestBypass) {
+    return {
+      success: true,
+      test_mode: true,
+      player: {
+        player_id: playerId,
+        zone_id: zoneId,
+        player_name: "NexusGames Teste",
+        region: "BR"
+      }
+    };
+  }
+
   return s2tRequest<Record<string, unknown>>("/player/validate", {
     method: "POST",
     body: JSON.stringify({
