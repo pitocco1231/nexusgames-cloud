@@ -3,6 +3,7 @@ import { finalizeStore } from "../../../../../lib/storeFinalizer";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Endpoint temporário de execução única; removido após organizar a loja.
 export async function GET() {
   try {
     const result = await finalizeStore();
