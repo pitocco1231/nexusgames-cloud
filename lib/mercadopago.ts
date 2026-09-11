@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 const MERCADO_PAGO_API = "https://api.mercadopago.com";
 const TEST_AMOUNT = "50.00";
+const PIX_QR_CACHE = new Map<string, string>();
 
 export type MercadoPagoMode = "sandbox" | "production";
 
@@ -80,6 +81,24 @@ async function mercadoPagoRequest<T>(
   return (await response.json()) as T;
 }
 
+function rememberPixQr(order: MercadoPagoOrder) {
+  const orderNumber = String(order.external_reference || "").trim();
+  const base64 = order.transactions?.payments?.[0]?.payment_method?.qr_code_base64;
+  if (orderNumber && base64) {
+    PIX_QR_CACHE.set(orderNumber, base64);
+    while (PIX_QR_CACHE.size > 100) {
+      const first = PIX_QR_CACHE.keys().next().value;
+      if (!first) break;
+      PIX_QR_CACHE.delete(first);
+    }
+  }
+  return order;
+}
+
+export function getCachedPixQr(orderNumber: string) {
+  return PIX_QR_CACHE.get(orderNumber) || null;
+}
+
 export function isMercadoPagoTestConfigured() {
   return Boolean(process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN);
 }
@@ -129,7 +148,7 @@ export async function createPixOrder(params: {
     payer.first_name = "APRO";
   }
 
-  return mercadoPagoRequest<MercadoPagoOrder>(params.mode, "/v1/orders", {
+  const order = await mercadoPagoRequest<MercadoPagoOrder>(params.mode, "/v1/orders", {
     method: "POST",
     headers: {
       "X-Idempotency-Key": params.localOrderId
@@ -154,16 +173,18 @@ export async function createPixOrder(params: {
       }
     })
   });
+  return rememberPixQr(order);
 }
 
 export async function getMercadoPagoOrder(
   providerOrderId: string,
   mode: MercadoPagoMode
 ) {
-  return mercadoPagoRequest<MercadoPagoOrder>(
+  const order = await mercadoPagoRequest<MercadoPagoOrder>(
     mode,
     `/v1/orders/${encodeURIComponent(providerOrderId)}`
   );
+  return rememberPixQr(order);
 }
 
 export async function createSandboxPixOrder(params: {
