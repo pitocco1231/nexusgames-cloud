@@ -208,10 +208,10 @@ export function verifyMercadoPagoWebhook(params: {
   const { ts, v1 } = parseSignature(params.signature);
   if (!ts || !v1 || !params.requestId || !params.dataId) return false;
 
-  const dataId = /^[a-z0-9]+$/i.test(params.dataId)
-    ? params.dataId.toLowerCase()
-    : params.dataId;
-  const manifest = `id:${dataId};request-id:${params.requestId};ts:${ts};`;
+  // O data.id faz parte da assinatura exatamente como foi enviado.
+  // IDs de Order podem conter letras maiusculas (ex.: ORD...), entao
+  // alterar o case invalida o HMAC.
+  const manifest = `id:${params.dataId};request-id:${params.requestId};ts:${ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
 
   const expectedBuffer = Buffer.from(expected, "utf8");
