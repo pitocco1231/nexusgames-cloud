@@ -1,5 +1,5 @@
-import { isCodesWholesaleConfigured } from "../../../../lib/codeswholesale";
-import { syncCodesWholesaleCatalog } from "../../../../lib/supplierCatalog";
+import { isShop2TopupConfigured } from "../../../../lib/shop2topup";
+import { syncShop2TopupCatalog } from "../../../../lib/supplierCatalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,23 +16,19 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
-  if (!isCodesWholesaleConfigured()) {
+  if (!isShop2TopupConfigured()) {
     return Response.json(
       {
         ok: false,
         reason: "supplier_not_configured",
-        required: [
-          "CODESWHOLESALE_CLIENT_ID",
-          "CODESWHOLESALE_CLIENT_SECRET",
-          "CODESWHOLESALE_MODE"
-        ]
+        required: ["S2T_KEY"]
       },
       { status: 503 }
     );
   }
 
   try {
-    const result = await syncCodesWholesaleCatalog();
+    const result = await syncShop2TopupCatalog();
     return Response.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";
