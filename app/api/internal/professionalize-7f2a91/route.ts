@@ -1,10 +1,10 @@
-import { productOptions } from "../../../../../lib/catalog";
-import { syncShop2TopupCatalog } from "../../../../../lib/supplierCatalog";
-import { refreshLiveProductPanels } from "../../../../../lib/liveProductPanels";
-import { ensureServerStructure } from "../../../../../lib/discord";
-import { normalizeOfficialMessages } from "../../../../../lib/officialMessages";
-import { applyFuturisticTheme } from "../../../../../lib/futuristicTheme";
-import { ensureRolesAndPermissions } from "../../../../../lib/roles";
+import { productOptions } from "../../../../lib/catalog";
+import { syncShop2TopupCatalog } from "../../../../lib/supplierCatalog";
+import { refreshLiveProductPanels } from "../../../../lib/liveProductPanels";
+import { ensureServerStructure } from "../../../../lib/discord";
+import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
+import { applyFuturisticTheme } from "../../../../lib/futuristicTheme";
+import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
