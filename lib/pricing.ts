@@ -1,22 +1,33 @@
 import { getBestSupplierOffer, saveOrderQuote } from "./checkoutStore";
 
-async function eurToBrlRate() {
-  const manual = Number(process.env.NEXUS_EUR_BRL_RATE || 0);
+async function currencyToBrlRate(currency: string) {
+  const normalized = currency.toUpperCase();
+  if (normalized === "BRL") return 1;
+
+  const manualName = `NEXUS_${normalized}_BRL_RATE`;
+  const manual = Number(process.env[manualName] || 0);
   if (Number.isFinite(manual) && manual > 0) return manual;
 
-  const response = await fetch("https://api.frankfurter.app/latest?from=EUR&to=BRL", {
-    cache: "no-store",
-    signal: AbortSignal.timeout(5000)
-  });
+  if (!/^[A-Z]{3}$/.test(normalized)) {
+    throw new Error(`Moeda do fornecedor inválida: ${currency}`);
+  }
+
+  const response = await fetch(
+    `https://api.frankfurter.app/latest?from=${encodeURIComponent(normalized)}&to=BRL`,
+    {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
+    }
+  );
 
   if (!response.ok) {
-    throw new Error("Não foi possível obter a cotação EUR/BRL para calcular o preço.");
+    throw new Error(`Não foi possível obter a cotação ${normalized}/BRL.`);
   }
 
   const payload = (await response.json()) as { rates?: { BRL?: number } };
   const rate = Number(payload.rates?.BRL || 0);
   if (!Number.isFinite(rate) || rate <= 0) {
-    throw new Error("Cotação EUR/BRL inválida.");
+    throw new Error(`Cotação ${normalized}/BRL inválida.`);
   }
   return rate;
 }
@@ -46,12 +57,9 @@ export async function quoteProduct(productId: string) {
     throw new Error("O fornecedor não retornou um custo válido para esta opção.");
   }
 
-  if (offer.currency !== "EUR") {
-    throw new Error(`Moeda do fornecedor ainda não suportada: ${offer.currency}`);
-  }
-
-  const eurBrl = await eurToBrlRate();
-  const costBrl = cost * eurBrl;
+  const currency = String(offer.currency || "").toUpperCase();
+  const fxBrl = await currencyToBrlRate(currency);
+  const costBrl = cost * fxBrl;
   const { marginPercent, minMarginBrl } = pricingSettings();
   const percentagePrice = costBrl * (1 + marginPercent / 100);
   const minimumPrice = costBrl + minMarginBrl;
@@ -63,8 +71,13 @@ export async function quoteProduct(productId: string) {
     supplier: offer.supplier_name,
     supplierSku: offer.supplier_sku,
     region: offer.region,
-    costEur: cost,
-    eurBrl,
+    supplierCurrency: currency,
+    supplierCost: cost,
+    fxBrl,
+    costUsd: currency === "USD" ? cost : null,
+    usdBrl: currency === "USD" ? fxBrl : null,
+    costEur: currency === "EUR" ? cost : null,
+    eurBrl: currency === "EUR" ? fxBrl : null,
     costBrl: roundPrice(costBrl),
     marginPercent,
     minMarginBrl,
