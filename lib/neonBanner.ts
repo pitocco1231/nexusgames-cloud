@@ -12,68 +12,72 @@ type BannerKind =
 
 type Banner = {
   title: string;
+  eyebrow: string;
   subtitle: string;
   kind: BannerKind;
   accent: string;
-  accent2: string;
 };
+
+const PURPLE = "#8B5CF6";
+const WHITE = "#F7F5FF";
+const MUTED = "#B7AEC8";
 
 const BANNERS: Record<string, Banner> = {
   roblox: {
     title: "ROBLOX",
-    subtitle: "ROBLOX • ROBUX • ENTREGA DIGITAL",
+    eyebrow: "CATÁLOGO • ROBLOX",
+    subtitle: "Produtos digitais selecionados para sua conta.",
     kind: "roblox",
-    accent: "#b45cff",
-    accent2: "#7c3aed"
+    accent: "#C084FC"
   },
   minecraft: {
     title: "MINECRAFT",
-    subtitle: "JAVA + BEDROCK • ENTREGA DIGITAL",
+    eyebrow: "CATÁLOGO • MINECRAFT",
+    subtitle: "Java + Bedrock e produtos digitais.",
     kind: "minecraft",
-    accent: "#a970ff",
-    accent2: "#6d28d9"
+    accent: "#A78BFA"
   },
   steam: {
     title: "STEAM",
-    subtitle: "WALLET • KEYS • PC GAMING",
+    eyebrow: "CATÁLOGO • PC GAMING",
+    subtitle: "Wallet, keys e produtos digitais para PC.",
     kind: "steam",
-    accent: "#8b5cf6",
-    accent2: "#5b21b6"
+    accent: "#93C5FD"
   },
   valorant: {
     title: "VALORANT",
-    subtitle: "VALORANT POINTS • ENTREGA DIGITAL",
+    eyebrow: "CATÁLOGO • VALORANT",
+    subtitle: "Valorant Points e produtos relacionados.",
     kind: "valorant",
-    accent: "#a855f7",
-    accent2: "#7e22ce"
+    accent: "#F0ABFC"
   },
   xbox: {
     title: "XBOX",
-    subtitle: "GAME PASS • GIFT CARDS • DIGITAL",
+    eyebrow: "CATÁLOGO • XBOX",
+    subtitle: "Game Pass, gift cards e produtos digitais.",
     kind: "xbox",
-    accent: "#a855f7",
-    accent2: "#22c55e"
+    accent: "#86EFAC"
   },
   playstation: {
     title: "PLAYSTATION",
-    subtitle: "PSN • GIFT CARDS • DIGITAL",
+    eyebrow: "CATÁLOGO • PLAYSTATION",
+    subtitle: "PSN, gift cards e produtos digitais.",
     kind: "playstation",
-    accent: "#8b5cf6",
-    accent2: "#3b82f6"
+    accent: "#7DD3FC"
   },
   ofertas: {
     title: "OFERTAS",
-    subtitle: "DROPS • DESCONTOS • OPORTUNIDADES",
+    eyebrow: "NEXUS • DROPS",
+    subtitle: "Cupons, campanhas e oportunidades por tempo limitado.",
     kind: "ofertas",
-    accent: "#d946ef",
-    accent2: "#8b5cf6"
+    accent: "#F0ABFC"
   },
   suporte: {
     title: "SUPORTE",
-    subtitle: "ATENDIMENTO • TICKETS • NEXUSGAMES",
+    eyebrow: "NEXUS • CENTRAL DE AJUDA",
+    subtitle: "Atendimento privado para compras, pagamentos e entrega.",
     kind: "suporte",
-    accent: "#a855f7",
-    accent2: "#6366f1"
+    accent: "#A5B4FC"
   }
 };
 
@@ -86,227 +90,144 @@ function escapeXml(value: string) {
     .replaceAll("'", "&apos;");
 }
 
-function floatingCube(x: number, y: number, size: number, accent: string, rotate = 0) {
-  const hole = Math.round(size * 0.28);
-  const hx = Math.round((size - hole) / 2);
-  return `<g transform="translate(${x} ${y}) rotate(${rotate} ${size / 2} ${size / 2})" filter="url(#softGlow)">
-    <rect width="${size}" height="${size}" rx="${Math.max(5, Math.round(size * 0.08))}" fill="#10061f" stroke="${accent}" stroke-width="3"/>
-    <rect x="${hx}" y="${hx}" width="${hole}" height="${hole}" rx="${Math.max(2, Math.round(hole * 0.08))}" fill="#02030a" stroke="#f4eaff" stroke-opacity="0.7" stroke-width="2"/>
+function iconArt(kind: BannerKind, accent: string) {
+  const common = `stroke="${accent}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"`;
+
+  if (kind === "roblox") {
+    return `<g transform="translate(826 184) rotate(10 132 132)" filter="url(#glow)">
+      <rect x="26" y="26" width="212" height="212" rx="34" fill="#110B1D" ${common}/>
+      <rect x="92" y="92" width="80" height="80" rx="14" fill="#07050D" stroke="${WHITE}" stroke-opacity=".9" stroke-width="7"/>
+    </g>`;
+  }
+
+  if (kind === "minecraft") {
+    return `<g transform="translate(815 170)" filter="url(#glow)" ${common} fill="none">
+      <path d="M137 12 L252 74 L137 136 L22 74 Z" fill="#100B1C"/>
+      <path d="M22 74 V205 L137 269 V136 Z" fill="#0B0714"/>
+      <path d="M252 74 V205 L137 269 V136 Z" fill="#140A22"/>
+      <path d="M22 74 L137 136 L252 74 M137 136 V269"/>
+      <path d="M80 45 L194 108 M80 237 L194 174" stroke-opacity=".45"/>
+    </g>`;
+  }
+
+  if (kind === "steam") {
+    return `<g transform="translate(806 166)" filter="url(#glow)">
+      <circle cx="150" cy="138" r="124" fill="#0E0918" ${common}/>
+      <circle cx="194" cy="98" r="43" fill="#090611" stroke="${WHITE}" stroke-width="8"/>
+      <circle cx="194" cy="98" r="14" fill="${accent}"/>
+      <circle cx="89" cy="189" r="37" fill="#090611" stroke="${WHITE}" stroke-width="8"/>
+      <path d="M116 164 L164 124" stroke="${WHITE}" stroke-width="18" stroke-linecap="round"/>
+    </g>`;
+  }
+
+  if (kind === "valorant") {
+    return `<g transform="translate(818 174)" filter="url(#glow)" fill="none" ${common}>
+      <path d="M25 34 L126 246 L166 246 L86 70 Z" fill="#12091D"/>
+      <path d="M274 34 L173 246 L133 246 L213 70 Z" fill="#12091D"/>
+      <path d="M94 108 L150 204 L206 108" stroke="${WHITE}" stroke-width="10"/>
+    </g>`;
+  }
+
+  if (kind === "xbox") {
+    return `<g transform="translate(817 170)" filter="url(#glow)">
+      <circle cx="145" cy="142" r="125" fill="#0E0918" ${common}/>
+      <path d="M65 72 Q145 28 225 72 Q178 92 145 126 Q112 92 65 72 Z" fill="${accent}" opacity=".9"/>
+      <path d="M63 222 Q96 154 145 126 Q194 154 227 222" fill="none" stroke="${accent}" stroke-width="15" stroke-linecap="round"/>
+    </g>`;
+  }
+
+  if (kind === "playstation") {
+    return `<g transform="translate(814 176)" filter="url(#glow)" ${common} fill="none">
+      <path d="M35 70 H114 V149 H35 Z"/>
+      <circle cx="219" cy="108" r="40"/>
+      <path d="M47 232 L88 164 L129 232 Z"/>
+      <path d="M185 175 L250 240 M250 175 L185 240"/>
+    </g>`;
+  }
+
+  if (kind === "ofertas") {
+    return `<g transform="translate(810 170)" filter="url(#glow)">
+      <g transform="rotate(-8 150 135)"><rect x="30" y="36" width="245" height="196" rx="28" fill="#10091B" ${common}/><text x="152" y="170" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="116" font-weight="900" fill="${WHITE}">%</text></g>
+      <path d="M278 38 L302 62 M22 232 L0 254" stroke="${accent}" stroke-width="10" stroke-linecap="round"/>
+    </g>`;
+  }
+
+  return `<g transform="translate(812 168)" filter="url(#glow)" ${common} fill="none">
+    <path d="M47 153 V121 C47 58 94 20 151 20 C208 20 255 58 255 121 V153"/>
+    <rect x="25" y="137" width="54" height="91" rx="22" fill="#10091B"/>
+    <rect x="223" y="137" width="54" height="91" rx="22" fill="#10091B"/>
+    <path d="M250 220 C243 262 205 278 164 278"/>
+    <circle cx="150" cy="278" r="11" fill="${accent}" stroke="none"/>
   </g>`;
 }
 
-function artFor(banner: Banner) {
-  const a = banner.accent;
-  const b = banner.accent2;
-
-  if (banner.kind === "roblox") {
-    return `<g>
-      <circle cx="600" cy="244" r="194" fill="url(#heroOrb)" opacity="0.74"/>
-      <g transform="translate(465 105) rotate(12 135 135)" filter="url(#hardGlow)">
-        <rect width="270" height="270" rx="34" fill="#130626" stroke="${a}" stroke-width="10"/>
-        <rect x="89" y="89" width="92" height="92" rx="12" fill="#04030b" stroke="#ffffff" stroke-opacity="0.9" stroke-width="7"/>
-      </g>
-      ${floatingCube(192, 126, 88, a, -12)}
-      ${floatingCube(876, 96, 74, b, 16)}
-      ${floatingCube(1005, 255, 54, a, -8)}
-      ${floatingCube(105, 294, 50, b, 13)}
-      <g transform="translate(540 170)" opacity="0.72">
-        <circle cx="60" cy="32" r="34" fill="#05030b" stroke="#d9c8ff" stroke-width="4"/>
-        <path d="M15 145 Q22 72 60 72 Q98 72 105 145" fill="#090411" stroke="${a}" stroke-width="5"/>
-        <path d="M20 94 L-22 150 M100 94 L142 150" stroke="${a}" stroke-width="15" stroke-linecap="round"/>
-      </g>
-    </g>`;
-  }
-
-  if (banner.kind === "minecraft") {
-    return `<g>
-      <circle cx="600" cy="235" r="205" fill="url(#heroOrb)" opacity="0.7"/>
-      <g transform="translate(430 55)" filter="url(#hardGlow)">
-        <rect x="0" y="0" width="340" height="390" rx="12" fill="#08030f" stroke="${a}" stroke-width="22"/>
-        <rect x="38" y="38" width="264" height="314" rx="7" fill="url(#portal)" stroke="#e9d5ff" stroke-opacity="0.5" stroke-width="4"/>
-        <path d="M70 85 C150 35 235 135 292 72 M52 190 C155 130 214 245 300 167 M65 286 C142 230 232 342 286 264" stroke="#f5eaff" stroke-opacity="0.26" stroke-width="7" fill="none"/>
-      </g>
-      ${floatingCube(184, 105, 88, b, -10)}
-      ${floatingCube(895, 91, 82, a, 12)}
-      ${floatingCube(1004, 255, 58, b, -8)}
-      <g transform="translate(826 255) rotate(-35)" filter="url(#softGlow)">
-        <rect x="0" y="0" width="26" height="190" rx="8" fill="#27103e" stroke="#e9d5ff" stroke-width="3"/>
-        <path d="M-48 6 H74 V38 H30 V72 H0 V38 H-48 Z" fill="#160925" stroke="${a}" stroke-width="5"/>
-      </g>
-    </g>`;
-  }
-
-  if (banner.kind === "steam") {
-    return `<g>
-      <circle cx="600" cy="240" r="215" fill="url(#heroOrb)" opacity="0.72"/>
-      <g transform="translate(405 42)" filter="url(#hardGlow)">
-        <circle cx="195" cy="195" r="170" fill="#08030f" stroke="${a}" stroke-width="10"/>
-        <circle cx="245" cy="135" r="58" fill="#0f0720" stroke="#f5eaff" stroke-width="9"/>
-        <circle cx="245" cy="135" r="25" fill="${a}"/>
-        <circle cx="112" cy="275" r="49" fill="#0f0720" stroke="#f5eaff" stroke-width="9"/>
-        <circle cx="112" cy="275" r="19" fill="${b}"/>
-        <path d="M145 248 L210 171" stroke="#f5eaff" stroke-width="24" stroke-linecap="round"/>
-      </g>
-      <g opacity="0.8">
-        <rect x="110" y="118" width="205" height="128" rx="16" fill="#090411" stroke="${a}" stroke-width="4"/>
-        <rect x="884" y="135" width="206" height="132" rx="16" fill="#090411" stroke="${b}" stroke-width="4"/>
-        <path d="M130 215 H295 M903 233 H1070" stroke="#d8c9ff" stroke-opacity="0.25" stroke-width="5"/>
-      </g>
-    </g>`;
-  }
-
-  if (banner.kind === "valorant") {
-    return `<g>
-      <circle cx="600" cy="240" r="220" fill="url(#heroOrb)" opacity="0.72"/>
-      <g transform="translate(390 56)" filter="url(#hardGlow)">
-        <path d="M15 48 L160 340 L210 340 L95 85 Z" fill="#170625" stroke="${a}" stroke-width="9"/>
-        <path d="M405 48 L260 340 L210 340 L325 85 Z" fill="#170625" stroke="${a}" stroke-width="9"/>
-        <path d="M112 100 L210 274 L308 100 L260 320 H160 Z" fill="url(#neon)" opacity="0.7"/>
-      </g>
-      <g transform="translate(194 130)" opacity="0.9">
-        <circle cx="0" cy="0" r="8" fill="${a}"/><circle cx="55" cy="-35" r="5" fill="#fff"/><circle cx="100" cy="18" r="7" fill="${b}"/>
-        <path d="M0 0 L55 -35 L100 18" stroke="${a}" stroke-opacity="0.5" stroke-width="2" fill="none"/>
-      </g>
-      <g transform="translate(905 120)" opacity="0.9">
-        <circle cx="0" cy="0" r="7" fill="${a}"/><circle cx="65" cy="50" r="5" fill="#fff"/><circle cx="120" cy="10" r="7" fill="${b}"/>
-        <path d="M0 0 L65 50 L120 10" stroke="${a}" stroke-opacity="0.5" stroke-width="2" fill="none"/>
-      </g>
-    </g>`;
-  }
-
-  if (banner.kind === "xbox") {
-    return `<g>
-      <circle cx="600" cy="238" r="220" fill="url(#heroOrb)" opacity="0.72"/>
-      <g transform="translate(402 42)" filter="url(#hardGlow)">
-        <circle cx="198" cy="198" r="170" fill="#07030e" stroke="${a}" stroke-width="10"/>
-        <path d="M82 98 Q198 20 314 98 Q245 122 198 178 Q151 122 82 98 Z" fill="${b}" opacity="0.85"/>
-        <path d="M75 302 Q130 208 198 171 Q266 208 321 302 Q272 346 198 362 Q124 346 75 302 Z" fill="${b}" opacity="0.75"/>
-      </g>
-      ${floatingCube(168, 124, 76, b, -10)}
-      ${floatingCube(944, 106, 78, a, 14)}
-      <g transform="translate(868 272)" filter="url(#softGlow)">
-        <rect width="154" height="105" rx="42" fill="#0b0614" stroke="${b}" stroke-width="5"/>
-        <circle cx="45" cy="54" r="18" fill="#05030a" stroke="#fff" stroke-opacity="0.55" stroke-width="3"/>
-        <circle cx="111" cy="43" r="7" fill="${b}"/><circle cx="128" cy="59" r="7" fill="${a}"/>
-      </g>
-    </g>`;
-  }
-
-  if (banner.kind === "playstation") {
-    return `<g>
-      <circle cx="600" cy="238" r="220" fill="url(#heroOrb)" opacity="0.74"/>
-      <g transform="translate(430 66)" filter="url(#hardGlow)">
-        <path d="M165 0 V236 C165 270 119 286 82 266 V70 C82 30 120 5 165 0 Z" fill="#130725" stroke="${a}" stroke-width="8"/>
-        <path d="M182 54 C250 62 300 84 300 132 C300 185 230 204 182 211 V166 C220 159 240 147 240 130 C240 113 218 105 182 101 Z" fill="${b}" opacity="0.95"/>
-        <path d="M18 290 C92 250 166 241 228 250 C178 268 128 287 87 310 C141 300 212 299 307 315 C218 348 121 348 18 290 Z" fill="#f5eaff" opacity="0.92"/>
-      </g>
-      <g transform="translate(170 145)" opacity="0.84" filter="url(#softGlow)"><path d="M0 0 L28 28 L0 56 L-28 28 Z" fill="none" stroke="${a}" stroke-width="5"/><circle cx="115" cy="28" r="26" fill="none" stroke="${b}" stroke-width="5"/><rect x="190" y="2" width="52" height="52" fill="none" stroke="${a}" stroke-width="5"/><path d="M300 5 L328 52 L272 52 Z" fill="none" stroke="${b}" stroke-width="5"/></g>
-    </g>`;
-  }
-
-  if (banner.kind === "ofertas") {
-    return `<g>
-      <circle cx="600" cy="238" r="220" fill="url(#heroOrb)" opacity="0.72"/>
-      <g transform="translate(450 78)" filter="url(#hardGlow)">
-        <rect x="0" y="68" width="300" height="220" rx="30" fill="#0c0416" stroke="${a}" stroke-width="8"/>
-        <path d="M150 68 V288 M0 144 H300" stroke="${a}" stroke-width="7"/>
-        <path d="M150 69 C70 35 40 0 86 0 C126 0 146 42 150 69 Z M150 69 C230 35 260 0 214 0 C174 0 154 42 150 69 Z" fill="#170525" stroke="${b}" stroke-width="7"/>
-      </g>
-      <g font-family="Arial,Helvetica,sans-serif" font-weight="900" filter="url(#softGlow)">
-        <g transform="translate(173 126) rotate(-12)"><path d="M0 0 H142 L175 43 L142 86 H0 Z" fill="#130725" stroke="${a}" stroke-width="5"/><text x="77" y="58" text-anchor="middle" font-size="48" fill="#fff">%</text></g>
-        <g transform="translate(890 135) rotate(11)"><path d="M0 0 H142 L175 43 L142 86 H0 Z" fill="#130725" stroke="${b}" stroke-width="5"/><text x="77" y="58" text-anchor="middle" font-size="48" fill="#fff">%</text></g>
-      </g>
-    </g>`;
-  }
-
-  return `<g>
-    <circle cx="600" cy="238" r="220" fill="url(#heroOrb)" opacity="0.72"/>
-    <g transform="translate(430 78)" filter="url(#hardGlow)">
-      <path d="M35 220 V145 C35 60 95 0 170 0 C245 0 305 60 305 145 V220" fill="none" stroke="${a}" stroke-width="18" stroke-linecap="round"/>
-      <rect x="0" y="165" width="78" height="120" rx="30" fill="#10051f" stroke="${a}" stroke-width="7"/>
-      <rect x="262" y="165" width="78" height="120" rx="30" fill="#10051f" stroke="${b}" stroke-width="7"/>
-      <path d="M302 252 C302 312 245 338 190 328" fill="none" stroke="${b}" stroke-width="8" stroke-linecap="round"/>
-      <circle cx="178" cy="327" r="13" fill="#fff"/>
-    </g>
-    <g transform="translate(185 145)" filter="url(#softGlow)"><rect width="170" height="105" rx="25" fill="#10051f" stroke="${a}" stroke-width="5"/><circle cx="52" cy="53" r="8" fill="#fff"/><circle cx="85" cy="53" r="8" fill="#fff"/><circle cx="118" cy="53" r="8" fill="#fff"/></g>
-    <g transform="translate(873 125)" filter="url(#softGlow)"><path d="M85 0 L160 30 V98 C160 153 127 194 85 216 C43 194 10 153 10 98 V30 Z" fill="#10051f" stroke="${b}" stroke-width="6"/><path d="M48 106 L75 133 L124 78" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></g>
-  </g>`;
-}
-
-function svgFor(banner: Banner) {
+function buildSvg(banner: Banner) {
   const title = escapeXml(banner.title);
+  const eyebrow = escapeXml(banner.eyebrow);
   const subtitle = escapeXml(banner.subtitle);
   const accent = banner.accent;
-  const accent2 = banner.accent2;
 
   return `<svg width="1200" height="675" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#020107"/>
-      <stop offset="0.42" stop-color="#0d0218"/>
-      <stop offset="0.75" stop-color="#120323"/>
-      <stop offset="1" stop-color="#02030a"/>
-    </linearGradient>
-    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.32" stop-color="${accent}"/>
-      <stop offset="0.72" stop-color="${accent2}"/>
-      <stop offset="1" stop-color="#22d3ee"/>
-    </linearGradient>
-    <radialGradient id="heroOrb">
-      <stop offset="0" stop-color="${accent}" stop-opacity="0.80"/>
-      <stop offset="0.34" stop-color="${accent2}" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#030108" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="portal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4c1d95"/><stop offset="0.45" stop-color="${accent}"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient>
-    <filter id="softGlow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="hardGlow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="13" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#a855f7" stroke-opacity="0.075" stroke-width="1"/></pattern>
-  </defs>
+    <defs>
+      <radialGradient id="orb" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${PURPLE}" stop-opacity=".28"/><stop offset="1" stop-color="${PURPLE}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop stop-color="${PURPLE}"/><stop offset="1" stop-color="${accent}"/></linearGradient>
+      <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#A78BFA" stroke-opacity=".055" stroke-width="1"/></pattern>
+      <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    </defs>
 
-  <rect width="1200" height="675" rx="32" fill="url(#bg)"/>
-  <rect width="1200" height="675" rx="32" fill="url(#grid)"/>
-  <path d="M0 95 H310 L345 60 H690" stroke="${accent}" stroke-width="2" opacity="0.5"/>
-  <path d="M1200 365 H1002 L970 398 H810" stroke="${accent2}" stroke-width="2" opacity="0.5"/>
-  <circle cx="112" cy="110" r="2" fill="#fff"/><circle cx="1050" cy="74" r="3" fill="${accent}"/><circle cx="1078" cy="332" r="2" fill="#fff"/><circle cx="158" cy="340" r="3" fill="${accent2}"/>
+    <rect width="1200" height="675" fill="#06040D"/>
+    <rect width="1200" height="675" fill="url(#grid)"/>
+    <ellipse cx="950" cy="315" rx="330" ry="330" fill="url(#orb)" filter="url(#soft)"/>
+    <ellipse cx="290" cy="620" rx="370" ry="190" fill="#4C1D95" opacity=".10" filter="url(#soft)"/>
 
-  ${artFor(banner)}
+    <rect x="42" y="42" width="1116" height="591" rx="34" fill="#0A0711" fill-opacity=".64" stroke="#FFFFFF" stroke-opacity=".07"/>
+    <rect x="42" y="42" width="8" height="591" rx="4" fill="url(#line)"/>
 
-  <g transform="translate(52 38)">
-    <path d="M0 28 L24 0 H62 L86 28 L70 74 H16 Z" fill="#0b0414" stroke="url(#neon)" stroke-width="3" filter="url(#softGlow)"/>
-    <path d="M20 57 V19 L43 42 L65 19 V57 L43 37 Z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
-    <text x="104" y="48" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="800" letter-spacing="2" fill="#fff">NEXUS<tspan fill="${accent}">GAMES</tspan></text>
-  </g>
+    <g transform="translate(84 82)">
+      <rect width="48" height="48" rx="14" fill="#130B21" stroke="${PURPLE}" stroke-width="2"/>
+      <path d="M13 35 V13 L35 35 V13" fill="none" stroke="${WHITE}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="66" y="31" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="800" letter-spacing="2" fill="${WHITE}">NEXUSGAMES</text>
+      <circle cx="225" cy="24" r="4" fill="#22C55E"/>
+      <text x="240" y="30" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" letter-spacing="1.4" fill="${MUTED}">LOJA ONLINE</text>
+    </g>
 
-  <g transform="translate(0 445)">
-    <rect x="0" y="0" width="1200" height="230" fill="#020107" fill-opacity="0.76"/>
-    <path d="M68 35 H1132" stroke="url(#neon)" stroke-width="2" opacity="0.65"/>
-    <text x="600" y="122" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="102" font-weight="900" letter-spacing="3" fill="#ffffff" stroke="${accent}" stroke-width="1.5" paint-order="stroke" filter="url(#softGlow)">${title}</text>
-    <text x="600" y="174" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="700" letter-spacing="5" fill="#d8c9ff">${subtitle}</text>
-    <text x="600" y="210" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" letter-spacing="4" fill="#8f7cae">DIGITAL • RÁPIDO • SEGURO</text>
-  </g>
-</svg>`;
+    <g transform="translate(86 232)">
+      <text x="0" y="0" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" letter-spacing="3" fill="${accent}">${eyebrow}</text>
+      <text x="0" y="96" font-family="Arial,Helvetica,sans-serif" font-size="82" font-weight="900" letter-spacing="-2" fill="${WHITE}">${title}</text>
+      <rect x="0" y="126" width="94" height="5" rx="2.5" fill="url(#line)"/>
+      <text x="0" y="178" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="500" fill="${MUTED}">${subtitle}</text>
+      <g transform="translate(0 226)">
+        <rect width="186" height="44" rx="22" fill="#FFFFFF" fill-opacity=".05" stroke="#FFFFFF" stroke-opacity=".09"/>
+        <circle cx="24" cy="22" r="5" fill="#22C55E"/>
+        <text x="40" y="28" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" letter-spacing="1" fill="${WHITE}">ENTREGA PRIVADA</text>
+      </g>
+    </g>
+
+    <g opacity=".20"><circle cx="960" cy="318" r="174" fill="none" stroke="${accent}" stroke-width="1"/><circle cx="960" cy="318" r="210" fill="none" stroke="${PURPLE}" stroke-width="1" stroke-dasharray="4 12"/></g>
+    ${iconArt(banner.kind, accent)}
+
+    <g transform="translate(86 578)">
+      <text x="0" y="0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" letter-spacing="1.6" fill="#7C728E">NEXUS // COMPRA DIGITAL • PAGAMENTO SEGURO • SUPORTE PRIVADO</text>
+      <text x="1026" y="0" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="800" letter-spacing="1.4" fill="${accent}">NX-01</text>
+    </g>
+  </svg>`;
 }
 
 export async function neonBannerResponse(name: string) {
   const banner = BANNERS[name];
-  if (!banner) return new Response("Not found", { status: 404 });
+  if (!banner) return new Response("not found", { status: 404 });
 
-  try {
-    const output = await sharp(Buffer.from(svgFor(banner)))
-      .jpeg({ quality: 92, chromaSubsampling: "4:4:4", mozjpeg: true })
-      .toBuffer();
+  const jpeg = await sharp(Buffer.from(buildSvg(banner)))
+    .jpeg({ quality: 91, chromaSubsampling: "4:4:4", progressive: true })
+    .toBuffer();
 
-    return new Response(new Uint8Array(output), {
-      status: 200,
-      headers: {
-        "Content-Type": "image/jpeg",
-        "Content-Disposition": `inline; filename=\"NexusGames-${name}.jpg\"`,
-        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable"
-      }
-    });
-  } catch (error) {
-    console.error("NexusGames banner render error", name, error);
-    return new Response("Banner render error", { status: 500 });
-  }
+  return new Response(new Uint8Array(jpeg), {
+    status: 200,
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Disposition": `inline; filename="NexusGames-${name}.jpg"`
+    }
+  });
 }
