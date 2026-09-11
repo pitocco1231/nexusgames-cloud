@@ -55,7 +55,7 @@ export default function AdminSetupPage() {
 
       setResult(
         [
-          "Fornecedor sincronizado com sucesso.",
+          "SHOP2TOPUP sincronizada com sucesso.",
           `Produtos lidos: ${data.scanned}`,
           `Opcoes NexusGames: ${data.options}`,
           `Correspondencias encontradas: ${data.matched}`
@@ -91,7 +91,7 @@ export default function AdminSetupPage() {
         </button>
 
         <button onClick={syncSupplier} disabled={loading || !secret}>
-          {loading ? "Processando..." : "Sincronizar CodesWholesale"}
+          {loading ? "Processando..." : "Sincronizar SHOP2TOPUP"}
         </button>
 
         {result && <pre className="setupResult">{result}</pre>}
