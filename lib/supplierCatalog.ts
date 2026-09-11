@@ -44,6 +44,7 @@ async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
 
 function normalize(value: string) {
   return value
+    .replace(/(\d)[.,](?=\d{3}\b)/g, "$1")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -162,11 +163,32 @@ function shop2TopupHaystack(product: Shop2TopupSubcategory) {
   );
 }
 
+function hasPhrase(haystack: string, phrase: string) {
+  const padded = ` ${haystack} `;
+  return padded.includes(` ${phrase} `);
+}
+
+function shop2TopupBrandMatches(option: ProductOption, haystack: string) {
+  const brands: Record<string, string[]> = {
+    roblox: ["roblox", "robux"],
+    valorant: ["valorant", "riot"],
+    steam: ["steam"],
+    minecraft: ["minecraft", "minecoins"],
+    xbox: ["xbox", "game pass"],
+    playstation: ["playstation", "psn"]
+  };
+  return (brands[option.categoryId] || []).some((brand) => hasPhrase(haystack, brand));
+}
+
+function numericTokens(value: string) {
+  return normalize(value).match(/\b\d+\b/g) || [];
+}
+
 function shop2TopupRegionScore(option: ProductOption, product: Shop2TopupSubcategory) {
   if (!option.regionHint) return 1;
   const haystack = shop2TopupHaystack(product);
-  const brazilHints = ["brazil", "brasil", "brl", " brazilian "];
-  if (brazilHints.some((hint) => ` ${haystack} `.includes(hint))) return 5;
+  const brazilHints = ["brazil", "brasil", "brl", "brazilian"];
+  if (brazilHints.some((hint) => hasPhrase(haystack, hint))) return 5;
 
   const foreignHints = [
     "united states",
@@ -182,25 +204,34 @@ function shop2TopupRegionScore(option: ProductOption, product: Shop2TopupSubcate
     "malaysia",
     "indonesia"
   ];
-  if (foreignHints.some((hint) => haystack.includes(hint))) return -20;
+  if (foreignHints.some((hint) => hasPhrase(haystack, hint))) return -50;
   return 0;
 }
 
 function shop2TopupMatchScore(option: ProductOption, product: Shop2TopupSubcategory) {
   const haystack = shop2TopupHaystack(product);
   const tokens = option.supplierSearch.map(normalize).filter(Boolean);
-  if (!haystack || !tokens.length) return -999;
+  if (!haystack || !tokens.length || !shop2TopupBrandMatches(option, haystack)) return -999;
 
-  const numericTokens = tokens.filter((token) => /\d/.test(token));
-  if (numericTokens.length && !numericTokens.some((token) => haystack.includes(token))) {
+  const requiredNumbers = Array.from(
+    new Set(tokens.flatMap((token) => numericTokens(token)))
+  );
+  const productNumbers = new Set(numericTokens(haystack));
+  if (requiredNumbers.length && !requiredNumbers.some((token) => productNumbers.has(token))) {
     return -999;
   }
 
-  let score = 0;
+  const region = shop2TopupRegionScore(option, product);
+  if (region <= -50) return -999;
+
+  let score = 10 + region;
   for (const token of tokens) {
-    if (haystack.includes(token)) score += /\d/.test(token) ? 6 : 3;
+    if (/^\d+$/.test(token)) {
+      if (productNumbers.has(token)) score += 8;
+    } else if (hasPhrase(haystack, token)) {
+      score += 3;
+    }
   }
-  score += shop2TopupRegionScore(option, product);
 
   if (product.returns_voucher) score += 1;
   if (Number(product.price || 0) > 0) score += 1;
@@ -214,7 +245,7 @@ function bestShop2TopupMatch(option: ProductOption, products: Shop2TopupSubcateg
       score: shop2TopupMatchScore(option, product),
       listedCost: Number(product.price || 0)
     }))
-    .filter((candidate) => candidate.score >= 7 && candidate.product.item_id)
+    .filter((candidate) => candidate.score >= 10 && candidate.product.item_id)
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       const aPrice = a.listedCost > 0 ? a.listedCost : Number.MAX_SAFE_INTEGER;
