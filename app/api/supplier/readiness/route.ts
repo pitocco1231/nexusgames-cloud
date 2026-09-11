@@ -19,6 +19,8 @@ function normalize(value: string) {
 
 export async function GET(request: Request) {
   const configured = isShop2TopupConfigured();
+  const webhookSecretConfigured = Boolean(process.env.S2T_WEBHOOK_SECRET?.trim());
+  const liveFulfillmentGate = process.env.NEXUS_REAL_FULFILLMENT_ENABLED === "true";
   const url = new URL(request.url);
   const liveCheck = url.searchParams.get("check") === "1";
   const catalogCheck = url.searchParams.get("catalog") === "1";
@@ -105,6 +107,14 @@ export async function GET(request: Request) {
       supplier: "shop2topup",
       configured,
       connection,
+      webhook: {
+        secretConfigured: webhookSecretConfigured,
+        signatureValidationReady: webhookSecretConfigured
+      },
+      fulfillment: {
+        explicitLiveGate: liveFulfillmentGate,
+        ready: configured && webhookSecretConfigured && liveFulfillmentGate
+      },
       account,
       catalog,
       catalogOptions: productOptions.filter((item) => item.enabled).length,
