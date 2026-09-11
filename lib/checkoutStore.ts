@@ -8,6 +8,7 @@ export type SupplierOffer = {
   last_cost: number | string | null;
   stock_status: string;
   enabled: boolean;
+  metadata?: Record<string, unknown>;
 };
 
 function supabaseConfig() {
@@ -42,9 +43,12 @@ async function request<T>(path: string, init: RequestInit = {}) {
   return (await response.json()) as T;
 }
 
+const OFFER_SELECT =
+  "id,product_id,supplier_name,supplier_sku,region,currency,last_cost,stock_status,enabled,metadata";
+
 export async function getBestSupplierOffer(productId: string) {
   const rows = await request<SupplierOffer[]>(
-    `supplier_products?select=id,product_id,supplier_name,supplier_sku,region,currency,last_cost,stock_status,enabled&product_id=eq.${encodeURIComponent(
+    `supplier_products?select=${OFFER_SELECT}&product_id=eq.${encodeURIComponent(
       productId
     )}&supplier_name=eq.shop2topup&enabled=eq.true&stock_status=eq.in_stock&last_cost=not.is.null&order=last_cost.asc&limit=1`
   );
@@ -80,9 +84,29 @@ export async function getFulfillmentOrder(orderId: string) {
     supplier_product_id: string | null;
     status: string;
     user_id: string;
+    fulfillment_data: Record<string, unknown>;
+    supplier_order_ref: string | null;
   }>>(
-    `orders?select=id,order_number,product_id,supplier_product_id,status,user_id&id=eq.${encodeURIComponent(
+    `orders?select=id,order_number,product_id,supplier_product_id,status,user_id,fulfillment_data,supplier_order_ref&id=eq.${encodeURIComponent(
       orderId
+    )}&limit=1`
+  );
+  return rows?.[0] || null;
+}
+
+export async function getFulfillmentOrderBySupplierRef(supplierOrderRef: string) {
+  const rows = await request<Array<{
+    id: string;
+    order_number: string;
+    product_id: string;
+    supplier_product_id: string | null;
+    status: string;
+    user_id: string;
+    fulfillment_data: Record<string, unknown>;
+    supplier_order_ref: string | null;
+  }>>(
+    `orders?select=id,order_number,product_id,supplier_product_id,status,user_id,fulfillment_data,supplier_order_ref&supplier_order_ref=eq.${encodeURIComponent(
+      supplierOrderRef
     )}&limit=1`
   );
   return rows?.[0] || null;
@@ -90,9 +114,7 @@ export async function getFulfillmentOrder(orderId: string) {
 
 export async function getSupplierOfferById(id: string) {
   const rows = await request<SupplierOffer[]>(
-    `supplier_products?select=id,product_id,supplier_name,supplier_sku,region,currency,last_cost,stock_status,enabled&id=eq.${encodeURIComponent(
-      id
-    )}&limit=1`
+    `supplier_products?select=${OFFER_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`
   );
   return rows?.[0] || null;
 }
