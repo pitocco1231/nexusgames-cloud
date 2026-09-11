@@ -4,23 +4,33 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+const allowed = new Set([
+  "Direct Topup Brazil",
+  "Nintendo eShop Brazil",
+  "PlayStation Brazil",
+  "Roblox Brazil",
+  "Roblox Global",
+  "Xbox Brazil"
+]);
+
 export async function GET() {
   const rows = await listShop2TopupSubcategories();
-  const groups = new Map<string, { count: number; samples: string[] }>();
-  for (const row of rows) {
-    const category = String(row.category_name || "Sem categoria");
-    const normalized = category.toLowerCase();
-    if (!["brazil", "brasil", "global", "worldwide", "world wide"].some((term) => normalized.includes(term))) continue;
-    const current = groups.get(category) || { count: 0, samples: [] };
-    current.count += 1;
-    if (current.samples.length < 8) current.samples.push(String(row.name || row.item_id));
-    groups.set(category, current);
-  }
+  const safeRows = rows
+    .filter((row) => allowed.has(String(row.category_name || "")))
+    .map((row) => ({
+      item_id: row.item_id,
+      name: row.name,
+      category_id: row.category_id,
+      category_name: row.category_name,
+      price: row.price,
+      fulfillment_type: row.fulfillment_type,
+      returns_voucher: row.returns_voucher
+    }));
+
   return Response.json({
     ok: true,
     scanned: rows.length,
-    categories: Array.from(groups.entries())
-      .map(([name, value]) => ({ name, ...value }))
-      .sort((a, b) => a.name.localeCompare(b.name))
+    safeCount: safeRows.length,
+    rows: safeRows
   });
 }
