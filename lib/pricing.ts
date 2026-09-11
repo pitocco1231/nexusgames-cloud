@@ -1,3 +1,4 @@
+import { getProductOption } from "./catalog";
 import { getBestSupplierOffer, saveOrderQuote } from "./checkoutStore";
 
 async function currencyToBrlRate(currency: string) {
@@ -35,10 +36,18 @@ async function currencyToBrlRate(currency: string) {
 function pricingSettings() {
   const marginPercent = Number(process.env.NEXUS_MARGIN_PERCENT || 20);
   const minMarginBrl = Number(process.env.NEXUS_MIN_MARGIN_BRL || 3);
+  const launchMinMarginPercent = Number(process.env.NEXUS_LAUNCH_MIN_MARGIN_PERCENT || 12);
+  const launchMinMarginBrl = Number(process.env.NEXUS_LAUNCH_MIN_MARGIN_BRL || 2);
 
   return {
     marginPercent: Number.isFinite(marginPercent) && marginPercent >= 0 ? marginPercent : 20,
-    minMarginBrl: Number.isFinite(minMarginBrl) && minMarginBrl >= 0 ? minMarginBrl : 3
+    minMarginBrl: Number.isFinite(minMarginBrl) && minMarginBrl >= 0 ? minMarginBrl : 3,
+    launchMinMarginPercent:
+      Number.isFinite(launchMinMarginPercent) && launchMinMarginPercent >= 0
+        ? launchMinMarginPercent
+        : 12,
+    launchMinMarginBrl:
+      Number.isFinite(launchMinMarginBrl) && launchMinMarginBrl >= 0 ? launchMinMarginBrl : 2
   };
 }
 
@@ -60,10 +69,31 @@ export async function quoteProduct(productId: string) {
   const currency = String(offer.currency || "").toUpperCase();
   const fxBrl = await currencyToBrlRate(currency);
   const costBrl = cost * fxBrl;
-  const { marginPercent, minMarginBrl } = pricingSettings();
-  const percentagePrice = costBrl * (1 + marginPercent / 100);
-  const minimumPrice = costBrl + minMarginBrl;
-  const salePriceBrl = roundPrice(Math.max(percentagePrice, minimumPrice));
+  const {
+    marginPercent,
+    minMarginBrl,
+    launchMinMarginPercent,
+    launchMinMarginBrl
+  } = pricingSettings();
+
+  const standardPrice = Math.max(
+    costBrl * (1 + marginPercent / 100),
+    costBrl + minMarginBrl
+  );
+
+  const option = getProductOption(productId);
+  const targetPrice = Number(option?.targetSalePriceBrl || 0);
+  let salePriceBrl = roundPrice(standardPrice);
+  let pricingMode: "dynamic" | "launch_target" = "dynamic";
+
+  if (Number.isFinite(targetPrice) && targetPrice > 0) {
+    const safetyFloor = Math.max(
+      costBrl * (1 + launchMinMarginPercent / 100),
+      costBrl + launchMinMarginBrl
+    );
+    salePriceBrl = roundPrice(Math.max(targetPrice, safetyFloor));
+    pricingMode = "launch_target";
+  }
 
   return {
     productId,
@@ -81,7 +111,10 @@ export async function quoteProduct(productId: string) {
     costBrl: roundPrice(costBrl),
     marginPercent,
     minMarginBrl,
-    salePriceBrl
+    pricingMode,
+    targetPriceBrl: targetPrice > 0 ? targetPrice : null,
+    salePriceBrl,
+    grossProfitBrl: roundPrice(salePriceBrl - costBrl)
   };
 }
 
