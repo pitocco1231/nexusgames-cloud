@@ -30,7 +30,7 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
       const categoryOk = active === "all" || item.categoryId === active;
-      const searchOk = !q || \`\${item.name} \${item.categoryName} \${item.description}\`.toLowerCase().includes(q);
+      const searchOk = !q || `${item.name} ${item.categoryName} ${item.description}`.toLowerCase().includes(q);
       return categoryOk && searchOk;
     });
   }, [items, query, active]);
@@ -48,12 +48,12 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
 
         <div className="marketCategoryRail">
           {categories.map((category) => (
-            <a className={\`marketCategoryTile \${category.available ? "" : "soon"}\`} href={category.available ? \`/categoria/\${category.id}\` : "#catalogo"} key={category.id}>
+            <a className={`marketCategoryTile ${category.available ? "" : "soon"}`} href={category.available ? `/categoria/${category.id}` : "#catalogo"} key={category.id}>
               <img src={category.image} alt={category.name} />
               <div className="marketCategoryShade" />
               <div className="marketCategoryCopy">
                 <strong>{category.name}</strong>
-                <small>{category.available && category.fromPrice !== null ? \`a partir de R$ \${category.fromPrice.toFixed(2).replace(".", ",")}\` : "em breve"}</small>
+                <small>{category.available && category.fromPrice !== null ? `a partir de R$ ${category.fromPrice.toFixed(2).replace(".", ",")}` : "em breve"}</small>
               </div>
             </a>
           ))}
