@@ -33,6 +33,7 @@ export async function getLiveOptions(force = false) {
   const rows = (await Promise.all(
     productOptions.map(async (option) => {
       try {
+        if (!option.enabled) return null;
         const offer = await getBestSupplierOffer(option.id);
         if (!offer || !safeRegion(option, offer)) return null;
         const quote = await quoteProduct(option.id);
