@@ -3,13 +3,13 @@ import { products } from "../../../lib/catalog";
 import { getLiveOptionsForCategory } from "../../../lib/liveStore";
 
 const images: Record<string, string> = {
-  "mobile-legends": "https://epngame.com/images/games/mlbb-big-1720743035-6690747b26195.png",
-  playstation: "https://www.pakdukaan.pk/cdn/shop/files/PlayStation-Store-PSN-Gift-Card-Price-in-Pakistan-2_1370x.jpg?v=1731663639",
-  xbox: "https://www.nme.com/wp-content/uploads/2025/05/Xbox-Game-Pass-Key-Art-696x442.jpg",
-  minecraft: "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A448%2Ccw%3A1152%2Cch%3A1152%2Cq%3A80%2Cw%3A1152/rpPGiw7RjFaeJCCDBC4Bna.jpg",
-  roblox: "https://store-images.s-microsoft.com/image/apps.58700.68327322396008232.bebf9df1-1c64-4f6c-b0af-31eb22f07ff3.ca76e906-0122-4627-925b-3feb7422154f",
-  valorant: "https://wegame.gtimg.com/g.2001715-r.9a324/info/1d8ac7c7cdcf660f503405796c7d0d83.jpg/1000",
-  steam: "https://www.allkeyshop.com/blog/wp-content/uploads/store_steam_featured.jpg"
+  "mobile-legends": "/assets/mobile-legends",
+  playstation: "/assets/playstation",
+  xbox: "/assets/xbox",
+  minecraft: "/assets/minecraft",
+  roblox: "/assets/roblox",
+  valorant: "/assets/valorant",
+  steam: "/assets/steam"
 };
 
 export const dynamic = "force-dynamic";
@@ -20,53 +20,68 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
   if (!product) notFound();
 
   const rows = await getLiveOptionsForCategory(id, true).catch(() => []);
-  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE || "#";
+  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/RDvDTVFwm";
 
   return (
-    <main className="siteShell">
-      <header className="siteNav">
-        <a className="siteBrand" href="/"><span className="brandMark">N</span><span>NEXUS<span>GAMES</span></span></a>
-        <a className="navCta ghost" href="/">← Voltar</a>
+    <main className="marketShell">
+      <header className="marketNav">
+        <a href="/" className="marketLogo">
+          <img src="/assets/nexus-icon" alt="NexusGames" />
+          <div><strong>NEXUS</strong><span>GAMES</span></div>
+        </a>
+        <a className="categoryBack" href="/">← Voltar para a loja</a>
       </header>
 
-      <section className="categoryHero">
-        <img src={images[id]} alt={product.name} className="categoryBackdropImage" />
-        <div className="categoryHeroShade" />
-        <div className="categoryHeroContent">
-          <span className="heroBadge"><i /> CATÁLOGO ATUALIZADO</span>
+      <section className="categoryMarketHero">
+        <img src={images[id] || "/assets/nexus-icon"} alt={product.name} />
+        <div className="categoryMarketShade" />
+        <div className="categoryMarketCopy">
+          <span className="marketEyebrow">{rows.length ? "DISPONÍVEL AGORA" : "CATÁLOGO NEXUS"}</span>
           <h1>{product.name.replace("🔥 ", "")}</h1>
           <p>{product.description}</p>
+          <div className="categoryMarketBadges">
+            <b>⚡ Produto digital</b>
+            <b>🔒 Checkout protegido</b>
+            <b>💠 Pix Mercado Pago</b>
+          </div>
         </div>
       </section>
 
-      <section className="productSection">
-        <div className="sectionHeading compact">
-          <span>PRODUTOS DISPONÍVEIS</span>
-          <h2>Escolha sua opção.</h2>
-          <p>Preço e disponibilidade são reconfirmados antes do pagamento.</p>
+      <section className="categoryProducts">
+        <div className="marketSectionHead">
+          <div><span>ESCOLHA SUA OPÇÃO</span><h2>Produtos</h2></div>
+          <p>Os valores abaixo são atualizados pelo catálogo. Antes do pagamento, a disponibilidade é verificada novamente.</p>
         </div>
 
         {rows.length ? (
-          <div className="productGrid">
+          <div className="categoryProductGrid">
             {rows.map((row, index) => (
-              <article className="productCard" key={row.option.id}>
-                {index === 0 ? <span className="bestTag">MELHOR PREÇO</span> : null}
-                <span className="productEmoji">{row.option.emoji}</span>
-                <h3>{row.option.name.replace(`${product.name.replace("🔥 ", "")} — `, "")}</h3>
-                <p>{row.option.description}</p>
-                <div className="productBottom">
-                  <div><small>Preço</small><strong>R$ {row.salePriceBrl.toFixed(2).replace(".", ",")}</strong></div>
-                  <a className="gameButton" href={`/checkout?produto=${encodeURIComponent(row.option.id)}`}>Comprar <b>→</b></a>
+              <article className="categoryProductCard" key={row.option.id}>
+                <div className="categoryProductImage">
+                  <img src={images[id] || "/assets/nexus-icon"} alt={row.option.name} />
+                  <div className="categoryProductImageShade" />
+                  {index === 0 ? <span>⭐ MELHOR PREÇO</span> : <span>⚡ DIGITAL</span>}
+                </div>
+                <div className="categoryProductBody">
+                  <small>{product.name.replace("🔥 ", "")}</small>
+                  <h3>{row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim()}</h3>
+                  <p>{row.option.description}</p>
+                  <div className="categoryProductMeta">
+                    <span>🌎 Região validada</span>
+                    <span>🔐 Entrega protegida</span>
+                  </div>
+                  <div className="categoryProductBottom">
+                    <div><small>Preço</small><strong>R$ {row.salePriceBrl.toFixed(2).replace(".", ",")}</strong></div>
+                    <a href={\`/checkout?produto=\${encodeURIComponent(row.option.id)}\`}>Comprar agora →</a>
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         ) : (
-          <div className="emptyState">
-            <span>🕒</span>
-            <h3>Sem oferta segura agora</h3>
-            <p>Essa categoria volta automaticamente quando houver estoque e região compatível.</p>
-            <a className="secondaryButton" href={discordInvite}>Falar com o suporte</a>
+          <div className="marketEmpty categoryEmpty">
+            <img src={images[id] || "/assets/nexus-icon"} alt="" />
+            <div><h3>Essa categoria está em preparação.</h3><p>Só liberamos produtos quando região, estoque e fornecedor estão validados.</p><a href={discordInvite}>Falar com o suporte →</a></div>
           </div>
         )}
       </section>
