@@ -68,7 +68,7 @@ export const products: Product[] = [
     name: "Minecraft",
     emoji: "🪻",
     description: "Minecraft Java + Bedrock e Minecoins, conforme disponibilidade do fornecedor.",
-    enabled: false
+    enabled: true
   }
 ];
 
@@ -256,7 +256,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Minecraft Java + Bedrock para PC, com região e ativação validadas.",
     supplierSearch: ["minecraft", "java", "bedrock", "pc"],
-    enabled: false
+    enabled: true
   },
   {
     id: "minecraft-minecoins-1720",
@@ -266,7 +266,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Minecoins para conteúdo do Minecraft Marketplace, conforme região disponível.",
     supplierSearch: ["minecraft", "minecoins", "1720"],
-    enabled: false
+    enabled: true
   },
   {
     id: "minecraft-minecoins-3500",
@@ -276,7 +276,7 @@ export const productOptions: ProductOption[] = [
     emoji: "🪻",
     description: "Pacote maior de Minecoins, sujeito ao catálogo atual do fornecedor.",
     supplierSearch: ["minecraft", "minecoins", "3500"],
-    enabled: false
+    enabled: true
   },
   {
     id: "xbox-giftcard-50",
