@@ -53,7 +53,7 @@ export default async function Home() {
       description: row.option.description,
       price: row.salePriceBrl,
       emoji: row.option.emoji,
-      href: \`/checkout?produto=\${encodeURIComponent(row.option.id)}\`
+      href: `/checkout?produto=${encodeURIComponent(row.option.id)}`
     };
   });
 
@@ -110,7 +110,7 @@ export default async function Home() {
           <div className="marketHeroDealShade" />
           <div className="marketHeroDealTop"><span>🔥 DESTAQUE</span><b>Mobile Legends</b></div>
           <div className="marketHeroDealBottom">
-            <div><small>Diamantes MLBB</small><strong>{heroPrice ? \`a partir de R$ \${heroPrice.toFixed(2).replace(".", ",")}\` : "Veja as ofertas"}</strong></div>
+            <div><small>Diamantes MLBB</small><strong>{heroPrice ? `a partir de R$ ${heroPrice.toFixed(2).replace(".", ",")}` : "Veja as ofertas"}</strong></div>
             <span>Explorar →</span>
           </div>
         </a>
