@@ -2,13 +2,13 @@ import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 
 const images: Record<string, string> = {
-  "mobile-legends": "/assets/mobile-legends",
-  playstation: "/assets/playstation",
-  xbox: "/assets/xbox",
-  minecraft: "/assets/minecraft",
-  roblox: "/assets/roblox",
-  valorant: "/assets/valorant",
-  steam: "/assets/steam"
+  "mobile-legends": "https://epngame.com/images/games/mlbb-big-1720743035-6690747b26195.png",
+  playstation: "https://www.pakdukaan.pk/cdn/shop/files/PlayStation-Store-PSN-Gift-Card-Price-in-Pakistan-2_1370x.jpg?v=1731663639",
+  xbox: "https://www.nme.com/wp-content/uploads/2025/05/Xbox-Game-Pass-Key-Art-696x442.jpg",
+  minecraft: "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A448%2Ccw%3A1152%2Cch%3A1152%2Cq%3A80%2Cw%3A1152/rpPGiw7RjFaeJCCDBC4Bna.jpg",
+  roblox: "https://store-images.s-microsoft.com/image/apps.58700.68327322396008232.bebf9df1-1c64-4f6c-b0af-31eb22f07ff3.ca76e906-0122-4627-925b-3feb7422154f",
+  valorant: "https://wegame.gtimg.com/g.2001715-r.9a324/info/1d8ac7c7cdcf660f503405796c7d0d83.jpg/1000",
+  steam: "https://www.allkeyshop.com/blog/wp-content/uploads/store_steam_featured.jpg"
 };
 
 const labels: Record<string, string> = {
@@ -46,7 +46,9 @@ export default async function Home() {
 
       <section className="storeHero">
         <div className="heroGrid" />
-        <div className="heroContent">
+        <div className="ambient ambientOne" />
+        <div className="ambient ambientTwo" />
+        <div className="heroContent heroReveal">
           <span className="heroBadge"><i /> LOJA ONLINE</span>
           <h1>Jogue mais.<br /><strong>Pague menos.</strong></h1>
           <p>Games, créditos e gift cards em uma experiência rápida, segura e sem enrolação.</p>
@@ -60,12 +62,20 @@ export default async function Home() {
             <span>💠 Pix Mercado Pago</span>
           </div>
         </div>
-        <div className="heroShowcase">
+        <div className="heroShowcase heroRevealDelay">
           <div className="showcaseOrb" />
-          <div className="floatingCard cardPs"><img src="/assets/playstation" alt="PlayStation" /></div>
-          <div className="floatingCard cardXbox"><img src="/assets/xbox" alt="Xbox" /></div>
-          <div className="floatingCard cardMine"><img src="/assets/minecraft" alt="Minecraft" /></div>
-          <div className="heroDiamond">◆</div>
+          <div className="heroVisualMain">
+            <img src={images["mobile-legends"]} alt="Mobile Legends" />
+            <div className="heroVisualOverlay" />
+            <div className="heroVisualCaption">
+              <span>MAIS VENDIDO</span>
+              <strong>Mobile Legends</strong>
+              <small>Diamantes com recarga direta</small>
+            </div>
+          </div>
+          <div className="floatingMini miniPs"><img src={images.playstation} alt="PlayStation" /></div>
+          <div className="floatingMini miniXbox"><img src={images.xbox} alt="Xbox" /></div>
+          <div className="floatingMini miniMine"><img src={images.minecraft} alt="Minecraft" /></div>
         </div>
       </section>
 
@@ -87,9 +97,9 @@ export default async function Home() {
             const from = cheapest.get(product.id);
             const available = from !== undefined;
             return (
-              <article className={`gameCard ${available ? "isLive" : "isSoon"}`} key={product.id}>
+              <article className={`gameCard ${available ? "isLive" : "isSoon"} animatedCard`} key={product.id}>
                 <div className="gameImage">
-                  <img src={images[product.id]} alt={product.name.replace("🔥 ", "")} />
+                  <img src={images[product.id]} alt={product.name.replace("🔥 ", "")} loading="lazy" />
                   <div className="gameShade" />
                   <span className={available ? "liveTag" : "soonTag"}>{available ? "DISPONÍVEL" : "EM BREVE"}</span>
                 </div>
