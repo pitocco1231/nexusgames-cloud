@@ -1,6 +1,7 @@
 import sharp from "sharp";
 
 type BannerKind =
+  | "mobile-legends"
   | "roblox"
   | "minecraft"
   | "steam"
