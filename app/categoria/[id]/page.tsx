@@ -72,7 +72,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
                   </div>
                   <div className="categoryProductBottom">
                     <div><small>Preço</small><strong>R$ {row.salePriceBrl.toFixed(2).replace(".", ",")}</strong></div>
-                    <a href={\`/checkout?produto=\${encodeURIComponent(row.option.id)}\`}>Comprar agora →</a>
+                    <a href={`/checkout?produto=${encodeURIComponent(row.option.id)}`}>Comprar agora →</a>
                   </div>
                 </div>
               </article>
