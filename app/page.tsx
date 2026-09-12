@@ -24,7 +24,7 @@ const labels: Record<string, string> = {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE || "#";
+  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/RDvDTVFwm";
   const live = await getLiveOptions().catch(() => []);
   const cheapest = new Map<string, number>();
   for (const row of live) {
