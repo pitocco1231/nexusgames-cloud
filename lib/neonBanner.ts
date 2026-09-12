@@ -93,6 +93,15 @@ function escapeXml(value: string) {
 function iconArt(kind: BannerKind, accent: string) {
   const common = `stroke="${accent}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"`;
 
+  if (kind === "mobile-legends") {
+    return `<g transform="translate(818 170)" filter="url(#glow)">
+      <path d="M145 18 L264 120 L145 264 L26 120 Z" fill="#10091B" ${common}/>
+      <path d="M145 18 L190 120 L145 264 L100 120 Z" fill="${accent}" opacity=".24"/>
+      <path d="M26 120 H264 M100 120 L145 18 L190 120" fill="none" stroke="${WHITE}" stroke-width="7" stroke-opacity=".85"/>
+      <text x="145" y="151" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="52" font-weight="900" fill="${WHITE}">ML</text>
+    </g>`;
+  }
+
   if (kind === "roblox") {
     return `<g transform="translate(826 184) rotate(10 132 132)" filter="url(#glow)">
       <rect x="26" y="26" width="212" height="212" rx="34" fill="#110B1D" ${common}/>
