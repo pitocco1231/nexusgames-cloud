@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "NexusGames | Games, créditos e gift cards",
   description: "Compre produtos digitais para seus jogos favoritos com Pix, preços atualizados e suporte pelo Discord.",
-  themeColor: "#07080d",
   robots: { index: true, follow: true },
   openGraph: {
     title: "NexusGames",
@@ -12,6 +11,8 @@ export const metadata: Metadata = {
     type: "website"
   }
 };
+
+export const viewport: Viewport = { themeColor: "#07080d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
