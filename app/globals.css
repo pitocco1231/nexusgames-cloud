@@ -424,3 +424,55 @@ body{font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",s
   .nxAuthVisualCopy p{font-size:11px}
   .nxAuthVisualCopy>div{display:none}
 }
+
+/* ===== Original NexusGames storefront scene ===== */
+.nexusStoreVisual{position:absolute;inset:0;overflow:hidden;background:
+radial-gradient(circle at 72% 36%,rgba(126,55,255,.22),transparent 28%),
+radial-gradient(circle at 32% 78%,rgba(0,174,255,.10),transparent 24%),
+linear-gradient(180deg,#090712,#05060a 78%)}
+.nsvGrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.8),transparent)}
+.nsvGlow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45;animation:nsvDrift 8s ease-in-out infinite}.nsvGlowOne{width:340px;height:340px;background:#7c3aed;right:12%;top:4%}.nsvGlowTwo{width:260px;height:260px;background:#0ea5e9;left:8%;bottom:2%;animation-delay:-3s}
+@keyframes nsvDrift{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(22px,-16px,0) scale(1.08)}}
+
+.nsvSign{position:absolute;left:7%;top:8%;display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:rgba(8,9,14,.58);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);box-shadow:0 16px 50px rgba(0,0,0,.28);z-index:3}
+.nsvSign img{width:48px;height:48px;border-radius:50%;box-shadow:0 0 28px rgba(139,92,246,.34)}.nsvSign>div{display:flex;flex-direction:column}.nsvSign strong{font:800 18px/1 "Outfit";letter-spacing:-.5px}.nsvSign strong span{color:#a855f7}.nsvSign small{margin-top:5px;color:#7f8492;font-size:7px;letter-spacing:1.8px}
+
+.nsvShelf{position:absolute;left:5%;right:4%;top:28%;display:grid;grid-template-columns:repeat(7,1fr);gap:12px;z-index:2;perspective:1200px}
+.nsvCard{position:relative;aspect-ratio:.72;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:#0e1018;box-shadow:0 18px 45px rgba(0,0,0,.34);transform:translateY(calc((var(--nsv-i) % 2) * 14px)) rotateY(calc((var(--nsv-i) - 3) * -1.1deg));animation:nsvFloat 5s ease-in-out infinite;animation-delay:calc(var(--nsv-i) * -0.35s)}
+@keyframes nsvFloat{0%,100%{translate:0 0}50%{translate:0 -10px}}
+.nsvCard img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.02) contrast(1.05);transition:transform .5s}.nsvCard:hover img{transform:scale(1.06)}
+.nsvCardShade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,6,10,.95),rgba(5,6,10,.08) 68%)}
+.nsvCardCopy{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-direction:column}.nsvCardCopy b{font:700 10px "Outfit";color:#fff}.nsvCardCopy small{font-size:7px;color:#9aa0ae;margin-top:2px;text-transform:uppercase;letter-spacing:.6px}
+
+.nsvDesk{position:absolute;left:0;right:0;bottom:9%;height:14%;border-top:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(18,13,35,.8),rgba(5,6,10,.95));box-shadow:0 -24px 70px rgba(88,28,135,.16);z-index:2}
+.nsvController{position:absolute;left:10%;top:-28px;font-size:50px;filter:drop-shadow(0 0 18px rgba(139,92,246,.35));transform:rotate(-8deg)}
+.nsvDeskLogo{position:absolute;left:44%;top:16px;display:flex;align-items:center;gap:9px}.nsvDeskLogo img{width:36px;height:36px;border-radius:50%}.nsvDeskLogo span{font:800 9px "Outfit";letter-spacing:1.6px;color:#a68bf4}
+.nsvStatus{position:absolute;right:8%;top:22px;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);font-size:7px;font-weight:800;letter-spacing:.9px;color:#aeb3bf}.nsvStatus i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#42d986;box-shadow:0 0 10px #42d986;margin-right:6px}
+.nsvPromise{position:absolute;left:6%;right:6%;bottom:2.7%;display:flex;justify-content:space-between;gap:14px;color:#777d8c;font-size:7px;font-weight:800;letter-spacing:.55px;z-index:2}
+
+.nexusStoreVisual.compact .nsvSign{left:12%;top:10%;transform:scale(.88);transform-origin:left top}
+.nexusStoreVisual.compact .nsvShelf{left:10%;right:5%;top:24%;gap:8px}
+.nexusStoreVisual.compact .nsvCard{border-radius:12px}
+.nexusStoreVisual.compact .nsvDesk{bottom:7%}
+.nexusStoreVisual.compact .nsvPromise{bottom:1.5%}
+
+.nxHeroArt>.nexusStoreVisual{position:absolute;inset:0;z-index:0}
+.nxHeroArt:before{z-index:1}
+.nxHeroArt:after{z-index:1}
+.nxAuthVisual>.nexusStoreVisual{position:absolute;inset:0}
+.nxAuthVisualShade{z-index:2}
+.nxAuthVisualCopy{z-index:3}
+.nxAuthVisual{isolation:isolate}
+
+@media(max-width:900px){
+  .nsvShelf{grid-template-columns:repeat(4,1fr);top:26%}
+  .nsvCard:nth-child(n+5){display:none}
+  .nsvSign{left:5%;top:6%}
+  .nsvPromise{font-size:6px}
+}
+@media(max-width:600px){
+  .nsvShelf{grid-template-columns:repeat(3,1fr);left:4%;right:4%;top:28%}
+  .nsvCard:nth-child(n+4){display:none}
+  .nsvSign{transform:scale(.8);transform-origin:left top}
+  .nsvController{font-size:38px}
+}
