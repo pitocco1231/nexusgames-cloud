@@ -1,3 +1,4 @@
+import HeaderActions from "./HeaderActions";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 
@@ -48,7 +49,7 @@ export default async function Home(){
           <a href={discord}>Suporte</a>
         </nav>
         <a href="#produtos" className="nxSearch"><span>⌕</span><b>Buscar jogos, produtos...</b></a>
-        <a className="nxDiscordMini" href={discord}><span>◉</span><div><b>Discord</b><small>Suporte 24/7</small></div></a>
+        <HeaderActions discord={discord} />
       </header>
 
       <section className="nxHero" id="inicio">
@@ -58,7 +59,7 @@ export default async function Home(){
           <p>Seus jogos favoritos com entrega rápida, segura e os melhores preços do Brasil.</p>
           <div className="nxHeroBtns">
             <a className="nxPrimary" href="#produtos">Ver produtos <b>→</b></a>
-            <a className="nxSecondary" href={discord}>◉ Entrar no Discord</a>
+            <a className="nxSecondary nxDiscordHeroButton" href={discord}><span className="nxDiscordHeroIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.5 5.34A16.3 16.3 0 0 0 15.44 4l-.5 1.02a15.3 15.3 0 0 0-5.87 0L8.56 4A16.5 16.5 0 0 0 4.5 5.35C1.94 9.16 1.25 12.87 1.6 16.53a16.4 16.4 0 0 0 4.98 2.51l1.2-1.66a10.5 10.5 0 0 1-1.89-.9l.46-.36c3.64 1.68 7.6 1.68 11.2 0l.47.36c-.61.36-1.24.66-1.9.9l1.2 1.66a16.4 16.4 0 0 0 4.98-2.51c.42-4.24-.72-7.92-2.8-11.19ZM8.6 14.7c-1.1 0-2-1.02-2-2.27 0-1.25.88-2.27 2-2.27s2.02 1.03 2 2.27c0 1.25-.89 2.27-2 2.27Zm6.8 0c-1.1 0-2-1.02-2-2.27 0-1.25.88-2.27 2-2.27s2.02 1.03 2 2.27c0 1.25-.88 2.27-2 2.27Z"/></svg></span>Entrar no Discord</a>
           </div>
           <div className="nxTrust">
             <span>⚡ Entrega instantânea</span>
@@ -69,7 +70,7 @@ export default async function Home(){
 
         <div className="nxHeroArt">
           <div className="nxHeroGlow"/>
-          <img className="nxHeroImg" src="https://cdn.mos.cms.futurecdn.net/uJRCtKEsYWkK99GtkuUQ64.jpg" alt="Arte Valorant"/>
+          <img className="nxHeroImg" src="https://images.hdqwalls.com/wallpapers/4k-apex-legends-2020-ja.jpg" alt="NexusGames gaming background"/>
           
           
           
