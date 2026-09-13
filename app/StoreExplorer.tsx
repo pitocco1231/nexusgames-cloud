@@ -10,6 +10,8 @@ type StoreItem = {
   description: string;
   price: number;
   emoji: string;
+  image: string;
+  brand: { name: string; mark: string; tone: string };
   href: string;
 };
 
@@ -95,23 +97,23 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
         {filtered.length ? (
           <div className="marketProductGrid">
             {filtered.map((item, index) => {
-              const image = categories.find((category) => category.id === item.categoryId)?.image || "/assets/nexus-logo";
               return (
                 <a className="marketProductCard" href={item.href} key={item.id}>
                   <div className="marketProductImage">
-                    <img src={image} alt={`${item.categoryName} - ${item.name}`} loading="lazy" />
+                    <img src={item.image} alt={`${item.categoryName} - ${item.name}`} loading="lazy" />
                     <div className="marketProductImageShade" />
-                    <span className="marketInstant">DIGITAL</span>
+                    <div className={`marketBrand marketBrand-${item.brand.tone}`}><b>{item.brand.mark}</b><span>{item.brand.name}</span></div>
+                    <span className="marketInstant">PRODUTO DIGITAL</span>
                     {index < 3 && active === "all" && !query ? <span className="marketHot">DESTAQUE</span> : null}
-                    <div className="marketProductVisualName"><small>{item.categoryName}</small><strong>{item.name}</strong></div>
+                    <div className="marketPackLabel"><small>PACOTE</small><strong>{item.name}</strong></div>
                   </div>
                   <div className="marketProductBody">
-                    <div className="marketProductMeta"><small>{item.categoryName}</small><span>Disponível</span></div>
+                    <div className="marketProductMeta"><small>{item.categoryName}</small><span>● Disponível agora</span></div>
                     <h3>{item.name}</h3>
                     <p>{item.description}</p>
                     <div className="marketProductFooter">
                       <div><span>Preço atual</span><strong>R$ {item.price.toFixed(2).replace(".", ",")}</strong></div>
-                      <b>Comprar <i>→</i></b>
+                      <b>Comprar agora <i>→</i></b>
                     </div>
                   </div>
                 </a>

@@ -15,6 +15,21 @@
 .nxAuthVisualV5{position:relative!important;background:#06070b!important}.nxAuthVisualV5 .nxAuthStableBg{filter:saturate(.92) contrast(1.07) brightness(.78)!important;object-position:center!important;transform:scale(1.015)}.nxAuthVisualV5 .nxAuthVisualShade{background:linear-gradient(90deg,rgba(6,7,11,.22),rgba(6,7,11,.04)),linear-gradient(0deg,rgba(6,7,11,.92) 0%,rgba(6,7,11,.26) 48%,rgba(6,7,11,.25) 100%)!important}.nxAuthVisualV5 .nxAuthVisualCopy{left:6.2%!important;right:7%!important;bottom:7%!important;max-width:650px!important}.nxAuthVisualV5 .nxAuthVisualCopy>span{color:#a979f4!important;font-size:8px!important;letter-spacing:1.8px!important}.nxAuthVisualV5 .nxAuthVisualCopy h2{font:800 clamp(48px,4.8vw,72px)/.94 "Outfit"!important;letter-spacing:-2.8px!important}.nxAuthVisualV5 .nxAuthVisualCopy p{max-width:560px!important;color:#b2b7c3!important;font-size:13px!important}.nxAuthVisualV5 .nxAuthVisualCopy b{border-radius:7px!important;background:rgba(8,10,14,.58)!important;font-size:8px!important}
 .nxAuthPanelV5{background:linear-gradient(180deg,#07080d,#06070b)!important;padding:48px clamp(26px,4vw,64px)!important}.nxAuthPanelV5 .nxAuthCard{width:min(430px,100%)!important}.nxAuthPanelV5 .nxAuthBrand{margin-bottom:30px!important}.nxAuthPanelV5 .nxAuthTabs{border-radius:10px!important;background:#0b0d13!important}.nxAuthPanelV5 .nxAuthTabs button{border-radius:7px!important}.nxAuthPanelV5 .nxAuthTabs button.active{background:#15111e!important}.nxAuthPanelV5 .nxAuthHeading h1{font-family:"Outfit"!important;font-size:36px!important}.nxAuthPanelV5 .nxAuthInput{height:52px!important;border-radius:10px!important;background:#0a0c11!important}.nxAuthPanelV5 .nxAuthSubmit{height:52px!important;border-radius:10px!important;background:#8b3dff!important;box-shadow:0 14px 34px rgba(100,45,200,.17)!important}.nxAuthPanelV5 .nxAuthSecure{background:#0a0c11!important;border-radius:9px!important}
 
+/* Login premium: legibilidade, conversão e arte exclusiva da loja */
+.nxAuthVisualV5 .nxAuthStableBg{filter:saturate(.94) contrast(1.06) brightness(.72)!important;transform:scale(1.01)!important}
+.nxAuthVisualV5 .nxAuthVisualCopy>span{color:#c49aff!important;font-size:12px!important}
+.nxAuthVisualV5 .nxAuthVisualCopy p{color:#c4c7d0!important;font-size:16px!important;line-height:1.65!important}
+.nxAuthVisualV5 .nxAuthVisualCopy b{padding:9px 12px!important;border-radius:8px!important;background:rgba(8,10,14,.68)!important;font-size:12px!important}
+.nxAuthPanelV5 .nxAuthHeading h1{font-size:38px!important}
+.nxAuthPanelV5 .nxAuthHeading>span{font-size:12px!important}
+.nxAuthPanelV5 .nxAuthHeading p{font-size:15px!important;line-height:1.6!important}
+.nxAuthPanelV5 .nxAuthForm label{font-size:14px!important}
+.nxAuthPanelV5 .nxAuthInput input{font-size:16px!important}
+.nxAuthPanelV5 .nxAuthInput button{font-size:13px!important}
+.nxAuthPanelV5 .nxAuthSubmit{height:54px!important;background:linear-gradient(135deg,#9a4dff,#7147f5)!important;font-size:14px!important;transition:transform .2s ease,filter .2s ease!important}
+.nxAuthPanelV5 .nxAuthSubmit:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.nxAuthPanelV5 .nxAuthSecure p,.nxAuthPanelV5 .nxAuthBack,.nxAuthPanelV5 .nxAuthMessage{font-size:13px!important}
+
 /* ---------- checkout ---------- */
 .checkoutPageV5{min-height:100vh!important;padding:0!important;background:radial-gradient(circle at 12% 4%,rgba(139,92,246,.075),transparent 23%),#06070b!important;color:#fff!important}
 .checkoutTopbar{height:78px;padding:0 clamp(18px,4vw,58px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.075);background:rgba(6,7,11,.86);backdrop-filter:blur(16px)}.checkoutTopbar .nxLogo{margin:0!important}.checkoutTopbar .nxLogo img{width:45px!important;height:45px!important}.checkoutTopbarTrust{display:flex;align-items:center;gap:18px;color:#707786;font-size:9px}.checkoutTopbarTrust a{color:#b4b8c3}.checkoutTopbarTrust a:hover{color:#fff}

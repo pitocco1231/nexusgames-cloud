@@ -4,6 +4,7 @@ import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 import { NEXUS_HERO_BACKGROUND } from "../lib/nexusHero";
 import { storeImage } from "../lib/storeMedia";
+import { productImage } from "../lib/productMedia";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ export default async function Home() {
 
   const items = live.map((row) => {
     const category = products.find((product) => product.id === row.option.categoryId);
+    const brand = row.option.categoryId === "mobile-legends"
+      ? { name: "MOBILE LEGENDS", mark: "ML", tone: "ml" }
+      : row.option.categoryId === "minecraft"
+        ? { name: "MINECRAFT", mark: "▣", tone: "mc" }
+        : row.option.categoryId === "xbox"
+          ? { name: "XBOX", mark: "X", tone: "xb" }
+          : row.option.categoryId === "playstation"
+            ? { name: "PLAYSTATION", mark: "PS", tone: "ps" }
+            : { name: category?.name.replace("🔥 ", "") || "NEXUSGAMES", mark: "N", tone: "nx" };
     return {
       id: row.option.id,
       categoryId: row.option.categoryId,
@@ -36,6 +46,8 @@ export default async function Home() {
       description: row.option.description,
       price: row.salePriceBrl,
       emoji: row.option.emoji,
+      image: productImage(row.option.id, row.option.categoryId),
+      brand,
       href: `/checkout?produto=${encodeURIComponent(row.option.id)}`
     };
   });
@@ -93,6 +105,17 @@ export default async function Home() {
         <div className="nxTrustCard"><span>◆</span><div><b>Pix via Mercado Pago</b><small>Checkout protegido e simples</small></div></div>
         <div className="nxTrustCard"><span>✓</span><div><b>Região verificada</b><small>Reduz risco de código incompatível</small></div></div>
         <div className="nxTrustCard"><span>◉</span><div><b>Suporte no Discord</b><small>Canal direto para acompanhar pedidos</small></div></div>
+      </section>
+
+      <section className="nxCollectionFeature" aria-label="Coleção de produtos digitais NexusGames">
+        <img src="/products/collection.webp" alt="Seleção de produtos digitais e acessórios gamer da NexusGames" />
+        <div className="nxCollectionShade" />
+        <div className="nxCollectionCopy">
+          <span>CATÁLOGO SELECIONADO</span>
+          <h2>Créditos e jogos para você entrar na partida.</h2>
+          <p>Cada oferta exibida passa por validação de preço, estoque e região antes do pagamento.</p>
+          <a href="#catalogo">Ver ofertas disponíveis <b>→</b></a>
+        </div>
       </section>
 
       <StoreExplorer items={items} categories={categories} />

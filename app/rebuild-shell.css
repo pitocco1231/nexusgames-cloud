@@ -49,6 +49,15 @@ body{font-family:"Inter",system-ui,sans-serif!important;color:var(--ng-text)}
 .nxHeaderV5 .nxSearch{width:min(310px,23vw)!important;height:42px!important;border-radius:10px!important;padding:0 13px!important;color:#7f8594!important}
 .nxHeaderV5 .nxSearch b{font-size:9px!important;font-weight:500!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+/* Textos de navegação precisam continuar legíveis em zoom e telas grandes. */
+.nxHeaderV5 .nxNav a{font-size:14px!important}
+.nxHeaderV5 .nxSearch b{font-size:13px!important}
+
+/* Refinamento visual geral: menos aparência de template, mais loja premium. */
+.nxHeaderV5{background:rgba(6,7,10,.94)!important;border-bottom-color:rgba(255,255,255,.09)!important}.nxHeaderV5:after{display:none!important}.nxHeaderV5 .nxLogo img{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 10px 28px rgba(0,0,0,.3)!important}.nxHeaderV5 .nxNav a{letter-spacing:.15px!important}.nxHeaderV5 .nxNav a.active{position:relative}.nxHeaderV5 .nxNav a.active:after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:2px;border-radius:2px;background:#a45cff}
+.nxHeroV5 h1{font-size:clamp(58px,6vw,92px)!important;letter-spacing:-4px!important;max-width:650px!important}.nxHeroCopyV5>p{max-width:570px!important;font-size:17px!important;line-height:1.65!important}.nxHeroBackdrop img{filter:saturate(.88) contrast(1.08) brightness(.72)!important}.nxPrimary,.nxSecondary{min-height:50px!important;font-size:14px!important}.nxTrustStrip{border-top:1px solid rgba(255,255,255,.07)!important;border-bottom:1px solid rgba(255,255,255,.07)!important;background:#090b10!important}
+.nxCommercePage{background:#07080b!important}
+
 /* ---------- hero ---------- */
 .nxHeroV5{
   position:relative!important;

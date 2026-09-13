@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 import { getLiveOption } from "../../lib/liveStore";
 import { products } from "../../lib/catalog";
-import { storeImage } from "../../lib/storeMedia";
+import { productImage } from "../../lib/productMedia";
 import CheckoutClient from "./CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     name: live.option.name,
     label: live.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim(),
     emoji: live.option.emoji,
-    image: storeImage(live.option.categoryId),
+    image: productImage(live.option.id, live.option.categoryId),
     price: live.salePriceBrl,
     directTopup: live.option.fulfillmentType === "direct_topup"
   };

@@ -3,6 +3,7 @@ import HeaderActions from "../../HeaderActions";
 import { products } from "../../../lib/catalog";
 import { getLiveOptions } from "../../../lib/liveStore";
 import { storeImage, storeLabel } from "../../../lib/storeMedia";
+import { productImage } from "../../../lib/productMedia";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,15 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
   const live = await getLiveOptions().catch(() => []);
   const rows = live.filter((row) => row.option.categoryId === id);
   const image = storeImage(id);
+  const brand = id === "mobile-legends"
+    ? { name: "MOBILE LEGENDS", mark: "ML", tone: "ml" }
+    : id === "minecraft"
+      ? { name: "MINECRAFT", mark: "▣", tone: "mc" }
+      : id === "xbox"
+        ? { name: "XBOX", mark: "X", tone: "xb" }
+        : id === "playstation"
+          ? { name: "PLAYSTATION", mark: "PS", tone: "ps" }
+          : { name: category.name.replace("🔥 ", ""), mark: "N", tone: "nx" };
 
   return (
     <main className="nxPage categoryPageV5">
@@ -61,9 +71,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
             {rows.map((row, index) => (
               <a className="categoryProductCard categoryProductCardV5" href={`/checkout?produto=${encodeURIComponent(row.option.id)}`} key={row.option.id}>
                 <div className="categoryProductMedia">
-                  <img src={image} alt={`${category.name} - ${row.option.label}`} loading="lazy" />
+                  <img src={productImage(row.option.id, row.option.categoryId)} alt={`${category.name} - ${row.option.label}`} loading="lazy" />
                   <div className="categoryProductMediaShade" />
                   <span className="categoryProductIndex">0{index + 1}</span>
+                  <div className={`marketBrand marketBrand-${brand.tone}`}><b>{brand.mark}</b><span>{brand.name}</span></div>
                   <div className="categoryProductVisualCopy"><small>{category.name.replace("🔥 ", "")}</small><strong>{row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim()}</strong></div>
                 </div>
                 <div className="categoryProductBodyV5">

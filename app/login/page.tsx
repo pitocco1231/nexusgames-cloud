@@ -1,6 +1,6 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import LoginClient from "./LoginClient";
-import { NEXUS_HERO_BACKGROUND } from "../../lib/nexusHero";
 
 export const metadata = {
   title: "Entrar",
@@ -11,13 +11,20 @@ export default function LoginPage() {
   return (
     <main className="nxAuthPage nxAuthPageV5">
       <section className="nxAuthVisual nxAuthVisualV5">
-        <img className="nxAuthStableBg" src={NEXUS_HERO_BACKGROUND} alt="Experiência digital NexusGames" />
+        <Image
+          className="nxAuthStableBg"
+          src="/nexus/login-store.webp"
+          alt="Ambiente gamer da loja digital NexusGames"
+          fill
+          priority
+          sizes="(max-width: 900px) 100vw, 58vw"
+        />
         <div className="nxAuthVisualShade" />
         <div className="nxAuthVisualCopy">
-          <span>NEXUSGAMES • CONTA</span>
-          <h2>Sua loja digital,<br/>também na sua conta.</h2>
-          <p>Acompanhe pedidos, acesse entregas e mantenha seu histórico em um só lugar.</p>
-          <div><b>⚡ Digital</b><b>🔒 Protegido</b><b>◉ Suporte</b></div>
+          <span>NEXUSGAMES • ÁREA DO CLIENTE</span>
+          <h2>Suas compras.<br/>Seu universo gamer.</h2>
+          <p>Acompanhe pedidos, consulte suas entregas digitais e tenha suporte sempre por perto.</p>
+          <div><b>⚡ Entrega digital</b><b>🔒 Acesso protegido</b><b>◉ Suporte no Discord</b></div>
         </div>
       </section>
 

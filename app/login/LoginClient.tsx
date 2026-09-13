@@ -95,7 +95,7 @@ export default function LoginClient() {
 
       <div className="nxAuthSecure">
         <span>🔒</span>
-        <p>Seus dados de login são protegidos e sua senha não fica armazenada no site.</p>
+        <p>Seus dados são enviados por conexão protegida. A NexusGames não exibe nem compartilha sua senha.</p>
       </div>
 
       <a className="nxAuthBack" href="/">← Voltar para a loja</a>
