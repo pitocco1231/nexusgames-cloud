@@ -69,7 +69,7 @@ export default async function Home(){
         </div>
 
         <div className="nxHeroArt nxHeroArtStable">
-          <img className="nxHeroStableBg" src="/assets/nexus-home-bg" alt="NexusGames digital store" />
+          <img className="nxHeroStableBg" src="https://images.unsplash.com/photo-1616588589676-62b3bd4ff6d2?auto=format&fit=crop&fm=jpg&q=88&w=2200" alt="Setup gamer NexusGames" />
         </div>
       </section>
 
@@ -134,11 +134,13 @@ export default async function Home(){
           <p>Suporte exclusivo, sorteios, promoções e muito mais!</p>
           <a href={discord}>◉ Entrar agora</a>
         </div>
-        <div className="nxDiscordVisual nxDiscordVisualArt">
-          <img src="/assets/community" alt="Comunidade NexusGames"/>
-          <span className="tag t1">🎁 SORTEIOS<br/>EXCLUSIVOS</span>
-          <span className="tag t2">🎧 SUPORTE<br/>24/7</span>
-          <span className="tag t3">💟 PROMOÇÕES<br/>ANTECIPADAS</span>
+        <div className="nxDiscordVisual nxDiscordVisualArt nxDiscordPhoto">
+          <img src="https://images.unsplash.com/photo-1760999896198-b7e780e42500?auto=format&fit=crop&fm=jpg&q=88&w=1800" alt="Comunidade NexusGames" />
+          <div className="nxDiscordPhotoOverlay">
+            <img src="/assets/nexus-logo" alt="NexusGames" />
+            <strong>NEXUSGAMES</strong>
+            <small>COMUNIDADE • SUPORTE • PROMOÇÕES</small>
+          </div>
         </div>
       </section>
 
