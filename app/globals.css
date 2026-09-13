@@ -223,3 +223,104 @@ body{font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",s
 .nxDiscordVisualArt{background:radial-gradient(circle at 65% 40%,rgba(130,50,255,.28),transparent 35%),#0b0817}
 .nxDiscordVisualArt>img{opacity:.88;filter:saturate(1.02) contrast(1.03)}
 .nxHeader,.nxFooter,.nxBenefits{backdrop-filter:blur(10px)}
+
+/* ===== Typography + scroll reveal ===== */
+.nxPage,
+.categoryProducts,
+.categoryMarketHero,
+.checkoutPage,
+.checkoutCard{
+  font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.nxLogo strong,
+.nxHero h1,
+.nxSectionTitle h2,
+.nxProductBody h3,
+.nxProductBottom strong,
+.nxDiscordCopy h2,
+.nxFooter b,
+.categoryMarketCopy h1,
+.categoryProductBody h3,
+.categoryProductBottom strong,
+.marketSectionHead h2{
+  font-family:"Outfit","Inter",sans-serif;
+}
+
+.nxHero h1{
+  font-weight:800;
+  letter-spacing:-3.2px;
+}
+
+.nxSectionTitle h2,
+.nxDiscordCopy h2,
+.categoryMarketCopy h1{
+  font-weight:700;
+  letter-spacing:-1.2px;
+}
+
+.nxReveal{
+  opacity:0;
+  transform:translate3d(0,34px,0) scale(.985);
+  filter:blur(5px);
+  transition:
+    opacity .72s cubic-bezier(.2,.75,.2,1),
+    transform .72s cubic-bezier(.2,.75,.2,1),
+    filter .72s ease;
+  transition-delay:var(--reveal-delay,0ms);
+  will-change:opacity,transform,filter;
+}
+
+.nxReveal.nxRevealVisible{
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  filter:blur(0);
+}
+
+.nxHeroArt.nxReveal{
+  transform:translate3d(42px,18px,0) scale(.98);
+}
+.nxHeroArt.nxReveal.nxRevealVisible{
+  transform:translate3d(0,0,0) scale(1);
+}
+
+.nxCat.nxReveal,
+.nxProduct.nxReveal,
+.categoryProductCard.nxReveal{
+  transform:translate3d(0,26px,0) scale(.97);
+}
+.nxCat.nxReveal.nxRevealVisible,
+.nxProduct.nxReveal.nxRevealVisible,
+.categoryProductCard.nxReveal.nxRevealVisible{
+  transform:translate3d(0,0,0) scale(1);
+}
+
+.nxBenefits>div.nxReveal{
+  transform:translate3d(0,18px,0);
+}
+
+.nxProduct,
+.nxCat,
+.nxBenefits>div{
+  transition:
+    transform .28s cubic-bezier(.2,.75,.2,1),
+    border-color .28s ease,
+    box-shadow .28s ease;
+}
+
+.nxProduct:hover{
+  transform:translateY(-7px) scale(1.015);
+}
+.nxCat:hover{
+  transform:translateY(-6px) scale(1.015);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .nxReveal,
+  .nxReveal.nxRevealVisible{
+    opacity:1!important;
+    transform:none!important;
+    filter:none!important;
+    transition:none!important;
+  }
+}
