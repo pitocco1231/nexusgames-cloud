@@ -1,6 +1,7 @@
 import HeaderActions from "./HeaderActions";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
+import { NEXUS_HERO_BACKGROUND } from "../lib/nexusHero";
 
 const img: Record<string,string> = {
   "mobile-legends": "https://sultra.disway.id/upload/250f57b3b1ebcb0945512ae3c2ac7ca0.jpg",
@@ -52,8 +53,26 @@ export default async function Home(){
         <HeaderActions discord={discord} />
       </header>
 
-      <section className="nxHero" id="inicio">
-        <div className="nxHeroCopy">
+      <section
+        className="nxHero"
+        id="inicio"
+        style={{position:"relative",gridTemplateColumns:"1fr",background:"#05060a"}}
+      >
+        <div
+          aria-hidden="true"
+          style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}
+        >
+          <img
+            src={NEXUS_HERO_BACKGROUND}
+            alt=""
+            style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center center",display:"block",filter:"saturate(1.06) contrast(1.05) brightness(.94)"}}
+          />
+          <div
+            style={{position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,6,10,.98) 0%,rgba(5,6,10,.91) 20%,rgba(5,6,10,.72) 34%,rgba(5,6,10,.24) 52%,rgba(5,6,10,.04) 74%),linear-gradient(0deg,rgba(5,6,10,.34),transparent 48%)"}}
+          />
+        </div>
+
+        <div className="nxHeroCopy" style={{position:"relative",zIndex:3,maxWidth:"690px"}}>
           <span className="nxEyebrow">🎮 GAMES, GIFT CARDS E MUITO MAIS</span>
           <h1>JOGUE MAIS.<br/><em>PAGUE MENOS.</em></h1>
           <p>Seus jogos favoritos com entrega rápida, segura e os melhores preços do Brasil.</p>
@@ -66,10 +85,6 @@ export default async function Home(){
             <span>🛡️ Pagamento seguro</span>
             <span>🎧 Suporte 24/7</span>
           </div>
-        </div>
-
-        <div className="nxHeroArt nxHeroArtStable">
-          <img className="nxHeroStableBg" src="https://images.unsplash.com/photo-1616588589676-62b3bd4ff6d2?auto=format&fit=crop&fm=jpg&q=88&w=2200" alt="Setup gamer NexusGames" />
         </div>
       </section>
 
