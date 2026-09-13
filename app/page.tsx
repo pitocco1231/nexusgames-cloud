@@ -40,6 +40,9 @@ export default async function Home() {
             : { name: category?.name.replace("🔥 ", "") || "NEXUSGAMES", mark: "N", tone: "nx" };
     return {
       id: row.option.id,
+      department: row.option.id.includes("giftcard") || row.option.id.includes("java-bedrock")
+        ? "gift-cards" as const
+        : "coins" as const,
       categoryId: row.option.categoryId,
       categoryName: category?.name.replace("🔥 ", "") || row.option.categoryId,
       name: row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim(),

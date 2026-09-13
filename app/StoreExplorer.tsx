@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 type StoreItem = {
   id: string;
+  department: "gift-cards" | "coins";
   categoryId: string;
   categoryName: string;
   name: string;
@@ -27,23 +28,95 @@ type Category = {
 export default function StoreExplorer({ items, categories }: { items: StoreItem[]; categories: Category[] }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("all");
+  const [department, setDepartment] = useState("all");
   const [sort, setSort] = useState("featured");
+
+  const departments = [
+    {
+      id: "gift-cards",
+      eyebrow: "CRÉDITOS PARA SUA PLATAFORMA",
+      title: "Gift Cards",
+      description: "Cartões digitais com região e disponibilidade verificadas antes do pagamento.",
+      image: "/departments/gift-cards.webp",
+      action: "Ver gift cards"
+    },
+    {
+      id: "accounts",
+      eyebrow: "ACESSO COM PROCEDÊNCIA",
+      title: "Contas",
+      description: "Uma área reservada somente para ofertas legítimas e verificadas. Catálogo em preparação.",
+      image: "/departments/accounts.webp",
+      action: "Em preparação"
+    },
+    {
+      id: "coins",
+      eyebrow: "SALDO DIRETO NO JOGO",
+      title: "Moedas",
+      description: "Diamantes, Minecoins e créditos entregues conforme as regras de cada jogo.",
+      image: "/departments/coins.webp",
+      action: "Ver moedas"
+    }
+  ] as const;
+
+  function selectDepartment(nextDepartment: string) {
+    if (nextDepartment === "accounts") return;
+    setDepartment(nextDepartment);
+    setActive("all");
+    setQuery("");
+    requestAnimationFrame(() => document.querySelector("#catalogo")?.scrollIntoView({ behavior: "smooth" }));
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const result = items.filter((item) => {
       const categoryOk = active === "all" || item.categoryId === active;
+      const departmentOk = department === "all" || item.department === department;
       const searchOk = !q || `${item.name} ${item.categoryName} ${item.description}`.toLowerCase().includes(q);
-      return categoryOk && searchOk;
+      return categoryOk && departmentOk && searchOk;
     });
     if (sort === "lowest") return result.toSorted((a, b) => a.price - b.price);
     if (sort === "highest") return result.toSorted((a, b) => b.price - a.price);
     if (sort === "name") return result.toSorted((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     return result;
-  }, [items, query, active, sort]);
+  }, [items, query, active, department, sort]);
 
   return (
     <>
+      <section className="nxDepartments" id="departamentos">
+        <div className="marketSectionHead nxDepartmentsHead">
+          <div>
+            <span>COMPRE DO SEU JEITO</span>
+            <h2>O que você procura?</h2>
+          </div>
+          <p>Três áreas claras para você chegar mais rápido ao produto certo.</p>
+        </div>
+
+        <div className="nxDepartmentGrid">
+          {departments.map((item) => {
+            const disabled = item.id === "accounts";
+            return (
+              <button
+                className={`nxDepartmentCard nxDepartment-${item.id} ${disabled ? "isPreparing" : ""}`}
+                type="button"
+                key={item.id}
+                onClick={() => selectDepartment(item.id)}
+                disabled={disabled}
+              >
+                <img src={item.image} alt="" loading="lazy" />
+                <span className="nxDepartmentShade" />
+                <span className="nxDepartmentBrand"><img src="/assets/nexus-logo" alt="" /><b>NEXUS<span>GAMES</span></b></span>
+                <span className="nxDepartmentCopy">
+                  <small>{item.eyebrow}</small>
+                  <strong>{item.title}</strong>
+                  <em>{item.description}</em>
+                  <b>{item.action} <i>{disabled ? "•" : "→"}</i></b>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="marketCategories" id="categorias">
         <div className="marketSectionHead">
           <div>
@@ -94,9 +167,11 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
 
         <div className="marketFilterRow" role="group" aria-label="Filtrar por categoria">
           <div className="marketFilterButtons">
-            <button className={active === "all" ? "active" : ""} onClick={() => setActive("all")}>Todos</button>
+            <button className={active === "all" && department === "all" ? "active" : ""} onClick={() => { setActive("all"); setDepartment("all"); }}>Todos</button>
+            <button className={department === "gift-cards" ? "active" : ""} onClick={() => { setActive("all"); setDepartment("gift-cards"); }}>Gift Cards</button>
+            <button className={department === "coins" ? "active" : ""} onClick={() => { setActive("all"); setDepartment("coins"); }}>Moedas</button>
             {categories.filter((category) => category.available).map((category) => (
-              <button key={category.id} className={active === category.id ? "active" : ""} onClick={() => setActive(category.id)}>{category.name}</button>
+              <button key={category.id} className={active === category.id ? "active" : ""} onClick={() => { setActive(category.id); setDepartment("all"); }}>{category.name}</button>
             ))}
           </div>
           <label className="marketSort">Ordenar
@@ -140,7 +215,7 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
             <span>⌕</span>
             <strong>Nenhum produto encontrado</strong>
             <p>Tente outro termo ou selecione outra categoria.</p>
-            <button type="button" onClick={() => { setQuery(""); setActive("all"); }}>Limpar filtros</button>
+            <button type="button" onClick={() => { setQuery(""); setActive("all"); setDepartment("all"); }}>Limpar filtros</button>
           </div>
         )}
       </section>
