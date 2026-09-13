@@ -324,3 +324,38 @@ body{font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",s
     transition:none!important;
   }
 }
+
+/* ===== Header account + Discord + hero background polish ===== */
+.nxHeaderActions{display:flex;align-items:center;gap:18px;margin-left:0}
+.nxDiscordOfficial{display:flex!important;align-items:center;gap:9px;color:#fff}
+.nxDiscordIcon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:linear-gradient(145deg,#5865F2,#7b4cff);box-shadow:0 0 20px rgba(88,101,242,.25)}
+.nxDiscordIcon svg{width:17px;height:17px}
+.nxDiscordOfficial b,.nxLoginButton b{font-size:9px}
+.nxDiscordOfficial small,.nxLoginButton small{font-size:7px;color:#777c89}
+.nxLoginButton{border:0;background:transparent;color:#fff;display:flex;align-items:center;gap:9px;padding:0;cursor:pointer}
+.nxUserOutline{width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.28);border-radius:50%;font-size:17px}
+.nxUserAvatar{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#8d2dff,#5f39ef);font-size:11px;font-weight:800}
+.nxLoginButton>div{display:flex;flex-direction:column;align-items:flex-start}
+
+.nxLoginOverlay{position:fixed;inset:0;z-index:200;background:rgba(2,3,8,.78);backdrop-filter:blur(10px);display:grid;place-items:center;padding:20px}
+.nxLoginModal{position:relative;width:min(420px,100%);padding:30px;border-radius:20px;border:1px solid rgba(154,85,255,.26);background:radial-gradient(circle at 50% 0,rgba(132,53,255,.2),transparent 36%),#0a0b12;box-shadow:0 30px 100px rgba(0,0,0,.6);text-align:center}
+.nxLoginModal>img{width:68px;height:68px;object-fit:cover;border-radius:50%;box-shadow:0 0 32px rgba(145,55,255,.4)}
+.nxLoginModal>span{display:block;margin-top:10px;color:#a763ff;font:800 9px/1 "Outfit";letter-spacing:2px}
+.nxLoginModal h2{font:700 28px/1.1 "Outfit";margin:13px 0 8px}.nxLoginModal>p{margin:0 0 22px;color:#858a99;font-size:11px}
+.nxLoginClose{position:absolute;right:14px;top:12px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:#101119;color:#aaa;font-size:20px;cursor:pointer}
+.nxLoginModal form{display:grid;gap:13px;text-align:left}.nxLoginModal label{display:grid;gap:7px;color:#bfc2cc;font-size:9px;font-weight:700}
+.nxLoginModal input{height:46px;border:1px solid rgba(255,255,255,.09);border-radius:11px;background:#07080d;color:#fff;padding:0 13px;outline:none;font:500 11px "Inter"}
+.nxLoginModal input:focus{border-color:#7e43e8;box-shadow:0 0 0 3px rgba(126,67,232,.1)}
+.nxLoginModal form>button{height:47px;border:0;border-radius:11px;background:linear-gradient(135deg,#922eff,#6848ff);color:#fff;font:800 10px "Inter";cursor:pointer}
+.nxLoginMessage{padding:10px;border-radius:8px;background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.16);color:#cbb7ff;font-size:9px;line-height:1.4}
+.nxSwitchMode{margin-top:14px;border:0;background:transparent;color:#a984ff;font-size:9px;cursor:pointer}
+
+.nxDiscordHeroButton{gap:9px}.nxDiscordHeroIcon{width:20px;height:20px;display:inline-grid;place-items:center;color:#fff}.nxDiscordHeroIcon svg{width:19px;height:19px}
+
+.nxHeroArt{border-left:1px solid rgba(255,255,255,.03)}
+.nxHeroImg{right:0!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;opacity:.94!important;filter:saturate(.92) contrast(1.08) hue-rotate(258deg) brightness(.72)!important;mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.55) 11%,#000 36%,#000 100%)!important}
+.nxHeroArt:before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,#05060a 0%,rgba(5,6,10,.82) 14%,rgba(5,6,10,.18) 52%,rgba(55,14,101,.18) 100%),radial-gradient(circle at 63% 45%,rgba(137,45,255,.13),transparent 45%);pointer-events:none}
+.nxHeroArt:after{z-index:1}
+
+@media(max-width:1100px){.nxHeaderActions{margin-left:auto}.nxDiscordOfficial{display:none!important}}
+@media(max-width:780px){.nxLoginButton div{display:none}.nxHeaderActions{gap:8px}}
