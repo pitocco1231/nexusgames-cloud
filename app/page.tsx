@@ -2,13 +2,13 @@ import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 
 const img: Record<string,string> = {
-  "mobile-legends": "/assets/mobile-legends",
-  playstation: "/assets/playstation",
-  xbox: "/assets/xbox",
-  minecraft: "/assets/minecraft",
-  roblox: "/assets/roblox",
-  valorant: "/assets/valorant",
-  steam: "/assets/steam"
+  "mobile-legends": "https://sultra.disway.id/upload/250f57b3b1ebcb0945512ae3c2ac7ca0.jpg",
+  playstation: "https://i5.walmartimages.com/seo/PlayStation-Store-50-Gift-Card_54093b0e-462f-4e5a-a74d-3067938b1628.f5ab47601f117e726a441e4edffbc312.jpeg?odnBg=FFFFFF&odnHeight=576&odnWidth=576",
+  xbox: "https://cdkeyprices.com/images/cards/xbox-game-pass/xbox-game-pass-logo-2.jpg",
+  minecraft: "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A448%2Ccw%3A1152%2Cch%3A1152%2Cq%3A80%2Cw%3A1152/rpPGiw7RjFaeJCCDBC4Bna.jpg",
+  roblox: "https://partners.pay-card.shop/storage/2465/01K7D0JRVR34SQ5HN4M6YZR6AH.webp",
+  valorant: "https://space-waves.co/data/image/game/valorant/valorant.png",
+  steam: "https://images.prom.ua/5831357315_w640_h640_podarochnaya-karta-steam.jpg"
 };
 
 export const dynamic = "force-dynamic";
@@ -69,10 +69,10 @@ export default async function Home(){
 
         <div className="nxHeroArt">
           <div className="nxHeroGlow"/>
-          <img className="nxHeroImg" src="/assets/hero-store" alt="NexusGames destaque"/>
-          <div className="nxHeroMark">N</div>
-          <div className="nxHeroWords">PLAY<br/><strong>MORE</strong></div>
-          <div className="nxHeroCommunity">+ MAIS<br/>QUE JOGOS,<br/>UMA COMUNIDADE</div>
+          <img className="nxHeroImg" src="https://cdn.mos.cms.futurecdn.net/uJRCtKEsYWkK99GtkuUQ64.jpg" alt="Arte Valorant"/>
+          
+          
+          
         </div>
       </section>
 
