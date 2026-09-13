@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "NexusGames | Games, créditos e gift cards",
   description: "Compre produtos digitais para seus jogos favoritos com Pix, preços atualizados e suporte pelo Discord.",
-  icons: { icon: "/assets/nexus-icon" },
+  icons: { icon: "/assets/nexus-logo" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "NexusGames",
