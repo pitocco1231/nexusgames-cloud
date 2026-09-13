@@ -1,175 +1,157 @@
 import HeaderActions from "./HeaderActions";
+import StoreExplorer from "./StoreExplorer";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 import { NEXUS_HERO_BACKGROUND } from "../lib/nexusHero";
-
-const img: Record<string,string> = {
-  "mobile-legends": "https://sultra.disway.id/upload/250f57b3b1ebcb0945512ae3c2ac7ca0.jpg",
-  playstation: "https://i5.walmartimages.com/seo/PlayStation-Store-50-Gift-Card_54093b0e-462f-4e5a-a74d-3067938b1628.f5ab47601f117e726a441e4edffbc312.jpeg?odnBg=FFFFFF&odnHeight=576&odnWidth=576",
-  xbox: "https://cdkeyprices.com/images/cards/xbox-game-pass/xbox-game-pass-logo-2.jpg",
-  minecraft: "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A448%2Ccw%3A1152%2Cch%3A1152%2Cq%3A80%2Cw%3A1152/rpPGiw7RjFaeJCCDBC4Bna.jpg",
-  roblox: "https://partners.pay-card.shop/storage/2465/01K7D0JRVR34SQ5HN4M6YZR6AH.webp",
-  valorant: "https://space-waves.co/data/image/game/valorant/valorant.png",
-  steam: "https://images.prom.ua/5831357315_w640_h640_podarochnaya-karta-steam.jpg"
-};
+import { storeImage } from "../lib/storeMedia";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home(){
+export default async function Home() {
   const discord = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/RDvDTVFwm";
-  const live = await getLiveOptions().catch(()=>[]);
+  const live = await getLiveOptions().catch(() => []);
+
   const byCategory = new Map<string, number>();
-  for(const row of live){
+  for (const row of live) {
     const current = byCategory.get(row.option.categoryId);
-    if(current===undefined || row.salePriceBrl<current) byCategory.set(row.option.categoryId,row.salePriceBrl);
+    if (current === undefined || row.salePriceBrl < current) byCategory.set(row.option.categoryId, row.salePriceBrl);
   }
 
-  const featured = live.slice(0,6).map((row)=>{
-    const cat = products.find(p=>p.id===row.option.categoryId);
+  const categories = products.map((product) => ({
+    id: product.id,
+    name: product.name.replace("🔥 ", ""),
+    description: product.description,
+    image: storeImage(product.id),
+    available: byCategory.has(product.id),
+    fromPrice: byCategory.get(product.id) ?? null
+  }));
+
+  const items = live.map((row) => {
+    const category = products.find((product) => product.id === row.option.categoryId);
     return {
       id: row.option.id,
-      catId: row.option.categoryId,
-      category: cat?.name.replace("🔥 ","") || row.option.categoryId,
-      name: row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i,"").trim(),
-      price: row.salePriceBrl
+      categoryId: row.option.categoryId,
+      categoryName: category?.name.replace("🔥 ", "") || row.option.categoryId,
+      name: row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim(),
+      description: row.option.description,
+      price: row.salePriceBrl,
+      emoji: row.option.emoji,
+      href: `/checkout?produto=${encodeURIComponent(row.option.id)}`
     };
   });
 
   return (
-    <main className="nxPage">
-      <header className="nxHeader">
-        <a href="/" className="nxLogo">
-          <img src="/assets/nexus-logo" alt="NexusGames"/>
+    <main className="nxPage nxCommercePage">
+      <header className="nxHeader nxHeaderV5">
+        <a href="/" className="nxLogo" aria-label="NexusGames - página inicial">
+          <img src="/assets/nexus-logo" alt="NexusGames" />
           <div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
         </a>
-        <nav className="nxNav">
+
+        <nav className="nxNav" aria-label="Navegação principal">
           <a className="active" href="#inicio">Início</a>
-          <a href="#categorias">Jogos</a>
-          <a href="#produtos">Gift Cards</a>
+          <a href="#categorias">Categorias</a>
+          <a href="#catalogo">Produtos</a>
           <a href="#como">Como funciona</a>
-          <a href={discord}>Suporte</a>
+          <a href={discord} target="_blank" rel="noreferrer">Suporte</a>
         </nav>
-        <a href="#produtos" className="nxSearch"><span>⌕</span><b>Buscar jogos, produtos...</b></a>
+
+        <a href="#catalogo" className="nxSearch" aria-label="Buscar produtos">
+          <span aria-hidden="true">⌕</span><b>Buscar jogos, recargas e gift cards</b>
+        </a>
         <HeaderActions discord={discord} />
       </header>
 
-      <section
-        className="nxHero"
-        id="inicio"
-        style={{position:"relative",gridTemplateColumns:"1fr",background:"#05060a"}}
-      >
-        <div
-          aria-hidden="true"
-          style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none"}}
-        >
-          <img
-            src={NEXUS_HERO_BACKGROUND}
-            alt=""
-            style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center center",display:"block",filter:"saturate(1.06) contrast(1.05) brightness(.94)"}}
-          />
-          <div
-            style={{position:"absolute",inset:0,background:"linear-gradient(90deg,rgba(5,6,10,.98) 0%,rgba(5,6,10,.91) 20%,rgba(5,6,10,.72) 34%,rgba(5,6,10,.24) 52%,rgba(5,6,10,.04) 74%),linear-gradient(0deg,rgba(5,6,10,.34),transparent 48%)"}}
-          />
+      <section className="nxHero nxHeroV5" id="inicio">
+        <div className="nxHeroBackdrop" aria-hidden="true">
+          <img src={NEXUS_HERO_BACKGROUND} alt="" />
+          <div className="nxHeroBackdropShade" />
         </div>
 
-        <div className="nxHeroCopy" style={{position:"relative",zIndex:3,maxWidth:"690px"}}>
-          <span className="nxEyebrow">🎮 GAMES, GIFT CARDS E MUITO MAIS</span>
+        <div className="nxHeroCopy nxHeroCopyV5">
+          <span className="nxEyebrow"><i /> ENTREGA DIGITAL • PIX • SUPORTE</span>
           <h1>JOGUE MAIS.<br/><em>PAGUE MENOS.</em></h1>
-          <p>Seus jogos favoritos com entrega rápida, segura e os melhores preços do Brasil.</p>
+          <p>Recargas, gift cards e créditos digitais com disponibilidade verificada, pagamento por Pix e acompanhamento do pedido.</p>
+
           <div className="nxHeroBtns">
-            <a className="nxPrimary" href="#produtos">Ver produtos <b>→</b></a>
-            <a className="nxSecondary nxDiscordHeroButton" href={discord}><span className="nxDiscordHeroIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.5 5.34A16.3 16.3 0 0 0 15.44 4l-.5 1.02a15.3 15.3 0 0 0-5.87 0L8.56 4A16.5 16.5 0 0 0 4.5 5.35C1.94 9.16 1.25 12.87 1.6 16.53a16.4 16.4 0 0 0 4.98 2.51l1.2-1.66a10.5 10.5 0 0 1-1.89-.9l.46-.36c3.64 1.68 7.6 1.68 11.2 0l.47.36c-.61.36-1.24.66-1.9.9l1.2 1.66a16.4 16.4 0 0 0 4.98-2.51c.42-4.24-.72-7.92-2.8-11.19ZM8.6 14.7c-1.1 0-2-1.02-2-2.27 0-1.25.88-2.27 2-2.27s2.02 1.03 2 2.27c0 1.25-.89 2.27-2 2.27Zm6.8 0c-1.1 0-2-1.02-2-2.27 0-1.25.88-2.27 2-2.27s2.02 1.03 2 2.27c0 1.25-.88 2.27-2 2.27Z"/></svg></span>Entrar no Discord</a>
+            <a className="nxPrimary" href="#catalogo">Explorar produtos <b>→</b></a>
+            <a className="nxSecondary nxDiscordHeroButton" href={discord} target="_blank" rel="noreferrer">
+              <span className="nxDiscordHeroIcon" aria-hidden="true">◉</span> Entrar no Discord
+            </a>
           </div>
-          <div className="nxTrust">
-            <span>⚡ Entrega instantânea</span>
-            <span>🛡️ Pagamento seguro</span>
-            <span>🎧 Suporte 24/7</span>
+
+          <div className="nxHeroProof" aria-label="Diferenciais da NexusGames">
+            <div><strong>Preço atualizado</strong><small>catálogo sincronizado</small></div>
+            <div><strong>Estoque validado</strong><small>antes do pagamento</small></div>
+            <div><strong>Entrega monitorada</strong><small>status do pedido</small></div>
           </div>
         </div>
       </section>
 
-      <section className="nxCategories" id="categorias">
-        {products.map((p)=> {
-          const price = byCategory.get(p.id);
-          return (
-            <a className="nxCat" href={price!==undefined?"/categoria/"+p.id:"#produtos"} key={p.id}>
-              <img src={img[p.id] || "/assets/nexus-logo"} alt={p.name}/>
-              <div className="nxCatShade"/>
-              <div className="nxCatText">
-                <strong>{p.name.replace("🔥 ","")}</strong>
-                <small>{p.id==="mobile-legends"?"Recargas":p.id==="playstation"?"Gift Cards":p.id==="xbox"?"Gift Cards e Game Pass":p.id==="minecraft"?"Minecoins e Gift Cards":p.id==="roblox"?"Robux e Gift Cards":p.id==="valorant"?"Points (VP)":"Gift Cards"}</small>
-              </div>
-            </a>
-          );
-        })}
+      <section className="nxTrustStrip" aria-label="Benefícios">
+        <div className="nxTrustCard"><span>⚡</span><div><b>Entrega digital</b><small>Fluxo automatizado quando disponível</small></div></div>
+        <div className="nxTrustCard"><span>◆</span><div><b>Pix via Mercado Pago</b><small>Checkout protegido e simples</small></div></div>
+        <div className="nxTrustCard"><span>✓</span><div><b>Região verificada</b><small>Reduz risco de código incompatível</small></div></div>
+        <div className="nxTrustCard"><span>◉</span><div><b>Suporte no Discord</b><small>Canal direto para acompanhar pedidos</small></div></div>
       </section>
 
-      <section className="nxFeatured" id="produtos">
-        <div className="nxSectionTitle">
-          <div><span>━ &nbsp; OFERTAS EM DESTAQUE</span><h2>Mais vendidos</h2><p>Os produtos mais adquiridos pelos nossos clientes.</p></div>
-          <a href="#categorias">Ver todos →</a>
-        </div>
+      <StoreExplorer items={items} categories={categories} />
 
-        <div className="nxProductGrid">
-          {featured.length ? featured.map((item)=>(
-            <a className="nxProduct" href={"/checkout?produto="+encodeURIComponent(item.id)} key={item.id}>
-              <div className="nxProductImg"><img src={img[item.catId] || "/assets/nexus-logo"} alt={item.name}/></div>
-              <div className="nxProductBody">
-                <h3>{item.category}</h3>
-                <p>{item.name}</p>
-                <span className="nxDelivery">{item.catId==="mobile-legends"?"⚡ Entrega direta":"◉ Código digital"}</span>
-                <small>A partir de</small>
-                <div className="nxProductBottom"><strong>R$ {item.price.toFixed(2).replace(".",",")}</strong><b>🛒</b></div>
-              </div>
-            </a>
-          )) : products.slice(0,6).map((p)=>(
-            <a className="nxProduct" href={"/categoria/"+p.id} key={p.id}>
-              <div className="nxProductImg"><img src={img[p.id] || "/assets/nexus-logo"} alt={p.name}/></div>
-              <div className="nxProductBody">
-                <h3>{p.name.replace("🔥 ","")}</h3><p>Produtos digitais</p><span className="nxDelivery">◉ Em breve</span><small>Catálogo</small>
-                <div className="nxProductBottom"><strong>Ver opções</strong><b>→</b></div>
-              </div>
-            </a>
-          ))}
+      <section className="nxHow" id="como">
+        <div className="nxSectionLead">
+          <span>COMPRA SEM COMPLICAÇÃO</span>
+          <h2>Do catálogo à entrega em poucos passos.</h2>
+          <p>O fluxo foi desenhado para reduzir atrito e deixar claro o que acontece em cada etapa.</p>
+        </div>
+        <div className="nxHowGrid">
+          <article className="nxHowCard"><b>01</b><h3>Escolha o produto</h3><p>Use a busca ou filtre por plataforma para encontrar a opção ideal.</p></article>
+          <article className="nxHowCard"><b>02</b><h3>Revise os dados</h3><p>Confirmamos preço, região e disponibilidade antes de iniciar o pagamento.</p></article>
+          <article className="nxHowCard"><b>03</b><h3>Pague com Pix</h3><p>O pagamento é processado pelo Mercado Pago em um checkout protegido.</p></article>
+          <article className="nxHowCard"><b>04</b><h3>Acompanhe a entrega</h3><p>Você recebe o status do pedido e, quando aplicável, o código digital.</p></article>
         </div>
       </section>
 
-      <section className="nxBenefits" id="como">
-        <div><span>◈</span><div><b>Melhores preços</b><small>Do Brasil</small></div></div>
-        <div><span>⚡</span><div><b>Entrega rápida</b><small>Em minutos</small></div></div>
-        <div><span>🛡️</span><div><b>Pagamento seguro</b><small>Via Mercado Pago</small></div></div>
-        <div><span>🎧</span><div><b>Suporte 24/7</b><small>Pelo Discord</small></div></div>
-        <div><span>👥</span><div><b>Comunidade</b><small>NexusGames</small></div></div>
+      <section className="nxSecurityPanel">
+        <div className="nxSecurityCopy">
+          <span>CONFIANÇA EM PRIMEIRO LUGAR</span>
+          <h2>Uma loja feita para parecer simples porque a parte difícil acontece por trás.</h2>
+          <p>Validação de estoque, região, preço e status de pedido trabalham nos bastidores para que a experiência fique direta para quem compra.</p>
+          <div className="nxSecurityBullets">
+            <b>✓ Disponibilidade conferida</b>
+            <b>✓ Checkout protegido</b>
+            <b>✓ Status atualizado</b>
+          </div>
+        </div>
+        <div className="nxSecurityVisual" aria-hidden="true">
+          <div className="nxSecurityOrb"><img src="/assets/nexus-logo" alt="" /></div>
+          <div className="nxSecurityMini one"><small>CATÁLOGO</small><strong>Online</strong></div>
+          <div className="nxSecurityMini two"><small>PAGAMENTO</small><strong>Pix</strong></div>
+          <div className="nxSecurityMini three"><small>SUPORTE</small><strong>Discord</strong></div>
+        </div>
       </section>
 
-      <section className="nxDiscordBanner">
+      <section className="nxDiscordBanner nxDiscordBannerV5">
         <div className="nxDiscordCopy">
-          <span>━ &nbsp; ENTRE NO NOSSO DISCORD</span>
-          <h2>FAÇA PARTE DA<br/>NOSSA COMUNIDADE</h2>
-          <p>Suporte exclusivo, sorteios, promoções e muito mais!</p>
-          <a href={discord}>◉ Entrar agora</a>
+          <span>COMUNIDADE NEXUSGAMES</span>
+          <h2>PRECISA DE AJUDA?<br/>FALA COM A GENTE.</h2>
+          <p>Entre no Discord para suporte, novidades, promoções e acompanhamento.</p>
+          <a href={discord} target="_blank" rel="noreferrer">Entrar no Discord →</a>
         </div>
-        <div className="nxDiscordVisual nxDiscordVisualArt nxDiscordPhoto">
-          <img src="https://images.unsplash.com/photo-1760999896198-b7e780e42500?auto=format&fit=crop&fm=jpg&q=88&w=1800" alt="Comunidade NexusGames" />
-          <div className="nxDiscordPhotoOverlay">
-            <img src="/assets/nexus-logo" alt="NexusGames" />
-            <strong>NEXUSGAMES</strong>
-            <small>COMUNIDADE • SUPORTE • PROMOÇÕES</small>
-          </div>
+        <div className="nxDiscordBackdrop" aria-hidden="true">
+          <img src={NEXUS_HERO_BACKGROUND} alt="" />
         </div>
       </section>
 
-      <footer className="nxFooter">
+      <footer className="nxFooter nxFooterV5">
         <div className="nxFooterBrand">
           <a href="/" className="nxLogo"><img src="/assets/nexus-logo" alt="NexusGames"/><div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div></a>
-          <p>Games, gift cards e muito mais. Sua diversão em primeiro lugar.</p>
-          <div className="nxSocial">◉ ◎ ♪ ▶</div>
+          <p>Recargas, gift cards e produtos digitais em uma experiência simples, rápida e segura.</p>
         </div>
-        <div><b>Navegação</b><a href="#inicio">Início</a><a href="#categorias">Jogos</a><a href="#produtos">Gift Cards</a><a href="#como">Como funciona</a><a href={discord}>Suporte</a></div>
-        <div><b>Institucional</b><a href="#">Termos de uso</a><a href="#">Política de privacidade</a><a href="#">Trocas e reembolsos</a><a href={discord}>Contato</a></div>
-        <div className="nxPayments"><b>Pagamento seguro</b><strong>mercado<br/>pago</strong><p>▰ VISA &nbsp; ◉ MC &nbsp; ◇ ELO &nbsp; ◈ PIX</p><small>⌘ Ambiente seguro e criptografado.</small></div>
+        <div><b>Navegação</b><a href="#inicio">Início</a><a href="#categorias">Categorias</a><a href="#catalogo">Produtos</a><a href="#como">Como funciona</a></div>
+        <div><b>Atendimento</b><a href={discord} target="_blank" rel="noreferrer">Discord</a><a href="/login">Minha conta</a><a href="#catalogo">Buscar produto</a></div>
+        <div className="nxPayments"><b>Pagamento</b><strong>Mercado Pago</strong><p>Pix • ambiente protegido</p><small>Os produtos disponíveis variam conforme estoque e região.</small></div>
       </footer>
-      <div className="nxCopyright"><span>© 2026 NexusGames. Todos os direitos reservados.</span><span>Play More. ✦ NexusGames</span></div>
+      <div className="nxCopyright"><span>© 2026 NexusGames. Todos os direitos reservados.</span><span>Play More. NexusGames.</span></div>
     </main>
   );
 }

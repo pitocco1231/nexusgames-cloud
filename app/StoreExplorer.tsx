@@ -40,20 +40,26 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
       <section className="marketCategories" id="categorias">
         <div className="marketSectionHead">
           <div>
-            <span>EXPLORE</span>
+            <span>ESCOLHA SUA PLATAFORMA</span>
             <h2>Categorias</h2>
           </div>
-          <p>Escolha a plataforma e veja apenas ofertas com região e estoque verificados.</p>
+          <p>Entre direto no catálogo da plataforma que você procura. Itens sem estoque ficam sinalizados como indisponíveis.</p>
         </div>
 
         <div className="marketCategoryRail">
           {categories.map((category) => (
-            <a className={`marketCategoryTile ${category.available ? "" : "soon"}`} href={category.available ? `/categoria/${category.id}` : "#catalogo"} key={category.id}>
-              <img src={category.image} alt={category.name} />
+            <a
+              className={`marketCategoryTile ${category.available ? "isAvailable" : "soon"}`}
+              href={category.available ? `/categoria/${category.id}` : "#catalogo"}
+              key={category.id}
+              aria-label={`${category.name}${category.available ? "" : " - em breve"}`}
+            >
+              <img src={category.image} alt={category.name} loading="lazy" />
               <div className="marketCategoryShade" />
               <div className="marketCategoryCopy">
+                <small>{category.available ? "DISPONÍVEL" : "EM BREVE"}</small>
                 <strong>{category.name}</strong>
-                <small>{category.available && category.fromPrice !== null ? `a partir de R$ ${category.fromPrice.toFixed(2).replace(".", ",")}` : "em breve"}</small>
+                <span>{category.available && category.fromPrice !== null ? `a partir de R$ ${category.fromPrice.toFixed(2).replace(".", ",")}` : "catálogo em preparação"}</span>
               </div>
             </a>
           ))}
@@ -63,18 +69,25 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
       <section className="marketCatalog" id="catalogo">
         <div className="marketSectionHead catalogHead">
           <div>
-            <span>OFERTAS ATIVAS</span>
-            <h2>Mais vendidos</h2>
+            <span>CATÁLOGO ATIVO</span>
+            <h2>Produtos disponíveis</h2>
+            <p>Somente ofertas que passaram pela validação de disponibilidade aparecem aqui.</p>
           </div>
-          <div className="marketSearch">
-            <span>⌕</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar produto, jogo ou plataforma..." />
-          </div>
+          <label className="marketSearch">
+            <span aria-hidden="true">⌕</span>
+            <input
+              aria-label="Buscar produtos"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar produto, jogo ou plataforma..."
+            />
+            {query ? <button type="button" onClick={() => setQuery("")} aria-label="Limpar busca">×</button> : null}
+          </label>
         </div>
 
-        <div className="marketFilterRow">
+        <div className="marketFilterRow" role="group" aria-label="Filtrar por categoria">
           <button className={active === "all" ? "active" : ""} onClick={() => setActive("all")}>Todos</button>
-          {categories.filter((c) => c.available).map((category) => (
+          {categories.filter((category) => category.available).map((category) => (
             <button key={category.id} className={active === category.id ? "active" : ""} onClick={() => setActive(category.id)}>{category.name}</button>
           ))}
         </div>
@@ -82,22 +95,23 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
         {filtered.length ? (
           <div className="marketProductGrid">
             {filtered.map((item, index) => {
-              const image = categories.find((c) => c.id === item.categoryId)?.image || "/assets/nexus-icon";
+              const image = categories.find((category) => category.id === item.categoryId)?.image || "/assets/nexus-logo";
               return (
                 <a className="marketProductCard" href={item.href} key={item.id}>
                   <div className="marketProductImage">
-                    <img src={image} alt={item.name} loading="lazy" />
+                    <img src={image} alt={`${item.categoryName} - ${item.name}`} loading="lazy" />
                     <div className="marketProductImageShade" />
-                    {index < 2 && active === "all" && !query ? <span className="marketHot">🔥 MAIS VENDIDO</span> : null}
-                    <span className="marketInstant">⚡ DIGITAL</span>
+                    <span className="marketInstant">DIGITAL</span>
+                    {index < 3 && active === "all" && !query ? <span className="marketHot">DESTAQUE</span> : null}
+                    <div className="marketProductVisualName"><small>{item.categoryName}</small><strong>{item.name}</strong></div>
                   </div>
                   <div className="marketProductBody">
-                    <small>{item.categoryName}</small>
+                    <div className="marketProductMeta"><small>{item.categoryName}</small><span>Disponível</span></div>
                     <h3>{item.name}</h3>
                     <p>{item.description}</p>
                     <div className="marketProductFooter">
-                      <div><span>Preço</span><strong>R$ {item.price.toFixed(2).replace(".", ",")}</strong></div>
-                      <b>Comprar →</b>
+                      <div><span>Preço atual</span><strong>R$ {item.price.toFixed(2).replace(".", ",")}</strong></div>
+                      <b>Comprar <i>→</i></b>
                     </div>
                   </div>
                 </a>
@@ -105,7 +119,12 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
             })}
           </div>
         ) : (
-          <div className="marketEmpty">Nenhum produto encontrado. Tente outro termo ou categoria.</div>
+          <div className="marketEmpty">
+            <span>⌕</span>
+            <strong>Nenhum produto encontrado</strong>
+            <p>Tente outro termo ou selecione outra categoria.</p>
+            <button type="button" onClick={() => { setQuery(""); setActive("all"); }}>Limpar filtros</button>
+          </div>
         )}
       </section>
     </>

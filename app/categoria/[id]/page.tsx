@@ -1,89 +1,95 @@
 import { notFound } from "next/navigation";
+import HeaderActions from "../../HeaderActions";
 import { products } from "../../../lib/catalog";
-import { getLiveOptionsForCategory } from "../../../lib/liveStore";
-
-const images: Record<string, string> = {
-  "mobile-legends": "https://sultra.disway.id/upload/250f57b3b1ebcb0945512ae3c2ac7ca0.jpg",
-  playstation: "https://i5.walmartimages.com/seo/PlayStation-Store-50-Gift-Card_54093b0e-462f-4e5a-a74d-3067938b1628.f5ab47601f117e726a441e4edffbc312.jpeg?odnBg=FFFFFF&odnHeight=576&odnWidth=576",
-  xbox: "https://cdkeyprices.com/images/cards/xbox-game-pass/xbox-game-pass-logo-2.jpg",
-  minecraft: "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A448%2Ccw%3A1152%2Cch%3A1152%2Cq%3A80%2Cw%3A1152/rpPGiw7RjFaeJCCDBC4Bna.jpg",
-  roblox: "https://partners.pay-card.shop/storage/2465/01K7D0JRVR34SQ5HN4M6YZR6AH.webp",
-  valorant: "https://space-waves.co/data/image/game/valorant/valorant.png",
-  steam: "https://images.prom.ua/5831357315_w640_h640_podarochnaya-karta-steam.jpg"
-};
+import { getLiveOptions } from "../../../lib/liveStore";
+import { storeImage, storeLabel } from "../../../lib/storeMedia";
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = products.find((item) => item.id === id);
-  if (!product) notFound();
+  const category = products.find((product) => product.id === id);
+  if (!category) notFound();
 
-  const rows = await getLiveOptionsForCategory(id, true).catch(() => []);
-  const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/RDvDTVFwm";
+  const discord = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/RDvDTVFwm";
+  const live = await getLiveOptions().catch(() => []);
+  const rows = live.filter((row) => row.option.categoryId === id);
+  const image = storeImage(id);
 
   return (
-    <main className="marketShell">
-      <header className="marketNav">
-        <a href="/" className="marketLogo">
-          <img src="/assets/nexus-icon" alt="NexusGames" />
-          <div><strong>NEXUS</strong><span>GAMES</span></div>
+    <main className="nxPage categoryPageV5">
+      <header className="nxHeader nxHeaderV5">
+        <a href="/" className="nxLogo" aria-label="Voltar para NexusGames">
+          <img src="/assets/nexus-logo" alt="NexusGames" />
+          <div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
         </a>
-        <a className="categoryBack" href="/">← Voltar para a loja</a>
+        <nav className="nxNav" aria-label="Navegação">
+          <a href="/">Início</a>
+          <a className="active" href="#produtos">Produtos</a>
+          <a href={discord} target="_blank" rel="noreferrer">Suporte</a>
+        </nav>
+        <HeaderActions discord={discord} />
       </header>
 
-      <section className="categoryMarketHero">
-        <img src={images[id] || "/assets/nexus-icon"} alt={product.name} />
-        <div className="categoryMarketShade" />
-        <div className="categoryMarketCopy">
-          <span className="marketEyebrow">{rows.length ? "DISPONÍVEL AGORA" : "CATÁLOGO NEXUS"}</span>
-          <h1>{product.name.replace("🔥 ", "")}</h1>
-          <p>{product.description}</p>
-          <div className="categoryMarketBadges">
-            <b>⚡ Produto digital</b>
-            <b>🔒 Checkout protegido</b>
-            <b>💠 Pix Mercado Pago</b>
+      <div className="categoryBreadcrumb"><a href="/">NexusGames</a><span>›</span><b>{category.name.replace("🔥 ", "")}</b></div>
+
+      <section className="categoryMarketHero categoryHeroV5">
+        <div className="categoryHeroMedia" aria-hidden="true">
+          <img src={image} alt="" />
+          <div />
+        </div>
+        <div className="categoryHeroCopy">
+          <span>CATÁLOGO • {storeLabel(id).toUpperCase()}</span>
+          <h1>{category.name.replace("🔥 ", "")}</h1>
+          <p>{category.description}</p>
+          <div className="categoryHeroFacts">
+            <b>✓ Estoque validado</b>
+            <b>✓ Preço atualizado</b>
+            <b>✓ Pagamento por Pix</b>
           </div>
         </div>
       </section>
 
-      <section className="categoryProducts">
+      <section className="categoryProductsV5" id="produtos">
         <div className="marketSectionHead">
-          <div><span>ESCOLHA SUA OPÇÃO</span><h2>Produtos</h2></div>
-          <p>Os valores abaixo são atualizados pelo catálogo. Antes do pagamento, a disponibilidade é verificada novamente.</p>
+          <div><span>OFERTAS DISPONÍVEIS</span><h2>Escolha sua opção</h2></div>
+          <p>{rows.length ? `${rows.length} ${rows.length === 1 ? "produto disponível" : "produtos disponíveis"} agora.` : "Nenhuma oferta disponível no momento."}</p>
         </div>
 
         {rows.length ? (
-          <div className="categoryProductGrid">
+          <div className="categoryProductGridV5">
             {rows.map((row, index) => (
-              <article className="categoryProductCard" key={row.option.id}>
-                <div className="categoryProductImage">
-                  <img src={images[id] || "/assets/nexus-icon"} alt={row.option.name} />
-                  <div className="categoryProductImageShade" />
-                  {index === 0 ? <span>⭐ MELHOR PREÇO</span> : <span>⚡ DIGITAL</span>}
+              <a className="categoryProductCard categoryProductCardV5" href={`/checkout?produto=${encodeURIComponent(row.option.id)}`} key={row.option.id}>
+                <div className="categoryProductMedia">
+                  <img src={image} alt={`${category.name} - ${row.option.label}`} loading="lazy" />
+                  <div className="categoryProductMediaShade" />
+                  <span className="categoryProductIndex">0{index + 1}</span>
+                  <div className="categoryProductVisualCopy"><small>{category.name.replace("🔥 ", "")}</small><strong>{row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim()}</strong></div>
                 </div>
-                <div className="categoryProductBody">
-                  <small>{product.name.replace("🔥 ", "")}</small>
+                <div className="categoryProductBodyV5">
+                  <span className="categoryProductType">{row.option.fulfillmentType === "direct_topup" ? "ENTREGA DIRETA" : "CÓDIGO DIGITAL"}</span>
                   <h3>{row.option.label.replace(/\s*[—-]\s*R\$\s*[\d.,]+\s*$/i, "").trim()}</h3>
                   <p>{row.option.description}</p>
-                  <div className="categoryProductMeta">
-                    <span>🌎 Região validada</span>
-                    <span>🔐 Entrega protegida</span>
-                  </div>
-                  <div className="categoryProductBottom">
-                    <div><small>Preço</small><strong>R$ {row.salePriceBrl.toFixed(2).replace(".", ",")}</strong></div>
-                    <a href={`/checkout?produto=${encodeURIComponent(row.option.id)}`}>Comprar agora →</a>
+                  <div className="categoryProductBottomV5">
+                    <div><small>Preço atual</small><strong>R$ {row.salePriceBrl.toFixed(2).replace(".", ",")}</strong></div>
+                    <b>Comprar →</b>
                   </div>
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         ) : (
-          <div className="marketEmpty categoryEmpty">
-            <img src={images[id] || "/assets/nexus-icon"} alt="" />
-            <div><h3>Essa categoria está em preparação.</h3><p>Só liberamos produtos quando região, estoque e fornecedor estão validados.</p><a href={discordInvite}>Falar com o suporte →</a></div>
+          <div className="categoryEmptyV5">
+            <span>◌</span><h2>Sem estoque agora</h2><p>Estamos aguardando uma oferta segura e compatível com a região.</p><a href="/">Ver outras categorias</a>
           </div>
         )}
+      </section>
+
+      <section className="categoryAssuranceV5">
+        <div><b>01</b><strong>Escolha</strong><small>Selecione a opção certa para sua conta.</small></div>
+        <div><b>02</b><strong>Confirme</strong><small>Revise dados e região antes de pagar.</small></div>
+        <div><b>03</b><strong>Pague</strong><small>Finalize por Pix via Mercado Pago.</small></div>
+        <div><b>04</b><strong>Receba</strong><small>Acompanhe a entrega do seu pedido.</small></div>
       </section>
     </main>
   );

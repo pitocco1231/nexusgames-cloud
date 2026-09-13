@@ -1,0 +1,36 @@
+/* ---------- responsive ---------- */
+@media(max-width:1180px){
+  .nxHeaderV5 .nxSearch{display:none!important}
+  .marketCategoryRail{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .marketProductGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .nxTrustStrip{grid-template-columns:repeat(2,1fr)}
+  .nxTrustCard:nth-child(1){border-radius:12px 0 0 0}.nxTrustCard:nth-child(2){border-right:1px solid var(--ng-line);border-radius:0 12px 0 0}.nxTrustCard:nth-child(3){border-left:1px solid var(--ng-line);border-radius:0 0 0 12px}.nxTrustCard:nth-child(4){border-radius:0 0 12px 0}
+  .nxHowGrid{grid-template-columns:repeat(2,1fr)}
+  .nxSecurityPanel,.nxDiscordBannerV5{margin-left:24px!important;margin-right:24px!important}
+  .categoryHeroV5,.categoryAssuranceV5{margin-left:24px!important;margin-right:24px!important}
+}
+@media(max-width:900px){
+  .nxHeaderV5 .nxNav{display:none!important}
+  .nxHeroV5{min-height:650px!important}.nxHeroCopyV5{width:min(680px,78vw)!important;margin-left:28px!important;padding-top:76px!important}.nxHeroBackdrop img{object-position:61% center}.nxHeroBackdropShade{background:linear-gradient(90deg,#05060a 0%,rgba(5,6,10,.95) 35%,rgba(5,6,10,.55) 70%,rgba(5,6,10,.18) 100%),linear-gradient(0deg,rgba(5,6,10,.67),transparent 52%)}
+  .marketSectionHead{align-items:flex-start!important;flex-direction:column!important;gap:17px!important}.marketSearch{width:100%!important}.marketCategoryRail{grid-template-columns:repeat(3,minmax(0,1fr))!important}.marketProductGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .nxSecurityPanel{grid-template-columns:1fr!important;padding:42px!important}.nxSecurityVisual{min-height:250px}.nxDiscordBannerV5{height:auto!important;grid-template-columns:1fr!important}.nxDiscordBackdrop{min-height:220px}.nxFooterV5{grid-template-columns:1fr 1fr!important}
+  .categoryHeroV5{min-height:390px!important}.categoryHeroCopy{width:78%;padding:46px 40px}.categoryProductGridV5{grid-template-columns:repeat(2,minmax(0,1fr))}.categoryAssuranceV5{grid-template-columns:repeat(2,1fr)}.categoryAssuranceV5>div:nth-child(3){border-left:0;border-top:1px solid rgba(255,255,255,.065)}.categoryAssuranceV5>div:nth-child(4){border-top:1px solid rgba(255,255,255,.065)}
+  .nxAuthPageV5{grid-template-columns:1fr!important}.nxAuthVisualV5{min-height:360px!important}.nxAuthPanelV5{padding-top:38px!important}
+  .checkoutShellV5{grid-template-columns:1fr!important;gap:28px!important;padding-top:38px!important}.checkoutSideV5{position:static!important;padding:0!important;max-width:700px}.checkoutSideSteps{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:620px){
+  .nxHeaderV5{min-height:68px!important;padding:0 14px!important}.nxHeaderV5 .nxLogo img{width:42px!important;height:42px!important}.nxHeaderV5 .nxLogo strong{font-size:16px!important}.nxHeaderV5 .nxLogo small{font-size:5px!important}.nxHeaderActions{margin-left:auto!important}.nxDiscordOfficial{display:none!important}
+  .nxHeroV5{min-height:670px!important;align-items:flex-end!important}.nxHeroCopyV5{width:auto!important;margin:0 18px!important;padding:110px 0 74px!important}.nxHeroV5 h1{font-size:clamp(52px,15vw,74px)!important;letter-spacing:-3.4px!important}.nxHeroCopyV5>p{font-size:14px!important}.nxHeroBackdrop img{object-position:66% center!important;filter:saturate(.92) contrast(1.06) brightness(.67)!important}.nxHeroBackdropShade{background:linear-gradient(90deg,rgba(5,6,10,.95),rgba(5,6,10,.72)),linear-gradient(0deg,#05060a 0%,rgba(5,6,10,.83) 38%,rgba(5,6,10,.2) 82%)!important}.nxHeroCopyV5 .nxHeroBtns>a{width:100%!important}.nxHeroProof{grid-template-columns:1fr!important;gap:12px!important}.nxHeroProof>div,.nxHeroProof>div+div{padding:0!important;border:0!important;display:grid!important;grid-template-columns:130px 1fr!important;align-items:center!important}
+  .nxTrustStrip{margin-top:-24px!important;padding:0 12px!important;grid-template-columns:1fr!important}.nxTrustCard{border-left:1px solid var(--ng-line)!important;border-right:1px solid var(--ng-line)!important;border-radius:0!important}.nxTrustCard:first-child{border-radius:10px 10px 0 0!important}.nxTrustCard:last-child{border-radius:0 0 10px 10px!important}
+  .marketCategories{padding-top:50px!important}.marketCategoryRail{grid-template-columns:repeat(2,minmax(0,1fr))!important}.marketCategoryTile{height:178px!important}.marketCatalog{padding-bottom:70px!important}.marketProductGrid{grid-template-columns:1fr!important}.marketProductImage{height:220px!important}
+  .nxHow{padding-top:66px!important}.nxHowGrid{grid-template-columns:1fr!important}.nxHowCard{min-height:170px!important}.nxHowCard h3{margin-top:30px!important}
+  .nxSecurityPanel{margin:0 12px 68px!important;padding:28px 22px!important;border-radius:12px!important}.nxSecurityCopy h2{font-size:34px!important}.nxSecurityVisual{min-height:230px}.nxSecurityOrb{width:145px;height:145px}.nxSecurityOrb img{width:82px;height:82px}.nxSecurityMini{min-width:108px;padding:10px}.nxSecurityMini.one{left:0}.nxSecurityMini.two{right:0}.nxSecurityMini.three{left:2%}
+  .nxDiscordBannerV5{margin:0 12px 60px!important;border-radius:12px!important}.nxDiscordBannerV5 .nxDiscordCopy{padding:30px 24px!important}.nxDiscordBannerV5 .nxDiscordCopy h2{font-size:28px!important}.nxFooterV5{grid-template-columns:1fr!important;gap:28px!important;padding-top:38px!important}
+  .categoryBreadcrumb{padding-left:14px;padding-right:14px}.categoryHeroV5{margin:20px 12px 54px!important;min-height:440px!important;border-radius:12px!important;align-items:flex-end!important}.categoryHeroMedia img{filter:saturate(.9) contrast(1.06) brightness(.58)}.categoryHeroMedia>div{background:linear-gradient(0deg,#080a0f 0%,rgba(8,10,15,.88) 45%,rgba(8,10,15,.26) 100%)!important}.categoryHeroCopy{width:100%!important;padding:32px 24px!important}.categoryHeroCopy h1{font-size:48px!important}.categoryProductsV5{padding-left:12px!important;padding-right:12px!important}.categoryProductGridV5{grid-template-columns:1fr!important}.categoryAssuranceV5{margin:0 12px 60px!important;grid-template-columns:1fr!important}.categoryAssuranceV5>div+div{border-left:0!important;border-top:1px solid rgba(255,255,255,.065)!important}
+  .nxAuthVisualV5{min-height:300px!important}.nxAuthVisualV5 .nxAuthVisualCopy{left:22px!important;right:22px!important;bottom:24px!important}.nxAuthVisualV5 .nxAuthVisualCopy h2{font-size:39px!important}.nxAuthVisualV5 .nxAuthVisualCopy p{font-size:11px!important}.nxAuthPanelV5{padding:30px 18px 46px!important}
+  .checkoutTopbar{height:70px;padding:0 14px}.checkoutTopbarTrust>span{display:none}.checkoutTopbarTrust{font-size:8px}.checkoutShellV5{width:calc(100% - 24px);padding:30px 0 58px}.checkoutSideV5>h1{font-size:34px}.checkoutSideSteps{grid-template-columns:1fr}.checkoutCardV5{padding:20px!important;border-radius:11px!important}.checkoutProductV5{grid-template-columns:72px 1fr!important}.checkoutProductImage{width:72px;height:72px}.checkoutProductV5>strong{grid-column:2;justify-self:start;font-size:19px!important}.twoFields{grid-template-columns:1fr!important}.checkoutAssurance{display:grid!important}.checkoutButton{font-size:9px!important}.checkoutButton b{font-size:10px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .nxHeroBackdrop img{animation:none!important}
+}

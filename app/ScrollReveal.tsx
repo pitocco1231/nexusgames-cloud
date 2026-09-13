@@ -6,29 +6,33 @@ export default function ScrollReveal() {
   useEffect(() => {
     const selectors = [
       ".nxHeroCopy",
-      ".nxHeroArt",
-      ".nxCat",
-      ".nxSectionTitle",
-      ".nxProduct",
-      ".nxBenefits > div",
+      ".nxTrustCard",
+      ".marketSectionHead",
+      ".marketCategoryTile",
+      ".marketProductCard",
+      ".nxHowCard",
+      ".nxSecurityCopy",
+      ".nxSecurityVisual",
       ".nxDiscordCopy",
-      ".nxDiscordVisual",
+      ".nxDiscordBackdrop",
       ".nxFooter > div",
       ".categoryMarketHero",
       ".categoryProductCard",
-      ".marketSectionHead"
+      ".categoryAssuranceV5 > div",
+      ".checkoutSideV5",
+      ".checkoutCard"
     ];
 
     const nodes = Array.from(document.querySelectorAll<HTMLElement>(selectors.join(",")));
 
-    nodes.forEach((el, index) => {
-      el.classList.add("nxReveal");
-      const parent = el.parentElement;
-      if (parent && Array.from(parent.children).filter(c => c.classList.contains(el.classList[0])).length > 1) {
-        const siblingIndex = Array.from(parent.children).indexOf(el);
-        el.style.setProperty("--reveal-delay", `${Math.min(siblingIndex * 70, 420)}ms`);
+    nodes.forEach((element, index) => {
+      element.classList.add("nxReveal");
+      const parent = element.parentElement;
+      if (parent && parent.children.length > 1) {
+        const siblingIndex = Array.from(parent.children).indexOf(element);
+        element.style.setProperty("--reveal-delay", `${Math.min(siblingIndex * 65, 360)}ms`);
       } else {
-        el.style.setProperty("--reveal-delay", `${Math.min(index * 20, 160)}ms`);
+        element.style.setProperty("--reveal-delay", `${Math.min(index * 18, 140)}ms`);
       }
     });
 
@@ -41,10 +45,10 @@ export default function ScrollReveal() {
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -7% 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -6% 0px" }
     );
 
-    nodes.forEach((el) => observer.observe(el));
+    nodes.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
 

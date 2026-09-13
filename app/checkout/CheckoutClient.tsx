@@ -5,9 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 type Product = {
   id: string;
   categoryId: string;
+  categoryName: string;
   name: string;
   label: string;
   emoji: string;
+  image: string;
   price: number;
   directTopup: boolean;
 };
@@ -80,12 +82,12 @@ export default function CheckoutClient({ product, siteKey }: { product: Product;
 
   if (result?.ok && result.orderNumber) {
     return (
-      <section className="checkoutCard successCheckout">
+      <section className="checkoutCard checkoutCardV5 successCheckout" aria-live="polite">
         <div className="checkoutProgress"><span className="done">Produto</span><span className="done">Dados</span><span className="active">Pix</span><span>Entrega</span></div>
-        <div className="checkoutSuccessIcon">💠</div>
+        <div className="checkoutSuccessIcon">✓</div>
         <span className="checkoutEyebrow">PEDIDO {result.orderNumber}</span>
         <h1>Seu Pix está pronto.</h1>
-        <p>Valor: <strong>R$ {Number(result.amount || product.price).toFixed(2).replace(".", ",")}</strong></p>
+        <p className="checkoutSuccessAmount">Valor do pedido <strong>R$ {Number(result.amount || product.price).toFixed(2).replace(".", ",")}</strong></p>
         {result.qrCodeBase64 ? <img className="pixQr" src={result.qrCodeBase64.startsWith("data:") ? result.qrCodeBase64 : `data:image/png;base64,${result.qrCodeBase64}`} alt="QR Code Pix" /> : null}
         {result.qrCode ? (
           <div className="copyBox">
@@ -101,15 +103,17 @@ export default function CheckoutClient({ product, siteKey }: { product: Product;
   }
 
   return (
-    <section className="checkoutCard">
+    <section className="checkoutCard checkoutCardV5">
       <div className="checkoutProgress"><span className="active">Produto</span><span>Dados</span><span>Pix</span><span>Entrega</span></div>
-      <div className="checkoutProduct">
-        <span>{product.emoji}</span>
-        <div><small>VOCÊ ESTÁ COMPRANDO</small><h1>{product.label}</h1><p>{product.name}</p></div>
+
+      <div className="checkoutProduct checkoutProductV5">
+        <div className="checkoutProductImage"><img src={product.image} alt={product.categoryName} /></div>
+        <div className="checkoutProductCopy"><small>VOCÊ ESTÁ COMPRANDO • {product.categoryName}</small><h1>{product.label}</h1><p>{product.directTopup ? "Entrega direta após confirmação" : "Código digital após confirmação"}</p></div>
         <strong>R$ {product.price.toFixed(2).replace(".", ",")}</strong>
       </div>
 
-      <form onSubmit={submit} className="checkoutForm">
+      <form onSubmit={submit} className="checkoutForm checkoutFormV5">
+        <div className="checkoutFormHeading"><span>SEUS DADOS</span><h2>Onde devemos enviar o acompanhamento?</h2></div>
         <label>E-mail para recibo e acompanhamento
           <input type="email" required maxLength={180} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" />
         </label>
@@ -125,9 +129,11 @@ export default function CheckoutClient({ product, siteKey }: { product: Product;
         ) : null}
         <input className="honeypot" tabIndex={-1} autoComplete="off" name="company" aria-hidden="true" />
         {siteKey ? <div className="cf-turnstile" data-sitekey={siteKey} data-theme="dark" /> : null}
-        <div className="checkoutAssurance"><span>🔐 Seus dados ficam protegidos</span><span>💠 Pix via Mercado Pago</span></div>
-        <button className="checkoutButton" type="submit" disabled={loading}>{loading ? "Validando..." : `Continuar para o Pix • R$ ${product.price.toFixed(2).replace(".", ",")}`}</button>
-        {result?.message ? <div className={result.code === "PRELAUNCH" ? "checkoutNotice" : "checkoutError"}>{result.message}</div> : null}
+        <div className="checkoutAssurance"><span>🔐 Dados protegidos</span><span>◆ Pix via Mercado Pago</span><span>✓ Produto validado</span></div>
+        <button className="checkoutButton" type="submit" disabled={loading}>
+          {loading ? <><i className="checkoutSpinner" /> Validando pedido...</> : <>Continuar para o Pix <b>R$ {product.price.toFixed(2).replace(".", ",")}</b></>}
+        </button>
+        {result?.message ? <div role="status" className={result.code === "PRELAUNCH" ? "checkoutNotice" : "checkoutError"}>{result.message}</div> : null}
       </form>
     </section>
   );
