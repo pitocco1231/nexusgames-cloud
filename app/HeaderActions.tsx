@@ -11,13 +11,7 @@ function DiscordIcon({ size = 22 }: { size?: number }) {
 }
 
 export default function HeaderActions({ discord }: { discord: string }) {
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
 
   async function loadUser() {
     try {
@@ -29,36 +23,10 @@ export default function HeaderActions({ discord }: { discord: string }) {
 
   useEffect(() => { loadUser(); }, []);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setMessage("");
-    try {
-      const res = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, mode })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessage(data?.message || "Não foi possível continuar.");
-        return;
-      }
-      if (data?.requiresConfirmation) {
-        setMessage("Conta criada. Confira seu e-mail para confirmar o cadastro.");
-        return;
-      }
-      setOpen(false);
-      setPassword("");
-      await loadUser();
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     setUserEmail("");
+    window.location.href = "/";
   }
 
   return (
@@ -74,34 +42,11 @@ export default function HeaderActions({ discord }: { discord: string }) {
           <div><b>{userEmail.split("@")[0]}</b><small>Sair da conta</small></div>
         </button>
       ) : (
-        <button className="nxLoginButton" onClick={() => setOpen(true)}>
+        <a className="nxLoginButton nxLoginLink" href="/login">
           <span className="nxUserOutline">♙</span>
           <div><b>Entrar</b><small>Minha conta</small></div>
-        </button>
+        </a>
       )}
-
-      {open ? (
-        <div className="nxLoginOverlay" onMouseDown={(e) => { if (e.currentTarget === e.target) setOpen(false); }}>
-          <div className="nxLoginModal">
-            <button className="nxLoginClose" onClick={() => setOpen(false)}>×</button>
-            <img src="/assets/nexus-logo" alt="NexusGames" />
-            <span>NEXUSGAMES</span>
-            <h2>{mode === "login" ? "Bem-vindo de volta." : "Crie sua conta."}</h2>
-            <p>{mode === "login" ? "Entre para acompanhar seus pedidos." : "Cadastre-se para ter uma experiência mais rápida."}</p>
-
-            <form onSubmit={submit}>
-              <label>E-mail<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" /></label>
-              <label>Senha<input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></label>
-              {message ? <div className="nxLoginMessage">{message}</div> : null}
-              <button type="submit" disabled={busy}>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</button>
-            </form>
-
-            <button className="nxSwitchMode" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
-              {mode === "login" ? "Ainda não tem conta? Criar conta" : "Já tem conta? Entrar"}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
