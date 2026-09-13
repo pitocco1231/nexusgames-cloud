@@ -1,0 +1,459 @@
+
+/* ===== NexusGames Premium UI Layer =====
+   Non-destructive overrides loaded after globals.css.
+   Focus: polish, motion, depth, readability, responsive behavior.
+*/
+
+:root{
+  --nx-bg:#05060a;
+  --nx-surface:#0b0d13;
+  --nx-surface-2:#10131b;
+  --nx-purple:#8b5cf6;
+  --nx-purple-2:#a855f7;
+  --nx-cyan:#22d3ee;
+  --nx-text:#f7f7fb;
+  --nx-muted:#9ca3b5;
+  --nx-line:rgba(255,255,255,.085);
+  --nx-shadow:0 30px 90px rgba(0,0,0,.42);
+}
+
+html{background:var(--nx-bg);scroll-padding-top:84px}
+body{
+  background:
+    radial-gradient(circle at 84% 0%,rgba(124,58,237,.10),transparent 28%),
+    radial-gradient(circle at 12% 26%,rgba(34,211,238,.035),transparent 22%),
+    var(--nx-bg);
+  color:var(--nx-text);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(139,92,246,.35);color:#fff}
+*{scrollbar-width:thin;scrollbar-color:#3b2a63 #090a0f}
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:#090a0f}
+::-webkit-scrollbar-thumb{background:linear-gradient(#5b3fb3,#37265f);border-radius:999px;border:2px solid #090a0f}
+
+.nxPage{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 76% 8%,rgba(126,55,255,.11),transparent 23%),
+    linear-gradient(180deg,#05060a 0%,#07080d 48%,#05060a 100%);
+}
+.nxPage:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:80;
+  opacity:.16;
+  mix-blend-mode:soft-light;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:52px 52px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 72%);
+}
+
+/* Header */
+.nxHeader{
+  position:sticky!important;
+  top:0;
+  z-index:100!important;
+  min-height:76px;
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+  background:linear-gradient(180deg,rgba(5,6,10,.90),rgba(5,6,10,.72))!important;
+  border-bottom:1px solid rgba(255,255,255,.075)!important;
+  box-shadow:0 10px 40px rgba(0,0,0,.20);
+  backdrop-filter:blur(22px) saturate(1.25);
+  -webkit-backdrop-filter:blur(22px) saturate(1.25);
+}
+.nxHeader:after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(139,92,246,.42),rgba(34,211,238,.16),transparent);
+  opacity:.7;
+}
+.nxLogo{transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .3s ease}
+.nxLogo:hover{transform:translateY(-1px);filter:drop-shadow(0 0 14px rgba(139,92,246,.22))}
+.nxLogo img{
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 8px 28px rgba(124,58,237,.22)!important;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s ease!important;
+}
+.nxLogo:hover img{transform:rotate(-4deg) scale(1.05);box-shadow:0 0 0 1px rgba(255,255,255,.10),0 12px 34px rgba(124,58,237,.34)!important}
+.nxNav a{
+  position:relative;
+  transition:color .24s ease,transform .24s ease!important;
+}
+.nxNav a:after{
+  content:"";
+  position:absolute;
+  left:50%;right:50%;bottom:-10px;height:2px;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--nx-purple),var(--nx-cyan));
+  transition:left .25s ease,right .25s ease;
+  opacity:.9;
+}
+.nxNav a:hover{color:#fff!important;transform:translateY(-1px)}
+.nxNav a:hover:after,.nxNav a.active:after{left:8%;right:8%}
+.nxSearch{
+  border:1px solid rgba(255,255,255,.08)!important;
+  background:rgba(255,255,255,.025)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  transition:border-color .25s ease,background .25s ease,transform .25s ease!important;
+}
+.nxSearch:hover{
+  transform:translateY(-1px);
+  border-color:rgba(139,92,246,.28)!important;
+  background:rgba(139,92,246,.055)!important;
+}
+
+/* Hero */
+.nxHero{
+  min-height:660px!important;
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.nxHero:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 82% 36%,rgba(126,55,255,.20),transparent 27%),
+    radial-gradient(circle at 64% 72%,rgba(34,211,238,.07),transparent 23%);
+  animation:nxAmbient 12s ease-in-out infinite alternate;
+}
+.nxHero:after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:0;height:170px;
+  z-index:2;pointer-events:none;
+  background:linear-gradient(0deg,#07080d 0%,rgba(7,8,13,.72) 28%,transparent 100%);
+}
+@keyframes nxAmbient{
+  from{transform:translate3d(-1.2%,0,0) scale(1)}
+  to{transform:translate3d(1.4%,-1%,0) scale(1.035)}
+}
+.nxHero>div[aria-hidden="true"] img{
+  transform:scale(1.025);
+  animation:nxHeroZoom 18s ease-in-out infinite alternate;
+  image-rendering:auto;
+  backface-visibility:hidden;
+}
+@keyframes nxHeroZoom{
+  from{transform:scale(1.025) translate3d(0,0,0)}
+  to{transform:scale(1.075) translate3d(-.7%,-.4%,0)}
+}
+.nxHeroCopy{
+  padding:42px 0 48px;
+  text-shadow:0 3px 30px rgba(0,0,0,.22);
+}
+.nxEyebrow{
+  display:inline-flex!important;
+  align-items:center;
+  gap:7px;
+  padding:8px 11px!important;
+  border-radius:999px;
+  border:1px solid rgba(168,85,247,.22);
+  background:rgba(124,58,237,.075);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 36px rgba(79,36,145,.12);
+  backdrop-filter:blur(12px);
+}
+.nxHero h1{
+  max-width:820px;
+  text-wrap:balance;
+  text-shadow:0 14px 60px rgba(0,0,0,.35);
+}
+.nxHero h1 em{
+  position:relative;
+  display:inline-block;
+  background:linear-gradient(90deg,#b76cff 0%,#8b5cf6 44%,#49d8ff 100%);
+  background-size:180% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent!important;
+  animation:nxGradientFlow 7s ease-in-out infinite alternate;
+}
+@keyframes nxGradientFlow{from{background-position:0% 50%}to{background-position:100% 50%}}
+.nxHeroCopy>p{max-width:600px!important;color:#c2c5cf!important;font-size:clamp(15px,1.4vw,18px)!important;line-height:1.72!important}
+
+.nxPrimary,.nxSecondary,.nxDiscordHeroButton{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  transform:translateZ(0);
+  transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s ease,border-color .24s ease!important;
+}
+.nxPrimary:before,.nxDiscordHeroButton:before{
+  content:"";
+  position:absolute;
+  top:-60%;bottom:-60%;width:36%;
+  left:-50%;
+  transform:skewX(-22deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);
+  transition:left .6s cubic-bezier(.2,.8,.2,1);
+  z-index:-1;
+}
+.nxPrimary:hover:before,.nxDiscordHeroButton:hover:before{left:125%}
+.nxPrimary:hover,.nxSecondary:hover,.nxDiscordHeroButton:hover{transform:translateY(-3px)}
+.nxPrimary:hover{box-shadow:0 18px 46px rgba(125,67,255,.30)!important}
+.nxSecondary:hover,.nxDiscordHeroButton:hover{border-color:rgba(139,92,246,.32)!important;box-shadow:0 16px 34px rgba(0,0,0,.22)}
+.nxTrust span{
+  position:relative;
+  padding-left:2px;
+  transition:color .2s ease,transform .2s ease;
+}
+.nxTrust span:hover{color:#fff;transform:translateY(-1px)}
+
+/* Category cards */
+.nxCategories{
+  position:relative;
+  z-index:4;
+  max-width:1380px!important;
+  padding-top:18px!important;
+  padding-bottom:34px!important;
+}
+.nxCat{
+  min-height:188px!important;
+  border:1px solid rgba(255,255,255,.075)!important;
+  background:#0b0d12!important;
+  box-shadow:0 16px 44px rgba(0,0,0,.18);
+  isolation:isolate;
+}
+.nxCat:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  border-radius:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  opacity:.75;
+}
+.nxCat img{
+  width:100%;height:100%;
+  object-fit:cover;
+  filter:saturate(.95) contrast(1.06) brightness(.83);
+  transition:transform .65s cubic-bezier(.2,.75,.2,1),filter .4s ease!important;
+  will-change:transform;
+}
+.nxCat:hover{
+  border-color:rgba(139,92,246,.30)!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.30),0 0 0 1px rgba(139,92,246,.06)!important;
+}
+.nxCat:hover img{transform:scale(1.085);filter:saturate(1.08) contrast(1.05) brightness(.90)}
+.nxCatShade{
+  background:
+    linear-gradient(0deg,rgba(4,5,9,.94) 0%,rgba(4,5,9,.52) 45%,rgba(4,5,9,.12) 72%,rgba(4,5,9,.15) 100%)!important;
+}
+.nxCatText{z-index:4!important}
+.nxCatText strong{font-size:16px!important;letter-spacing:-.25px}
+.nxCatText small{color:#b3b6c1!important}
+
+/* Featured */
+.nxFeatured{
+  position:relative;
+  z-index:3;
+}
+.nxFeatured:before{
+  content:"";
+  position:absolute;
+  width:680px;height:680px;
+  left:-390px;top:10%;
+  background:radial-gradient(circle,rgba(105,51,198,.09),transparent 65%);
+  pointer-events:none;
+}
+.nxSectionTitle span{letter-spacing:1.9px!important;color:#a87aff!important}
+.nxSectionTitle h2{text-wrap:balance}
+.nxSectionTitle>a{
+  position:relative;
+  padding:10px 0;
+  transition:color .22s ease,transform .22s ease!important;
+}
+.nxSectionTitle>a:hover{color:#c6a7ff!important;transform:translateX(3px)}
+.nxProductGrid{gap:18px!important}
+.nxProduct{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.075)!important;
+  background:linear-gradient(180deg,rgba(18,20,28,.96),rgba(10,11,17,.98))!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.18);
+}
+.nxProduct:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+  opacity:0;
+  background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.06) 44%,transparent 61%);
+  transform:translateX(-110%);
+  transition:transform .7s ease,opacity .3s ease;
+}
+.nxProduct:hover:before{opacity:1;transform:translateX(110%)}
+.nxProduct:hover{
+  border-color:rgba(139,92,246,.32)!important;
+  box-shadow:0 28px 76px rgba(0,0,0,.34),0 0 34px rgba(96,45,172,.08)!important;
+}
+.nxProductImg{overflow:hidden;background:#08090d!important}
+.nxProductImg img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .7s cubic-bezier(.2,.75,.2,1),filter .35s ease!important;
+  filter:saturate(.96) contrast(1.045) brightness(.92);
+}
+.nxProduct:hover .nxProductImg img{transform:scale(1.065);filter:saturate(1.05) contrast(1.04) brightness(.98)}
+.nxProductBody{position:relative}
+.nxProductBody h3{letter-spacing:-.25px}
+.nxDelivery{
+  border:1px solid rgba(116,226,165,.12)!important;
+  background:rgba(50,196,122,.055)!important;
+}
+.nxProductBottom b{
+  transition:transform .25s ease,background .25s ease!important;
+}
+.nxProduct:hover .nxProductBottom b{transform:translateY(-2px) rotate(-4deg) scale(1.05)}
+
+/* Benefits */
+.nxBenefits{
+  position:relative;
+  border-top:1px solid rgba(255,255,255,.06)!important;
+  border-bottom:1px solid rgba(255,255,255,.06)!important;
+  background:
+    linear-gradient(90deg,rgba(139,92,246,.025),transparent 22%,transparent 78%,rgba(34,211,238,.02)),
+    rgba(255,255,255,.012)!important;
+}
+.nxBenefits>div{
+  position:relative;
+  transition:background .25s ease,transform .25s ease!important;
+}
+.nxBenefits>div:hover{background:rgba(255,255,255,.024);transform:translateY(-2px)}
+.nxBenefits>div>span{
+  filter:drop-shadow(0 0 16px rgba(139,92,246,.18));
+}
+
+/* Discord banner */
+.nxDiscordBanner{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(139,92,246,.16)!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.28);
+  background:
+    radial-gradient(circle at 15% 36%,rgba(139,92,246,.18),transparent 34%),
+    linear-gradient(135deg,#0a0912,#0b0c13)!important;
+}
+.nxDiscordBanner:before{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:conic-gradient(from 180deg,transparent,rgba(139,92,246,.045),transparent 35%);
+  animation:nxRotateGlow 16s linear infinite;
+  pointer-events:none;
+}
+@keyframes nxRotateGlow{to{transform:rotate(360deg)}}
+.nxDiscordCopy{position:relative;z-index:3}
+.nxDiscordCopy>a{
+  transition:transform .25s ease,box-shadow .25s ease!important;
+  box-shadow:0 12px 32px rgba(88,101,242,.18);
+}
+.nxDiscordCopy>a:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(88,101,242,.26)}
+.nxDiscordPhoto>img:first-child{
+  transition:transform 9s ease-out,filter .4s ease!important;
+  transform:scale(1.02);
+}
+.nxDiscordBanner:hover .nxDiscordPhoto>img:first-child{transform:scale(1.08);filter:saturate(1.02) contrast(1.08) brightness(.70)!important}
+.nxDiscordPhotoOverlay{
+  box-shadow:0 18px 70px rgba(0,0,0,.30);
+  transition:transform .3s ease,border-color .3s ease!important;
+}
+.nxDiscordBanner:hover .nxDiscordPhotoOverlay{transform:translateY(-52%) scale(1.025);border-color:rgba(255,255,255,.16)}
+
+/* Footer */
+.nxFooter{
+  position:relative;
+  border-top:1px solid rgba(255,255,255,.065)!important;
+}
+.nxFooter:before{
+  content:"";
+  position:absolute;
+  left:8%;right:8%;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(139,92,246,.36),transparent);
+}
+.nxFooter a{transition:color .2s ease,transform .2s ease!important}
+.nxFooter a:hover{color:#fff!important;transform:translateX(2px)}
+.nxSocial{letter-spacing:8px!important;opacity:.72;transition:opacity .2s ease}
+.nxSocial:hover{opacity:1}
+.nxCopyright{border-top:1px solid rgba(255,255,255,.045)!important}
+
+/* Reveal motion refinement */
+.nxReveal{
+  opacity:0;
+  transform:translate3d(0,28px,0) scale(.992);
+  filter:blur(4px);
+  transition:
+    opacity .78s cubic-bezier(.16,1,.3,1),
+    transform .78s cubic-bezier(.16,1,.3,1),
+    filter .72s ease!important;
+  will-change:opacity,transform,filter;
+}
+.nxReveal.nxRevealVisible{
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  filter:blur(0);
+}
+
+/* Accessibility */
+a:focus-visible,button:focus-visible,input:focus-visible{
+  outline:2px solid rgba(168,85,247,.95)!important;
+  outline-offset:3px!important;
+}
+@media (hover:none){
+  .nxCat:hover,.nxProduct:hover,.nxPrimary:hover,.nxSecondary:hover,.nxDiscordHeroButton:hover{transform:none!important}
+}
+
+/* Responsive polish */
+@media(max-width:1100px){
+  .nxHero{min-height:610px!important}
+  .nxCategories{padding-left:18px!important;padding-right:18px!important}
+}
+@media(max-width:780px){
+  .nxHeader{min-height:68px}
+  .nxHero{min-height:590px!important}
+  .nxHeroCopy{padding-top:64px!important;padding-bottom:56px!important}
+  .nxHero h1{font-size:clamp(46px,14vw,68px)!important;letter-spacing:-2.4px!important}
+  .nxHeroCopy>p{font-size:15px!important}
+  .nxTrust{gap:10px 16px!important;flex-wrap:wrap}
+  .nxCategories{gap:12px!important}
+  .nxCat{min-height:164px!important}
+  .nxProductGrid{gap:12px!important}
+  .nxDiscordBanner{border-left:0!important;border-right:0!important;border-radius:0!important}
+}
+@media(max-width:560px){
+  .nxHero{
+    min-height:620px!important;
+    background:#05060a!important;
+  }
+  .nxHero>div[aria-hidden="true"] img{object-position:62% center!important;filter:saturate(1.02) contrast(1.06) brightness(.70)!important}
+  .nxHero>div[aria-hidden="true"]>div{background:linear-gradient(90deg,rgba(5,6,10,.97) 0%,rgba(5,6,10,.88) 56%,rgba(5,6,10,.52) 100%),linear-gradient(0deg,rgba(5,6,10,.72),transparent 54%)!important}
+  .nxHeroCopy{padding-top:70px!important;max-width:100%!important}
+  .nxEyebrow{font-size:8px!important;letter-spacing:1.1px!important}
+  .nxHeroBtns{gap:9px!important}
+  .nxHeroBtns>a{width:100%!important;justify-content:center!important}
+  .nxCategories{padding-left:12px!important;padding-right:12px!important}
+  .nxCat{min-height:152px!important}
+  .nxFooter{padding-left:18px!important;padding-right:18px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+  .nxReveal,.nxReveal.nxRevealVisible{opacity:1!important;transform:none!important;filter:none!important}
+}
