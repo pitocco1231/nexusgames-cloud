@@ -1,4 +1,3 @@
-import NexusStoreVisual from "../NexusStoreVisual";
 import { Suspense } from "react";
 import LoginClient from "./LoginClient";
 
@@ -10,8 +9,8 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <main className="nxAuthPage">
-      <section className="nxAuthVisual">
-        <NexusStoreVisual />
+      <section className="nxAuthVisual nxAuthVisualStable">
+        <img className="nxAuthStableBg" src="/assets/nexus-login-bg" alt="NexusGames store" />
         <div className="nxAuthVisualShade" />
         <div className="nxAuthVisualCopy">
           <span>NEXUSGAMES STORE</span>
