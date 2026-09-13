@@ -27,15 +27,20 @@ type Category = {
 export default function StoreExplorer({ items, categories }: { items: StoreItem[]; categories: Category[] }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("all");
+  const [sort, setSort] = useState("featured");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((item) => {
+    const result = items.filter((item) => {
       const categoryOk = active === "all" || item.categoryId === active;
       const searchOk = !q || `${item.name} ${item.categoryName} ${item.description}`.toLowerCase().includes(q);
       return categoryOk && searchOk;
     });
-  }, [items, query, active]);
+    if (sort === "lowest") return result.toSorted((a, b) => a.price - b.price);
+    if (sort === "highest") return result.toSorted((a, b) => b.price - a.price);
+    if (sort === "name") return result.toSorted((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    return result;
+  }, [items, query, active, sort]);
 
   return (
     <>
@@ -88,10 +93,20 @@ export default function StoreExplorer({ items, categories }: { items: StoreItem[
         </div>
 
         <div className="marketFilterRow" role="group" aria-label="Filtrar por categoria">
-          <button className={active === "all" ? "active" : ""} onClick={() => setActive("all")}>Todos</button>
-          {categories.filter((category) => category.available).map((category) => (
-            <button key={category.id} className={active === category.id ? "active" : ""} onClick={() => setActive(category.id)}>{category.name}</button>
-          ))}
+          <div className="marketFilterButtons">
+            <button className={active === "all" ? "active" : ""} onClick={() => setActive("all")}>Todos</button>
+            {categories.filter((category) => category.available).map((category) => (
+              <button key={category.id} className={active === category.id ? "active" : ""} onClick={() => setActive(category.id)}>{category.name}</button>
+            ))}
+          </div>
+          <label className="marketSort">Ordenar
+            <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Ordenar produtos">
+              <option value="featured">Destaques</option>
+              <option value="lowest">Menor preço</option>
+              <option value="highest">Maior preço</option>
+              <option value="name">Nome</option>
+            </select>
+          </label>
         </div>
 
         {filtered.length ? (

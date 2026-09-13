@@ -72,6 +72,16 @@ export default async function Home() {
           <span aria-hidden="true">⌕</span><b>Buscar jogos, recargas e gift cards</b>
         </a>
         <HeaderActions discord={discord} />
+        <details className="nxMobileMenu">
+          <summary aria-label="Abrir menu"><span></span><span></span><span></span></summary>
+          <nav aria-label="Navegação móvel">
+            <a href="#categorias">Categorias</a>
+            <a href="#catalogo">Produtos</a>
+            <a href="#como">Como comprar</a>
+            <a href="#duvidas">Dúvidas</a>
+            <a href={discord} target="_blank" rel="noreferrer">Suporte no Discord</a>
+          </nav>
+        </details>
       </header>
 
       <section className="nxHero nxHeroV5" id="inicio">
@@ -81,21 +91,21 @@ export default async function Home() {
         </div>
 
         <div className="nxHeroCopy nxHeroCopyV5">
-          <span className="nxEyebrow"><i /> ENTREGA DIGITAL • PIX • SUPORTE</span>
-          <h1>JOGUE MAIS.<br/><em>PAGUE MENOS.</em></h1>
-          <p>Recargas, gift cards e créditos digitais com disponibilidade verificada, pagamento por Pix e acompanhamento do pedido.</p>
+          <span className="nxEyebrow"><i /> SUA LOJA DIGITAL DE GAMES</span>
+          <h1>SUA PRÓXIMA PARTIDA<br/><em>COMEÇA AQUI.</em></h1>
+          <p>Games, créditos e gift cards com preço atualizado, pagamento por Pix e acompanhamento do pedido do início à entrega.</p>
 
           <div className="nxHeroBtns">
-            <a className="nxPrimary" href="#catalogo">Explorar produtos <b>→</b></a>
+            <a className="nxPrimary" href="#catalogo">Ver produtos <b>→</b></a>
             <a className="nxSecondary nxDiscordHeroButton" href={discord} target="_blank" rel="noreferrer">
               <span className="nxDiscordHeroIcon" aria-hidden="true">◉</span> Entrar no Discord
             </a>
           </div>
 
           <div className="nxHeroProof" aria-label="Diferenciais da NexusGames">
-            <div><strong>Preço atualizado</strong><small>catálogo sincronizado</small></div>
-            <div><strong>Estoque validado</strong><small>antes do pagamento</small></div>
-            <div><strong>Entrega monitorada</strong><small>status do pedido</small></div>
+            <div><strong>Preço atualizado</strong><small>em cada oferta</small></div>
+            <div><strong>Compra protegida</strong><small>Pix pelo Mercado Pago</small></div>
+            <div><strong>Suporte próximo</strong><small>atendimento no Discord</small></div>
           </div>
         </div>
       </section>
@@ -150,6 +160,20 @@ export default async function Home() {
           <div className="nxSecurityMini one"><small>CATÁLOGO</small><strong>Online</strong></div>
           <div className="nxSecurityMini two"><small>PAGAMENTO</small><strong>Pix</strong></div>
           <div className="nxSecurityMini three"><small>SUPORTE</small><strong>Discord</strong></div>
+        </div>
+      </section>
+
+      <section className="nxFaq" id="duvidas">
+        <div className="nxSectionLead">
+          <span>DÚVIDAS FREQUENTES</span>
+          <h2>Tudo claro antes de pagar.</h2>
+          <p>Informações diretas sobre pagamento, entrega e compatibilidade.</p>
+        </div>
+        <div className="nxFaqList">
+          <details><summary>Como recebo meu produto?<b>+</b></summary><p>Após a confirmação do Pix, o pedido segue para processamento. Produtos de recarga são enviados para os dados informados; códigos digitais aparecem quando a entrega é concluída.</p></details>
+          <details><summary>O pagamento é seguro?<b>+</b></summary><p>O Pix é gerado pelo Mercado Pago. A NexusGames acompanha o status do pagamento sem solicitar sua senha bancária.</p></details>
+          <details><summary>Como sei se funciona na minha região?<b>+</b></summary><p>A região e a disponibilidade são verificadas antes da geração do pagamento. Confira também os dados do produto durante o checkout.</p></details>
+          <details><summary>Onde acompanho ou peço ajuda?<b>+</b></summary><p>Você acompanha o status pelo pedido e pode falar com o suporte da NexusGames diretamente no Discord.</p></details>
         </div>
       </section>
 

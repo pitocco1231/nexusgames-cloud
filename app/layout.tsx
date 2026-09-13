@@ -5,6 +5,7 @@ import "./rebuild-shell.css";
 import "./rebuild-market.css";
 import "./rebuild-pages.css";
 import "./rebuild-responsive.css";
+import "./final-design.css";
 import ScrollReveal from "./ScrollReveal";
 
 export const metadata: Metadata = {
