@@ -1,3 +1,4 @@
+import NexusStoreVisual from "./NexusStoreVisual";
 import HeaderActions from "./HeaderActions";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
@@ -69,11 +70,7 @@ export default async function Home(){
         </div>
 
         <div className="nxHeroArt">
-          <div className="nxHeroGlow"/>
-          <img className="nxHeroImg" src="https://images.hdqwalls.com/wallpapers/4k-apex-legends-2020-ja.jpg" alt="NexusGames gaming background"/>
-          
-          
-          
+          <NexusStoreVisual compact />
         </div>
       </section>
 
