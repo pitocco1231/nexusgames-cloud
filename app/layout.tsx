@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./premium.css";
 import ScrollReveal from "./ScrollReveal";
 
 export const metadata: Metadata = {
