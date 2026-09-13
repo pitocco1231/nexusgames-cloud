@@ -37,7 +37,7 @@ export default async function Home(){
     <main className="nxPage">
       <header className="nxHeader">
         <a href="/" className="nxLogo">
-          <img src="/assets/community" alt="Comunidade NexusGames"/>
+          <img src="/assets/nexus-logo" alt="NexusGames"/>
           <div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
         </a>
         <nav className="nxNav">
@@ -138,7 +138,7 @@ export default async function Home(){
           <a href={discord}>◉ Entrar agora</a>
         </div>
         <div className="nxDiscordVisual nxDiscordVisualArt">
-          <img src="/assets/nexus-logo" alt="NexusGames"/>
+          <img src="/assets/community" alt="Comunidade NexusGames"/>
           <span className="tag t1">🎁 SORTEIOS<br/>EXCLUSIVOS</span>
           <span className="tag t2">🎧 SUPORTE<br/>24/7</span>
           <span className="tag t3">💟 PROMOÇÕES<br/>ANTECIPADAS</span>
