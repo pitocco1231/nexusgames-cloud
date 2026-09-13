@@ -1,4 +1,3 @@
-import NexusStoreVisual from "./NexusStoreVisual";
 import HeaderActions from "./HeaderActions";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
@@ -69,8 +68,8 @@ export default async function Home(){
           </div>
         </div>
 
-        <div className="nxHeroArt">
-          <NexusStoreVisual compact />
+        <div className="nxHeroArt nxHeroArtStable">
+          <img className="nxHeroStableBg" src="/assets/nexus-home-bg" alt="NexusGames digital store" />
         </div>
       </section>
 
