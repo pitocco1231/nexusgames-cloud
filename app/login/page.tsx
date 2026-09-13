@@ -10,7 +10,7 @@ export default function LoginPage() {
   return (
     <main className="nxAuthPage">
       <section className="nxAuthVisual nxAuthVisualStable">
-        <img className="nxAuthStableBg" src="/assets/nexus-login-bg" alt="NexusGames store" />
+        <img className="nxAuthStableBg" src="https://images.unsplash.com/photo-1767800766429-7179fd80948f?auto=format&fit=crop&fm=jpg&q=88&w=1800" alt="Ambiente gamer NexusGames" />
         <div className="nxAuthVisualShade" />
         <div className="nxAuthVisualCopy">
           <span>NEXUSGAMES STORE</span>
