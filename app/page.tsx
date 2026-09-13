@@ -37,7 +37,7 @@ export default async function Home(){
     <main className="nxPage">
       <header className="nxHeader">
         <a href="/" className="nxLogo">
-          <img src="/assets/nexus-logo" alt="NexusGames"/>
+          <img src="/assets/community" alt="Comunidade NexusGames"/>
           <div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
         </a>
         <nav className="nxNav">
@@ -69,7 +69,7 @@ export default async function Home(){
 
         <div className="nxHeroArt">
           <div className="nxHeroGlow"/>
-          <img className="nxHeroImg" src="/assets/valorant" alt="NexusGames destaque"/>
+          <img className="nxHeroImg" src="/assets/hero-store" alt="NexusGames destaque"/>
           <div className="nxHeroMark">N</div>
           <div className="nxHeroWords">PLAY<br/><strong>MORE</strong></div>
           <div className="nxHeroCommunity">+ MAIS<br/>QUE JOGOS,<br/>UMA COMUNIDADE</div>
@@ -137,7 +137,7 @@ export default async function Home(){
           <p>Suporte exclusivo, sorteios, promoções e muito mais!</p>
           <a href={discord}>◉ Entrar agora</a>
         </div>
-        <div className="nxDiscordVisual">
+        <div className="nxDiscordVisual nxDiscordVisualArt">
           <img src="/assets/nexus-logo" alt="NexusGames"/>
           <span className="tag t1">🎁 SORTEIOS<br/>EXCLUSIVOS</span>
           <span className="tag t2">🎧 SUPORTE<br/>24/7</span>
