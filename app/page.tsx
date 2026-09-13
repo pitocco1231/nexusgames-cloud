@@ -37,7 +37,7 @@ export default async function Home(){
     <main className="nxPage">
       <header className="nxHeader">
         <a href="/" className="nxLogo">
-          <img src="/assets/nexus-icon" alt="NexusGames"/>
+          <img src="/assets/nexus-logo" alt="NexusGames"/>
           <div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
         </a>
         <nav className="nxNav">
@@ -81,7 +81,7 @@ export default async function Home(){
           const price = byCategory.get(p.id);
           return (
             <a className="nxCat" href={price!==undefined?"/categoria/"+p.id:"#produtos"} key={p.id}>
-              <img src={img[p.id] || "/assets/nexus-icon"} alt={p.name}/>
+              <img src={img[p.id] || "/assets/nexus-logo"} alt={p.name}/>
               <div className="nxCatShade"/>
               <div className="nxCatText">
                 <strong>{p.name.replace("🔥 ","")}</strong>
@@ -101,7 +101,7 @@ export default async function Home(){
         <div className="nxProductGrid">
           {featured.length ? featured.map((item)=>(
             <a className="nxProduct" href={"/checkout?produto="+encodeURIComponent(item.id)} key={item.id}>
-              <div className="nxProductImg"><img src={img[item.catId] || "/assets/nexus-icon"} alt={item.name}/></div>
+              <div className="nxProductImg"><img src={img[item.catId] || "/assets/nexus-logo"} alt={item.name}/></div>
               <div className="nxProductBody">
                 <h3>{item.category}</h3>
                 <p>{item.name}</p>
@@ -112,7 +112,7 @@ export default async function Home(){
             </a>
           )) : products.slice(0,6).map((p)=>(
             <a className="nxProduct" href={"/categoria/"+p.id} key={p.id}>
-              <div className="nxProductImg"><img src={img[p.id] || "/assets/nexus-icon"} alt={p.name}/></div>
+              <div className="nxProductImg"><img src={img[p.id] || "/assets/nexus-logo"} alt={p.name}/></div>
               <div className="nxProductBody">
                 <h3>{p.name.replace("🔥 ","")}</h3><p>Produtos digitais</p><span className="nxDelivery">◉ Em breve</span><small>Catálogo</small>
                 <div className="nxProductBottom"><strong>Ver opções</strong><b>→</b></div>
@@ -138,7 +138,7 @@ export default async function Home(){
           <a href={discord}>◉ Entrar agora</a>
         </div>
         <div className="nxDiscordVisual">
-          <img src="/assets/nexus-icon" alt="NexusGames"/>
+          <img src="/assets/nexus-logo" alt="NexusGames"/>
           <span className="tag t1">🎁 SORTEIOS<br/>EXCLUSIVOS</span>
           <span className="tag t2">🎧 SUPORTE<br/>24/7</span>
           <span className="tag t3">💟 PROMOÇÕES<br/>ANTECIPADAS</span>
@@ -147,7 +147,7 @@ export default async function Home(){
 
       <footer className="nxFooter">
         <div className="nxFooterBrand">
-          <a href="/" className="nxLogo"><img src="/assets/nexus-icon" alt="NexusGames"/><div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div></a>
+          <a href="/" className="nxLogo"><img src="/assets/nexus-logo" alt="NexusGames"/><div><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div></a>
           <p>Games, gift cards e muito mais. Sua diversão em primeiro lugar.</p>
           <div className="nxSocial">◉ ◎ ♪ ▶</div>
         </div>
