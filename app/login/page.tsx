@@ -1,3 +1,4 @@
+import NexusStoreVisual from "../NexusStoreVisual";
 import { Suspense } from "react";
 import LoginClient from "./LoginClient";
 
@@ -10,12 +11,12 @@ export default function LoginPage() {
   return (
     <main className="nxAuthPage">
       <section className="nxAuthVisual">
-        <img src="https://cdn.mos.cms.futurecdn.net/uJRCtKEsYWkK99GtkuUQ64.jpg" alt="NexusGames" />
+        <NexusStoreVisual />
         <div className="nxAuthVisualShade" />
         <div className="nxAuthVisualCopy">
-          <span>NEXUSGAMES</span>
+          <span>NEXUSGAMES STORE</span>
           <h2>Seu universo gamer,<br/>em um só lugar.</h2>
-          <p>Compre, acompanhe seus pedidos e conte com nosso suporte quando precisar.</p>
+          <p>Games, gift cards e recargas reunidos em uma experiência própria da NexusGames.</p>
           <div><b>⚡ Digital</b><b>🔒 Seguro</b><b>💠 Pix</b></div>
         </div>
       </section>
