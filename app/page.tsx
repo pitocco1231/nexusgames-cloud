@@ -117,7 +117,7 @@ export default async function Home() {
         <div className="nxHeroLogoStage" aria-hidden="true">
           <div className="nxHeroLogoLight" />
           <div className="nxHeroLogoMark">
-            <img src="/assets/nexus-icon" alt="" />
+            <img src="/assets/nexus-logo" alt="" />
             <div className="nxHeroWordmark"><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
           </div>
           <div className="nxHeroLogoCaption"><i /> DIGITAL GAMING STORE</div>
