@@ -1,5 +1,6 @@
 import HeaderActions from "./HeaderActions";
 import StoreExplorer from "./StoreExplorer";
+import HeroMotion from "./HeroMotion";
 import { products } from "../lib/catalog";
 import { getLiveOptions } from "../lib/liveStore";
 import { NEXUS_HERO_BACKGROUND } from "../lib/nexusHero";
@@ -88,6 +89,7 @@ export default async function Home() {
       </header>
 
       <section className="nxHero nxHeroV5" id="inicio">
+        <HeroMotion />
         <div className="nxHeroBackdrop" aria-hidden="true">
           <img src={NEXUS_HERO_BACKGROUND} alt="" />
           <div className="nxHeroBackdropShade" />
@@ -115,7 +117,7 @@ export default async function Home() {
         <div className="nxHeroLogoStage" aria-hidden="true">
           <div className="nxHeroLogoLight" />
           <div className="nxHeroLogoMark">
-            <img src="/assets/nexus-logo" alt="" />
+            <img src="/assets/nexus-icon" alt="" />
             <div className="nxHeroWordmark"><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
           </div>
           <div className="nxHeroLogoCaption"><i /> DIGITAL GAMING STORE</div>
