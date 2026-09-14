@@ -111,6 +111,15 @@ export default async function Home() {
             <div><strong>Suporte próximo</strong><small>atendimento no Discord</small></div>
           </div>
         </div>
+
+        <div className="nxHeroLogoStage" aria-hidden="true">
+          <div className="nxHeroLogoLight" />
+          <div className="nxHeroLogoMark">
+            <img src="/assets/nexus-logo" alt="" />
+            <div className="nxHeroWordmark"><strong>NEXUS<span>GAMES</span></strong><small>PLAY MORE</small></div>
+          </div>
+          <div className="nxHeroLogoCaption"><i /> DIGITAL GAMING STORE</div>
+        </div>
       </section>
 
       <section className="nxTrustStrip" aria-label="Benefícios">
