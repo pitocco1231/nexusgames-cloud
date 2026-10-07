@@ -184,6 +184,92 @@ export async function notifyFavoriteChanges(params: {
   return { notified };
 }
 
+async function guildChannel(name: string) {
+  const channels = await discord("/guilds/1547332734794334319/channels") as any[];
+  return channels.find((channel) => channel.type === 0 && channel.name === name) || null;
+}
+
+function listingPublicDescription(listing: NexusListing, score?: number) {
+  return [
+    score ? `**Nexus Score:** ${score}/100` : null,
+    `**Skins:** ${listing.skin_count || "—"}`,
+    `**Picaretas:** ${listing.pickaxe_count || "—"}`,
+    `**Emotes:** ${listing.emote_count || "—"}`,
+    listing.vbucks ? `**V-Bucks:** ${listing.vbucks}` : null,
+    `**E-mail alterável:** ${listing.change_email === "yes" ? "✅" : listing.change_email === "no" ? "❌" : "ℹ️ verificar"}`,
+    "",
+    `### ${money(Number(listing.sale_price_brl || 0))}`
+  ].filter(Boolean).join("\n");
+}
+
+export async function publishDiscoveredListings(params: {
+  newListings: NexusListing[];
+  ranked: Array<{ listing: NexusListing; score: number }>;
+}) {
+  const newChannel = await guildChannel("🆕・novas-contas").catch(() => null);
+  const featuredChannel = await guildChannel("🔥・contas-em-destaque").catch(() => null);
+
+  const newest = params.newListings
+    .filter((listing) => listing.status === "available")
+    .sort((a,b) => Number(a.sale_price_brl || 0) - Number(b.sale_price_brl || 0))
+    .slice(0, 2);
+
+  if (newChannel) {
+    for (const listing of newest) {
+      await discord(`/channels/${newChannel.id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          allowed_mentions: { parse: [] },
+          embeds: [{
+            color: 0x7c3aed,
+            title: `🆕 ${listing.nexus_id}`,
+            description: listingPublicDescription(listing),
+            image: {
+              url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
+            },
+            footer: { text: "Nova oferta encontrada pelo Nexus Finder" }
+          }],
+          components: [{
+            type: 1,
+            components: [
+              { type: 2, style: 1, custom_id: `nexus:details:${listing.nexus_id}`, label: "Ver detalhes", emoji: { name: "🖼️" } },
+              { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
+            ]
+          }]
+        })
+      }).catch(() => null);
+    }
+  }
+
+  const featured = params.ranked.find((item) => item.score >= 80);
+  if (featuredChannel && featured && params.newListings.some((item) => item.nexus_id === featured.listing.nexus_id)) {
+    await discord(`/channels/${featuredChannel.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({
+        allowed_mentions: { parse: [] },
+        embeds: [{
+          color: 0xfee75c,
+          title: `🔥 Destaque Nexus • ${featured.listing.nexus_id}`,
+          description: listingPublicDescription(featured.listing, featured.score),
+          image: {
+            url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(featured.listing.nexus_id)}?type=skins`
+          },
+          footer: { text: "Selecionada automaticamente pelo Nexus Score" }
+        }],
+        components: [{
+          type: 1,
+          components: [
+            { type: 2, style: 1, custom_id: `nexus:details:${featured.listing.nexus_id}`, label: "Detalhes", emoji: { name: "🖼️" } },
+            { type: 2, style: 3, custom_id: `nexus:buy:${featured.listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
+          ]
+        }]
+      })
+    }).catch(() => null);
+  }
+
+  return { newPublished: newest.length, featuredPublished: featured ? 1 : 0 };
+}
+
 export async function notifyFavoriteUnavailable(listing: NexusListing) {
   const favorites = await listActiveFavoritesForListing(listing.nexus_id);
   let notified = 0;
