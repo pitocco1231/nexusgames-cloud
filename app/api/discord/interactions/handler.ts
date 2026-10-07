@@ -733,6 +733,77 @@ export async function POST(request: Request) {
   const earlyCustomId = interaction.data?.custom_id;
 
   if (interaction.type === 3 && typeof earlyCustomId === "string") {
+    if (earlyCustomId.startsWith("finder:open:")) {
+      const type = earlyCustomId.slice("finder:open:".length) as "skin" | "pickaxe" | "emote" | "glider" | "best";
+      if (!["skin","pickaxe","emote","glider","best"].includes(type)) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Tipo de busca inválido." } });
+      }
+      return json(finderModal(type));
+    }
+
+    if (earlyCustomId.startsWith("nexus:buy:")) {
+      if (!actor?.id || !interaction.token || !interaction.id) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar sua compra." } });
+      }
+      after(() => processDeferredFinderAction({
+        customId: earlyCustomId,
+        userId: actor.id,
+        username: actor.username || "cliente",
+        interactionId: interaction.id,
+        interactionToken: interaction.token
+      }));
+      return json({ type: 5, data: { flags: 64 } });
+    }
+
+    if (earlyCustomId.startsWith("fortnite:open-ticket:")) {
+      if (!actor?.id || !interaction.token) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Ação inválida." } });
+      }
+      after(() => processDeferredOpenPurchaseTicket({
+        orderNumber: earlyCustomId.slice("fortnite:open-ticket:".length),
+        adminId: actor.id,
+        adminUsername: actor.username || "admin",
+        roleIds: Array.isArray(interaction.member?.roles) ? interaction.member.roles : [],
+        permissions: interaction.member?.permissions,
+        interactionToken: interaction.token
+      }));
+      return json({ type: 5, data: { flags: 64 } });
+    }
+
+    if (earlyCustomId.startsWith("fortnite:revalidate:") || earlyCustomId.startsWith("fortnite:delivered:")) {
+      if (!actor?.id || !interaction.token) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Ação inválida." } });
+      }
+      const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+      const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+      if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Apenas a equipe pode executar esta ação." } });
+      const delivered = earlyCustomId.startsWith("fortnite:delivered:");
+      const prefix = delivered ? "fortnite:delivered:" : "fortnite:revalidate:";
+      after(() => processDeferredAdminFortnite({
+        action: delivered ? "delivered" : "revalidate",
+        orderNumber: earlyCustomId.slice(prefix.length),
+        interactionToken: interaction.token
+      }));
+      return json({ type: 5, data: { flags: 64 } });
+    }
+
+    if (earlyCustomId.startsWith("review:")) {
+      if (!actor?.id || !interaction.token) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar sua avaliação." } });
+      }
+      const [, ratingText, ...suffixParts] = earlyCustomId.split(":");
+      const rating = Math.max(1, Math.min(5, Number(ratingText || 0)));
+      const suffix = suffixParts.join(":") || "support";
+      after(() => processDeferredReview({
+        rating,
+        suffix,
+        userId: actor.id,
+        username: actor.username || "cliente",
+        interactionToken: interaction.token
+      }));
+      return json({ type: 5, data: { flags: 64 } });
+    }
+
     if (earlyCustomId.startsWith("pix-live:") && !earlyCustomId.startsWith("pix-live-refresh:")) return json(livePixEmailModal(earlyCustomId.slice("pix-live:".length)));
 
     if (earlyCustomId.startsWith("pix-test:") || earlyCustomId.startsWith("pix-refresh:")) {
@@ -749,6 +820,23 @@ export async function POST(request: Request) {
   }
 
   if (interaction.type === 5 && typeof earlyCustomId === "string") {
+    if (earlyCustomId.startsWith("finder:modal:")) {
+      if (!actor?.id || !interaction.token) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar sua busca." } });
+      }
+      const itemType = earlyCustomId.slice("finder:modal:".length) as "skin" | "pickaxe" | "emote" | "glider" | "best";
+      const input = finderInputFromModal(interaction, itemType);
+      after(() => runFinderSearch({
+        input: {
+          ...input,
+          discordUserId: actor.id,
+          discordUsername: actor.username || "cliente"
+        },
+        interactionToken: interaction.token
+      }));
+      return json({ type: 5, data: { flags: 64 } });
+    }
+
     if (earlyCustomId.startsWith("topup-modal:")) {
       if (!actor?.id || !interaction.token || !interaction.id) return json({ type: 4, data: { flags: 64, content: "❌ Operação inválida." } });
       const playerId = modalField(interaction, "player_id");
