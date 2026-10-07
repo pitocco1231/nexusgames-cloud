@@ -642,6 +642,81 @@ async function processDeferredTopup(params: {
   }
 }
 
+async function processDeferredReview(params: {
+  rating: number;
+  suffix: string;
+  userId: string;
+  username: string;
+  interactionToken: string;
+}) {
+  try {
+    await recordAndPublishReview({
+      discordUserId: params.userId,
+      discordUsername: params.username,
+      orderNumber: params.suffix === "support" ? null : params.suffix,
+      rating: params.rating
+    });
+    await editDeferredInteraction(params.interactionToken, {
+      content: `💜 Obrigado! Sua avaliação de **${params.rating} ⭐** foi registrada.`,
+      embeds: [],
+      components: []
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não consegui registrar sua avaliação. ${message}`,
+      embeds: [],
+      components: []
+    }).catch(() => null);
+  }
+}
+
+async function processDeferredOpenPurchaseTicket(params: {
+  orderNumber: string;
+  adminId: string;
+  adminUsername: string;
+  roleIds: string[];
+  permissions?: string;
+  interactionToken: string;
+}) {
+  try {
+    const staff = await isStaffMember(params.roleIds, params.permissions);
+    if (!staff) throw new Error("Apenas a equipe pode abrir tickets de venda.");
+
+    const data = await getOrderForAdmin(params.orderNumber);
+    const customerId = String(data?.user?.discord_user_id || "");
+    const customerName = String(data?.user?.discord_username || "cliente");
+    if (!data?.order || !customerId) throw new Error("Cliente do pedido não encontrado.");
+
+    const ticket = await createSupportTicket(customerId, customerName);
+    await ensureTicketStaffAccess(ticket.channelId);
+    await patchTicketState(ticket.channelId, {
+      source: "purchase",
+      order_number: params.orderNumber,
+      state: "open"
+    }).catch(() => null);
+
+    await postPurchaseTicketSummary(ticket.channelId, params.orderNumber);
+    const claim = await claimSupportTicket(ticket.channelId, params.adminId, params.adminUsername);
+    const claimText = claim.claimed || claim.alreadyMine
+      ? ` Atendimento assumido por <@${params.adminId}>.`
+      : ` Atendimento já estava com <@${claim.claimedBy}>.`;
+
+    await editDeferredInteraction(params.interactionToken, {
+      content: `✅ Ticket do pedido **${params.orderNumber}**: <#${ticket.channelId}>.${claimText}`,
+      embeds: [],
+      components: []
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não foi possível abrir o ticket da venda. ${message}`,
+      embeds: [],
+      components: []
+    }).catch(() => null);
+  }
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get("x-signature-ed25519") || "";
   const timestamp = request.headers.get("x-signature-timestamp") || "";
