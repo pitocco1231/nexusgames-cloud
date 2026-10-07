@@ -15,7 +15,11 @@ import {
   type NexusSearchInput
 } from "./nexusData";
 import { createFortniteCart } from "./fortniteOrders";
-import { getFinderConfigurationStatus, searchFortniteAccounts } from "./lztFortnite";
+import {
+  formatFortniteListingTitle,
+  getFinderConfigurationStatus,
+  searchFortniteAccounts
+} from "./lztFortnite";
 
 const APPLICATION_ID = "1547332142776975400";
 
@@ -148,6 +152,66 @@ function snapshotNames(snapshot: Record<string, any>, key: "skins" | "pickaxes" 
   }).filter(Boolean);
 }
 
+function rawListingTitle(listing: NexusListing) {
+  return String(listing.public_snapshot?.raw_title || listing.public_snapshot?.title || listing.title || "").trim();
+}
+
+function displayListingTitle(listing: NexusListing) {
+  return formatFortniteListingTitle(rawListingTitle(listing) || listing.title || "Conta Fortnite");
+}
+
+function countInTitle(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
+  const raw = rawListingTitle(listing);
+  const patterns: Record<typeof kind, RegExp[]> = {
+    skin: [/\b(\d{1,4})\s*skins?\b/i],
+    pickaxe: [/\b(\d{1,4})\s*pickaxes?\b/i],
+    emote: [/\b(\d{1,4})\s*(?:emotes?|dances?)\b/i],
+    glider: [/\b(\d{1,4})\s*gliders?\b/i]
+  };
+  for (const pattern of patterns[kind]) {
+    const match = raw.match(pattern);
+    if (match) return Number(match[1] || 0);
+  }
+  return 0;
+}
+
+function effectiveCount(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
+  const stored =
+    kind === "skin" ? Number(listing.skin_count || 0) :
+    kind === "pickaxe" ? Number(listing.pickaxe_count || 0) :
+    kind === "emote" ? Number(listing.emote_count || 0) :
+    Number(listing.glider_count || 0);
+  return stored || countInTitle(listing, kind);
+}
+
+function effectiveChangeEmail(listing: NexusListing) {
+  if (listing.change_email === "yes" || listing.change_email === "no") return listing.change_email;
+  const raw = rawListingTitle(listing).toLowerCase();
+  if (/\b(no|not)\s+(mail|email)\s+change\b/.test(raw)) return "no";
+  if (/\b(mail|email)\s+change\b/.test(raw) || /\bchange\s+(mail|email)\b/.test(raw)) return "yes";
+  return null;
+}
+
+function titleHighlights(listing: NexusListing, limit = 4) {
+  const fromSnapshot = snapshotNames(listing.public_snapshot || {}, "skins", limit);
+  if (fromSnapshot.length) return fromSnapshot;
+
+  return rawListingTitle(listing)
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      const text = part.toLowerCase();
+      return !/^\d+\s*(skins?|pickaxes?|emotes?|dances?|gliders?)$/.test(text) &&
+        !/(mail|email)\s+change/.test(text) &&
+        !/change\s+(mail|email)/.test(text) &&
+        !/^last\s+active/.test(text) &&
+        !/^full\s+access$/.test(text) &&
+        !/^(mail|email)\s+access$/.test(text);
+    })
+    .slice(0, limit);
+}
+
 function tagLabel(tag: string) {
   if (tag === "cheapest") return "💰 MAIS BARATA";
   if (tag === "complete") return "👑 MAIS COMPLETA";
@@ -156,19 +220,29 @@ function tagLabel(tag: string) {
 }
 
 function listingDescription(listing: NexusListing, score?: number, tag?: string) {
-  const skins = snapshotNames(listing.public_snapshot || {}, "skins", 5);
+  const skins = effectiveCount(listing, "skin");
+  const pickaxes = effectiveCount(listing, "pickaxe");
+  const emotes = effectiveCount(listing, "emote");
+  const gliders = effectiveCount(listing, "glider");
+  const highlights = titleHighlights(listing, 4);
+  const email = effectiveChangeEmail(listing);
+
+  const stats = [
+    skins ? `🎨 **${skins} skins**` : null,
+    pickaxes ? `⛏️ **${pickaxes} picaretas**` : null,
+    emotes ? `🎉 **${emotes} emotes**` : null,
+    gliders ? `🪂 **${gliders} asas-delta**` : null
+  ].filter(Boolean);
+
   return [
     tag ? `**${tagLabel(tag)}**` : null,
-    score ? `**Nexus Score:** ${score}/100` : null,
+    score ? `⭐ **Nexus Score:** ${score}/100` : null,
+    highlights.length ? `✨ **Destaques:** ${highlights.join(" • ")}` : null,
+    stats.length ? stats.join(" • ") : null,
+    listing.vbucks ? `💠 **V-Bucks:** ${Number(listing.vbucks).toLocaleString("pt-BR")}` : null,
+    email === "yes" ? "📧 **E-mail alterável:** ✅ Sim" : email === "no" ? "📧 **E-mail alterável:** ❌ Não" : null,
     "",
-    skins.length ? `**Destaques:** ${skins.join(" • ")}` : null,
-    `**Skins:** ${listing.skin_count || "—"}`,
-    `**Picaretas:** ${listing.pickaxe_count || "—"}`,
-    `**Emotes:** ${listing.emote_count || "—"}`,
-    listing.vbucks ? `**V-Bucks:** ${listing.vbucks}` : null,
-    `**E-mail alterável:** ${listing.change_email === "yes" ? "✅" : listing.change_email === "no" ? "❌" : "ℹ️ verificar"}`,
-    "",
-    `### ${money(Number(listing.sale_price_brl || 0))}`
+    `## ${money(Number(listing.sale_price_brl || 0))}`
   ].filter(Boolean).join("\n");
 }
 
@@ -206,12 +280,12 @@ export function searchResultsPayload(results: Awaited<ReturnType<typeof searchFo
     content: "",
     embeds: results.map(({ listing, score, tag }) => ({
       color: 0x7c3aed,
-      title: `${listing.nexus_id} • Conta Fortnite`,
+      title: `🎮 ${displayListingTitle(listing)}`,
       description: listingDescription(listing, score, tag),
       image: {
         url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
       },
-      footer: { text: "Fornecedor protegido pela NexusGames • disponibilidade sujeita a revalidação" }
+      footer: { text: `${listing.nexus_id} • NexusGames • disponibilidade revalidada no checkout` }
     })),
     components: results.map(({ listing }) => ({
       type: 1,
@@ -329,11 +403,12 @@ export async function detailsPayload(nexusId: string) {
     content: "",
     embeds: imageTypes.map(([type,label], index) => ({
       color: 0x7c3aed,
-      title: index === 0 ? `${listing.nexus_id} • Detalhes` : label,
+      title: index === 0 ? `🎮 ${displayListingTitle(listing)}` : `🖼️ ${label}`,
       description: index === 0 ? base : undefined,
       image: {
         url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=${type}`
-      }
+      },
+      footer: index === 0 ? { text: `${listing.nexus_id} • NexusGames` } : undefined
     })),
     components: [{
       type: 1,
@@ -354,7 +429,7 @@ export async function favoritesPayload(userId: string) {
       color: 0x7c3aed,
       title: "❤️ Seus favoritos",
       description: listings.length
-        ? listings.map((l) => `**${l.nexus_id}** • ${money(Number(l.sale_price_brl || 0))} • ${l.skin_count || 0} skins • ${l.status === "available" ? "🟢" : "🔴"}`).join("\n")
+        ? listings.map((l) => `**${displayListingTitle(l)}**\n${money(Number(l.sale_price_brl || 0))} • ${effectiveCount(l, "skin") || "?"} skins • ${l.status === "available" ? "🟢 disponível" : "🔴 indisponível"}`).join("\n\n")
         : "Você ainda não favoritou nenhuma conta."
     }],
     components: listings.slice(0,5).map((l) => ({
@@ -376,7 +451,7 @@ export async function comparePayload(userId: string) {
   return {
     embeds: listings.map((l) => ({
       color: 0x7c3aed,
-      title: l.nexus_id,
+      title: `🎮 ${displayListingTitle(l)}`,
       description: listingDescription(l),
       thumbnail: {
         url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(l.nexus_id)}?type=skins`
