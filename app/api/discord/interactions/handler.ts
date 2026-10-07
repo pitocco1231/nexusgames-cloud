@@ -868,6 +868,50 @@ export async function POST(request: Request) {
 
     if (interaction.type === 2) {
       const name = interaction.data?.name;
+
+      if (name === "buscar") {
+        if (!actor?.id || !interaction.token) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar sua busca." } });
+        }
+        const input = finderInputFromCommand(interaction);
+        after(() => runFinderSearch({
+          input: {
+            ...input,
+            discordUserId: actor.id,
+            discordUsername: actor.username || "cliente"
+          },
+          interactionToken: interaction.token
+        }));
+        return json({ type: 5, data: { flags: 64 } });
+      }
+
+      if (name === "perfil") {
+        if (!actor?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu perfil." } });
+        return json({ type: 4, data: { flags: 64, ...(await profilePayload(actor.id, actor.username)) } });
+      }
+
+      if (name === "favoritos") {
+        if (!actor?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu perfil." } });
+        return json({ type: 4, data: { flags: 64, ...(await favoritesPayload(actor.id)) } });
+      }
+
+      if (name === "alertas") {
+        if (!actor?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu perfil." } });
+        return json({ type: 4, data: { flags: 64, ...(await watchesPayload(actor.id)) } });
+      }
+
+      if (name === "comparar") {
+        if (!actor?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu perfil." } });
+        return json({ type: 4, data: { flags: 64, ...(await comparePayload(actor.id)) } });
+      }
+
+      if (name === "metricas") {
+        const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+        if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Este comando é exclusivo da equipe." } });
+        return json({ type: 4, data: { flags: 64, ...(await metricsPayload()) } });
+      }
+
       if (name === "loja") return json(await storeNavigationPayload());
       if (name === "comprar") return json(purchaseCatalogPayload());
       if (name === "pedidos") {
@@ -880,6 +924,56 @@ export async function POST(request: Request) {
 
     if (interaction.type === 3) {
       const customId = interaction.data?.custom_id;
+
+      if (
+        typeof customId === "string" &&
+        (
+          customId.startsWith("nexus:details:") ||
+          customId.startsWith("nexus:favorite:") ||
+          customId.startsWith("nexus:compare:") ||
+          customId === "nexus:compare-clear" ||
+          customId === "finder:favorites" ||
+          customId === "finder:watches" ||
+          customId === "finder:compare" ||
+          customId.startsWith("watch:add:") ||
+          customId.startsWith("watch:disable:")
+        )
+      ) {
+        const user = interaction.member?.user || interaction.user;
+        if (!user?.id || !interaction.id) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar sua ação." } });
+        }
+        const result = await handleFinderAction({
+          customId,
+          userId: user.id,
+          username: user.username || "cliente",
+          interactionId: interaction.id
+        });
+        if (result) return json(result);
+      }
+
+      if (
+        typeof customId === "string" &&
+        (customId.startsWith("fortnite:waiting:") || customId.startsWith("fortnite:transfer:"))
+      ) {
+        const user = interaction.member?.user || interaction.user;
+        const channelId = interaction.channel_id;
+        if (!user?.id || !channelId) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Ação inválida." } });
+        }
+        const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+        if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Apenas a equipe pode executar esta ação." } });
+
+        if (customId.startsWith("fortnite:waiting:")) {
+          await setSupportTicketWaiting(channelId, user.id);
+          return json({ type: 4, data: { flags: 64, content: "⏳ Ticket marcado como aguardando cliente." } });
+        }
+
+        await releaseSupportTicket(channelId, user.id);
+        return json({ type: 4, data: { flags: 64, content: "🔁 Atendimento liberado para outro admin assumir." } });
+      }
+
       if (customId === "product_select") {
         const categoryId = resolveCategoryId(interaction.data?.values?.[0]);
         if (!categoryId) return json({ type: 4, data: { flags: 64, content: "Categoria indisponível." } });
