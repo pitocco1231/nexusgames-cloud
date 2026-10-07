@@ -1034,6 +1034,36 @@ export async function POST(request: Request) {
         return json({ type: 4, data: { flags: 64, content: "🔁 Atendimento liberado para outro admin assumir." } });
       }
 
+      if (customId === "customer:profile") {
+        const user = interaction.member?.user || interaction.user;
+        if (!user?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu perfil." } });
+        return json({ type: 4, data: { flags: 64, ...(await profilePayload(user.id, user.username)) } });
+      }
+
+      if (customId === "customer:orders") {
+        const user = interaction.member?.user || interaction.user;
+        if (!user?.id) return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seus pedidos." } });
+        const orders = await listDiscordOrders(user.id, 10);
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            embeds: [{
+              color: 0x6d5dfb,
+              title: "📦 Meus pedidos",
+              description: orders.length ? orders.map(orderLine).join("\n\n") : "Você ainda não possui pedidos na NexusGames."
+            }]
+          }
+        });
+      }
+
+      if (customId === "admin:metrics") {
+        const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+        if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Este painel é exclusivo da equipe." } });
+        return json({ type: 4, data: { flags: 64, ...(await metricsPayload()) } });
+      }
+
       if (customId === "product_select") {
         const categoryId = resolveCategoryId(interaction.data?.values?.[0]);
         if (!categoryId) return json({ type: 4, data: { flags: 64, content: "Categoria indisponível." } });
