@@ -183,25 +183,40 @@ const PANELS = [
   },
   {
     channel: "🔎・buscar-conta",
-    marker: "nexus-search-v3",
-    title: "🔎 BUSCADOR NEXUS",
+    marker: "nexus-search-v4",
+    title: "🔎 NEXUS FINDER",
     description: [
-      "> Este é o canal principal para encontrar contas Fortnite.",
+      "> Encontre a melhor conta Fortnite sem procurar anúncio por anúncio.",
       "",
-      "Você poderá pesquisar por:",
-      "• skin",
-      "• picareta",
-      "• emote",
-      "• asa-delta",
-      "• quantidade de skins",
-      "• V-Bucks",
-      "• possibilidade de alteração de e-mail",
-      "• orçamento de até **R$ 500**",
+      "**Escolha como quer pesquisar:**",
+      "🎭 Skin • ⛏️ Picareta • 💃 Emote • 🪂 Asa-delta",
+      "💰 ou peça a melhor conta possível dentro do seu orçamento.",
       "",
-      "A Nexus mostra somente as melhores opções que passam pelos filtros internos de preço e fornecedor.",
+      "O Finder considera preço, quantidade de cosméticos, V-Bucks, troca de e-mail, qualidade da oferta e **Nexus Score**.",
       "",
-      "⚙️ O comando de busca será ativado neste canal durante a implantação do buscador."
-    ].join("\n")
+      "💜 Você também pode favoritar, comparar e criar um alerta do **Nexus Watch**.",
+      "💰 Limite público: **R$ 500**."
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: "finder:open:skin", label: "Skin", emoji: { name: "🎭" } },
+          { type: 2, style: 1, custom_id: "finder:open:pickaxe", label: "Picareta", emoji: { name: "⛏️" } },
+          { type: 2, style: 1, custom_id: "finder:open:emote", label: "Emote", emoji: { name: "💃" } },
+          { type: 2, style: 1, custom_id: "finder:open:glider", label: "Asa-delta", emoji: { name: "🪂" } }
+        ]
+      },
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 3, custom_id: "finder:open:best", label: "Melhor até R$500", emoji: { name: "💰" } },
+          { type: 2, style: 2, custom_id: "finder:favorites", label: "Favoritos", emoji: { name: "❤️" } },
+          { type: 2, style: 2, custom_id: "finder:watches", label: "Meus alertas", emoji: { name: "🔔" } },
+          { type: 2, style: 2, custom_id: "finder:compare", label: "Comparar", emoji: { name: "⚖️" } }
+        ]
+      }
+    ]
   },
   {
     channel: "🧩・como-pesquisar",
