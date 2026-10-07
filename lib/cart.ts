@@ -418,7 +418,7 @@ export async function findCartByOrder(orderNumber: string) {
 
 export async function notifyCartStatus(params: {
   orderNumber: string;
-  status: "paid" | "purchasing" | "delivered" | "failed" | "refunded" | "review";
+  status: "paid" | "validating" | "purchasing" | "delivered" | "failed" | "refunded" | "review";
   details?: string | null;
   autoClose?: boolean;
 }) {
@@ -427,6 +427,7 @@ export async function notifyCartStatus(params: {
 
   const configs = {
     paid: { color: 0x57f287, title: "✅ Pagamento aprovado", text: "O Pix foi confirmado pelo Mercado Pago. Você não precisa fazer mais nada." },
+    validating: { color: 0x7c3aed, title: "🔎 Conta em validação", text: "A equipe iniciou seu atendimento e está validando a disponibilidade e os dados da conta antes da entrega." },
     purchasing: { color: 0x5865f2, title: "⚡ Pedido em processamento", text: "Pagamento confirmado. Estamos enviando a solicitação ao fornecedor." },
     delivered: { color: 0x57f287, title: "🎉 Pedido entregue", text: "A entrega foi confirmada. Confira a mensagem abaixo e também sua DM do Discord." },
     failed: { color: 0xed4245, title: "❌ Falha na entrega", text: "Seu pagamento está registrado, mas a entrega precisa de atenção da equipe." },
