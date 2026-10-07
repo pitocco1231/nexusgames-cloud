@@ -43,8 +43,69 @@ async function discordFetch(path: string, init: RequestInit = {}) {
 }
 
 export const guildCommands = [
-  { name: "loja", description: "Mostra as categorias de contas Fortnite da NexusGames" },
-  { name: "comprar", description: "Abre o catálogo de contas Fortnite da NexusGames" },
+  {
+    name: "buscar",
+    description: "Encontre contas Fortnite por cosmético e orçamento",
+    options: [
+      {
+        type: 3,
+        name: "tipo",
+        description: "O que você quer encontrar",
+        required: true,
+        choices: [
+          { name: "Skin", value: "skin" },
+          { name: "Picareta", value: "pickaxe" },
+          { name: "Emote", value: "emote" },
+          { name: "Asa-delta", value: "glider" },
+          { name: "Melhor conta pelo orçamento", value: "best" }
+        ]
+      },
+      {
+        type: 3,
+        name: "item",
+        description: "Nome do cosmético, ex.: Travis Scott",
+        required: false,
+        max_length: 100
+      },
+      {
+        type: 10,
+        name: "preco",
+        description: "Orçamento máximo em reais",
+        required: false,
+        min_value: 20,
+        max_value: 500
+      },
+      {
+        type: 4,
+        name: "min_skins",
+        description: "Quantidade mínima de skins",
+        required: false,
+        min_value: 0,
+        max_value: 1000
+      },
+      {
+        type: 3,
+        name: "email",
+        description: "Troca de e-mail",
+        required: false,
+        choices: [
+          { name: "Precisa permitir", value: "yes" },
+          { name: "Não importa", value: "nomatter" }
+        ]
+      }
+    ]
+  },
+  { name: "perfil", description: "Mostra seu perfil, cashback e nível Nexus" },
+  { name: "favoritos", description: "Mostra suas contas favoritas" },
+  { name: "alertas", description: "Mostra seus alertas do Nexus Watch" },
+  { name: "comparar", description: "Compara as contas que você selecionou" },
+  {
+    name: "metricas",
+    description: "Métricas internas da NexusGames",
+    default_member_permissions: "8"
+  },
+  { name: "loja", description: "Mostra os atalhos da NexusGames" },
+  { name: "comprar", description: "Abre o catálogo da NexusGames" },
   { name: "pedidos", description: "Mostra seus pedidos" },
   { name: "suporte", description: "Abre o suporte privado da NexusGames" }
 ];
