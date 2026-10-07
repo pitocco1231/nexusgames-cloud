@@ -302,6 +302,87 @@ export async function notifyFortnitePaidSale(orderNumber: string) {
   });
 }
 
+
+export async function postPurchaseTicketSummary(channelId: string, orderNumber: string) {
+  const data = await getOrderForAdmin(orderNumber);
+  if (!data?.order) throw new Error("Pedido não encontrado.");
+  const fulfillment = data.order.fulfillment_data || {};
+  const nexusId = String(fulfillment.nexus_id || "");
+  const listing = nexusId ? await getListing(nexusId) : null;
+  const cost = Number(fulfillment.supplier_cost_brl || listing?.cost_brl || 0);
+  const sale = Number(data.order.total_price_brl || 0);
+  const supplierUrl = String(fulfillment.supplier_url || listing?.private_snapshot?.supplier_url || "");
+
+  await discord(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({
+      allowed_mentions: { users: [String(data.user?.discord_user_id || "")].filter(Boolean) },
+      embeds: [{
+        color: 0x7c3aed,
+        title: `🎮 Entrega • ${orderNumber}`,
+        description: [
+          `**Conta:** ${nexusId || "—"}`,
+          `**Valor pago:** ${money(sale)}`,
+          "",
+          "✅ Pagamento confirmado",
+          "🟣 A equipe está validando e preparando sua conta.",
+          "",
+          "🔐 Dados de acesso devem ser enviados somente neste ticket."
+        ].join("\n"),
+        image: nexusId ? {
+          url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(nexusId)}?type=skins`
+        } : undefined,
+        footer: { text: `NexusGames • pedido:${orderNumber}` }
+      }],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 1,
+              custom_id: `fortnite:waiting:${orderNumber}`,
+              label: "Aguardando cliente",
+              emoji: { name: "⏳" }
+            },
+            {
+              type: 2,
+              style: 2,
+              custom_id: `fortnite:transfer:${orderNumber}`,
+              label: "Transferir",
+              emoji: { name: "🔁" }
+            },
+            {
+              type: 2,
+              style: 3,
+              custom_id: `fortnite:delivered:${orderNumber}`,
+              label: "Marcar entregue",
+              emoji: { name: "✅" }
+            }
+          ]
+        },
+        ...(supplierUrl ? [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 5,
+            url: supplierUrl,
+            label: `Fornecedor • custo ${money(cost)}`,
+            emoji: { name: "🔗" }
+          }]
+        }] : [])
+      ]
+    })
+  });
+}
+
+export async function revalidateOrderListing(orderNumber: string) {
+  const data = await getOrderForAdmin(orderNumber);
+  const nexusId = String(data?.order?.fulfillment_data?.nexus_id || "");
+  if (!nexusId) throw new Error("Pedido sem Nexus ID.");
+  return revalidateListing(nexusId);
+}
+
 export async function setOrderDelivered(orderNumber: string) {
   const data = await getOrderForAdmin(orderNumber);
   if (!data?.order) throw new Error("Pedido não encontrado.");
