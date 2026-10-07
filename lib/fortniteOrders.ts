@@ -309,9 +309,7 @@ export async function postPurchaseTicketSummary(channelId: string, orderNumber: 
   const fulfillment = data.order.fulfillment_data || {};
   const nexusId = String(fulfillment.nexus_id || "");
   const listing = nexusId ? await getListing(nexusId) : null;
-  const cost = Number(fulfillment.supplier_cost_brl || listing?.cost_brl || 0);
   const sale = Number(data.order.total_price_brl || 0);
-  const supplierUrl = String(fulfillment.supplier_url || listing?.private_snapshot?.supplier_url || "");
 
   await discord(`/channels/${channelId}/messages`, {
     method: "POST",
@@ -360,17 +358,7 @@ export async function postPurchaseTicketSummary(channelId: string, orderNumber: 
               emoji: { name: "✅" }
             }
           ]
-        },
-        ...(supplierUrl ? [{
-          type: 1,
-          components: [{
-            type: 2,
-            style: 5,
-            url: supplierUrl,
-            label: `Fornecedor • custo ${money(cost)}`,
-            emoji: { name: "🔗" }
-          }]
-        }] : [])
+        }
       ]
     })
   });
