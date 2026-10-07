@@ -219,6 +219,71 @@ const PANELS = [
     ]
   },
   {
+    channel: "🎯・procurando-conta",
+    marker: "nexus-watch-v1",
+    title: "🔔 NEXUS WATCH",
+    description: [
+      "> Não encontrou a conta que queria? Salve sua busca.",
+      "",
+      "Quando o Finder encontrar uma oferta compatível em uma atualização de estoque, a Nexus envia uma **DM privada** para você.",
+      "",
+      "Você pode definir cosmético, orçamento, mínimo de skins e necessidade de troca de e-mail."
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: "finder:open:skin", label: "Procurar skin", emoji: { name: "🎭" } },
+          { type: 2, style: 1, custom_id: "finder:open:pickaxe", label: "Procurar picareta", emoji: { name: "⛏️" } },
+          { type: 2, style: 3, custom_id: "finder:open:best", label: "Melhor pelo preço", emoji: { name: "💰" } },
+          { type: 2, style: 2, custom_id: "finder:watches", label: "Meus alertas", emoji: { name: "🔔" } }
+        ]
+      }
+    ]
+  },
+  {
+    channel: "📦・meus-pedidos",
+    marker: "nexus-customer-hub-v1",
+    title: "📦 ÁREA DO CLIENTE",
+    description: [
+      "> Acompanhe seus pedidos e seus recursos da Nexus.",
+      "",
+      "Use os botões para abrir pedidos, perfil, favoritos e alertas.",
+      "Seu perfil mostra compras concluídas, nível VIP e saldo Nexus."
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: "customer:orders", label: "Meus pedidos", emoji: { name: "📦" } },
+          { type: 2, style: 1, custom_id: "customer:profile", label: "Meu perfil", emoji: { name: "👤" } },
+          { type: 2, style: 2, custom_id: "finder:favorites", label: "Favoritos", emoji: { name: "❤️" } },
+          { type: 2, style: 2, custom_id: "finder:watches", label: "Alertas", emoji: { name: "🔔" } }
+        ]
+      }
+    ]
+  },
+  {
+    channel: "📊・metricas",
+    marker: "nexus-admin-metrics-v1",
+    title: "📊 NEXUS CONTROL",
+    description: [
+      "> Painel interno de inteligência da NexusGames.",
+      "",
+      "Acompanhe vendas, faturamento, buscas, demanda sem resultado, clientes VIP e tickets sem atendente.",
+      "",
+      "Os dados são atualizados no momento em que o botão é usado."
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: "admin:metrics", label: "Atualizar métricas", emoji: { name: "📊" } }
+        ]
+      }
+    ]
+  },
+  {
     channel: "🧩・como-pesquisar",
     marker: "nexus-search-help-v3",
     title: "🧩 COMO PESQUISAR",
