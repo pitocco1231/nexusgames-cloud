@@ -10,6 +10,7 @@ import {
 } from "../../../../lib/catalog";
 import { getBestSupplierOffer } from "../../../../lib/checkoutStore";
 import {
+  claimSupportTicket,
   closeSupportTicket,
   createSupportTicket,
   getStoreNavigation
@@ -664,6 +665,43 @@ export async function POST(request: Request) {
         const ticket = await createSupportTicket(userId, username);
         await ensureTicketStaffAccess(ticket.channelId);
         return json({ type: 4, data: { flags: 64, content: ticket.created ? `✅ Ticket criado: <#${ticket.channelId}>` : `🎫 Você já possui um ticket aberto: <#${ticket.channelId}>` } });
+      }
+
+      if (customId === "support:claim-ticket") {
+        const user = interaction.member?.user || interaction.user;
+        const userId = user?.id;
+        const username = user?.username || "admin";
+        const channelId = interaction.channel_id;
+        if (!userId || !channelId) {
+          return json({ type: 4, data: { flags: 64, content: "❌ Não foi possível assumir este ticket." } });
+        }
+
+        const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+        if (!staff) {
+          return json({ type: 4, data: { flags: 64, content: "⛔ Apenas a equipe pode assumir tickets." } });
+        }
+
+        const claim = await claimSupportTicket(channelId, userId, username);
+        if (!claim.claimed && !claim.alreadyMine) {
+          return json({
+            type: 4,
+            data: {
+              flags: 64,
+              content: `⚠️ Este ticket já foi assumido por <@${claim.claimedBy}>.`
+            }
+          });
+        }
+
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: claim.claimed
+              ? "✅ Ticket assumido por você."
+              : "✅ Este ticket já está sob sua responsabilidade."
+          }
+        });
       }
 
       if (customId === "support:close-ticket") {
