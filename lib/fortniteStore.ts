@@ -149,10 +149,16 @@ const GROUPS: readonly GroupConfig[] = [
 ] as const;
 
 function publicSystemStatusDescription() {
-  const paymentsOnline =
-    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
+  const liveEnabled = process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true";
+  const botapixReady =
+    liveEnabled &&
+    Boolean(process.env.BOTAPIX_API_KEY) &&
+    Boolean(process.env.BOTAPIX_WEBHOOK_SECRET);
+  const mercadoPagoReady =
+    liveEnabled &&
     Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN) &&
     Boolean(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+  const paymentsOnline = botapixReady || mercadoPagoReady;
 
   const supplierCount = String(process.env.LZT_SUPPLIER_USER_IDS || "")
     .split(/[;,\s]+/)
