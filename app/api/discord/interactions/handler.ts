@@ -19,6 +19,7 @@ import {
 } from "../../../../lib/discord";
 import { maybeHandlePanelInteraction } from "../../../../lib/panelEditor";
 import {
+  alternativesForUnavailable,
   comparePayload,
   favoritesPayload,
   finderInputFromCommand,
@@ -452,6 +453,23 @@ async function processDeferredFinderAction(params: {
     await editDeferredInteraction(params.interactionToken, result.data);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro inesperado";
+
+    if (
+      params.customId.startsWith("nexus:buy:") &&
+      message.toLowerCase().includes("indispon")
+    ) {
+      const nexusId = params.customId.slice("nexus:buy:".length);
+      const alternatives = await alternativesForUnavailable({
+        nexusId,
+        discordUserId: params.userId,
+        discordUsername: params.username
+      }).catch(() => null);
+      if (alternatives) {
+        await editDeferredInteraction(params.interactionToken, alternatives).catch(() => null);
+        return;
+      }
+    }
+
     await editDeferredInteraction(params.interactionToken, {
       content: `❌ Não foi possível concluir esta ação. ${message}`,
       embeds: [],
