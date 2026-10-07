@@ -1,5 +1,5 @@
-import { migrateToFortniteAccountStore } from "../../../../../lib/fortniteStore";
-import { registerGuildCommands } from "../../../../../lib/discord";
+import { migrateToFortniteAccountStore } from "../../../../lib/fortniteStore";
+import { registerGuildCommands } from "../../../../lib/discord";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
