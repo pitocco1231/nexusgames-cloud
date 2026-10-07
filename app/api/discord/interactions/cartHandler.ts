@@ -33,6 +33,7 @@ import {
 } from "../../../../lib/mercadopago";
 import { quoteAndAttachOrder } from "../../../../lib/pricing";
 import { grantCustomerRole } from "../../../../lib/roles";
+import { getStoreNavigation } from "../../../../lib/discord";
 import { validateShop2TopupPlayer } from "../../../../lib/shop2topup";
 import {
   attachMercadoPagoSandboxOrder,
@@ -121,6 +122,38 @@ function chunkRows<T>(items: T[], size = 5) {
   const rows: T[][] = [];
   for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
   return rows;
+}
+
+async function fortniteAccountCatalogPayload() {
+  const navigation = await getStoreNavigation();
+  return {
+    type: 4,
+    data: {
+      flags: 64,
+      embeds: [{
+        color: 0x7c3aed,
+        title: "⚡ NexusGames // Contas Fortnite",
+        description: [
+          "Escolha a categoria de conta que você procura:",
+          "",
+          ...navigation.map((item) => `${item.emoji} **${item.label}** → ${item.mention}`),
+          "",
+          "🛒 Para comprar, abra um ticket e envie o ID/nome do anúncio.",
+          "⚠️ Leia **📜・regras** antes do pagamento."
+        ].join("\n")
+      }],
+      components: [{
+        type: 1,
+        components: [{
+          type: 2,
+          style: 1,
+          custom_id: "support:create-ticket",
+          label: "Abrir ticket de compra",
+          emoji: { name: "🛒" }
+        }]
+      }]
+    }
+  };
 }
 
 async function liveCatalogPayload() {
@@ -547,7 +580,7 @@ export async function POST(request: Request) {
   const channelId = String(interaction.channel_id || "");
 
   if (interaction.type === 2 && ["comprar", "loja"].includes(String(interaction.data?.name || ""))) {
-    return json(await liveCatalogPayload());
+    return json(await fortniteAccountCatalogPayload());
   }
 
   if (interaction.type === 3 && customId === "product_select") {
