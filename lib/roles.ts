@@ -36,6 +36,8 @@ export const ROLE_NAMES = {
   partner: "🤝・Parceiro",
   affiliate: "💸・Afiliado",
   customer: "💎・Cliente",
+  vip: "💜・Cliente VIP",
+  elite: "👑・Cliente Elite",
   member: "👤・Membro",
   bots: "🤖・Bots"
 } as const;
@@ -90,6 +92,8 @@ const roleDefinitions: RoleDefinition[] = [
   { name: ROLE_NAMES.partner, permissions: MEMBER_BASE, color: 0x9b59b6, hoist: false },
   { name: ROLE_NAMES.affiliate, permissions: MEMBER_BASE, color: 0x2ecc71, hoist: false },
   { name: ROLE_NAMES.customer, permissions: MEMBER_BASE, color: 0x1abc9c, hoist: false },
+  { name: ROLE_NAMES.vip, permissions: MEMBER_BASE, color: 0x9b59b6, hoist: false },
+  { name: ROLE_NAMES.elite, permissions: MEMBER_BASE, color: 0xf1c40f, hoist: true },
   { name: ROLE_NAMES.member, permissions: MEMBER_BASE, color: 0x95a5a6, hoist: false },
   { name: ROLE_NAMES.bots, permissions: MEMBER_BASE, color: 0x5865f2, hoist: false }
 ];
@@ -401,6 +405,30 @@ export async function grantCustomerRole(userId: string) {
   await addRoleToMember(userId, customerRole.id);
 
   return customerRole.id;
+}
+
+export async function grantRewardRole(
+  userId: string,
+  level: "cliente" | "vip" | "elite"
+) {
+  const roles = await getRoles();
+  const memberRole = roleByName(roles, ROLE_NAMES.member);
+  const customerRole = roleByName(roles, ROLE_NAMES.customer);
+
+  await addRoleToMember(userId, memberRole.id);
+  await addRoleToMember(userId, customerRole.id);
+
+  if (level === "vip" || level === "elite") {
+    const vipRole = roles.find((role) => role.name === ROLE_NAMES.vip);
+    if (vipRole) await addRoleToMember(userId, vipRole.id);
+  }
+
+  if (level === "elite") {
+    const eliteRole = roles.find((role) => role.name === ROLE_NAMES.elite);
+    if (eliteRole) await addRoleToMember(userId, eliteRole.id);
+  }
+
+  return level;
 }
 
 export async function ensureTicketStaffAccess(channelId: string) {
