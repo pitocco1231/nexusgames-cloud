@@ -572,7 +572,10 @@ export async function createSupportTicket(userId: string, username: string) {
   const openTopic = `nexus-ticket-owner:${userId}`;
 
   const existing = channels.find(
-    (channel) => channel.type === 0 && channel.topic === openTopic
+    (channel) =>
+      channel.type === 0 &&
+      typeof channel.topic === "string" &&
+      channel.topic.startsWith(openTopic)
   );
 
   if (existing) return { channelId: existing.id, created: false };
@@ -619,6 +622,7 @@ export async function createSupportTicket(userId: string, username: string) {
             "Se for sobre uma compra, envie **somente o número do pedido** e uma descrição do problema.",
             "Não envie senhas, tokens ou dados bancários completos.",
             "",
+            "Quando um membro da equipe iniciar o atendimento, ele usará **Assumir ticket**.",
             "Quando o atendimento terminar, use o botão **Fechar ticket**."
           ].join("\n"),
           image: { url: assetUrl("suporte") },
@@ -629,6 +633,13 @@ export async function createSupportTicket(userId: string, username: string) {
         {
           type: 1,
           components: [
+            {
+              type: 2,
+              style: 3,
+              custom_id: "support:claim-ticket",
+              label: "Assumir ticket",
+              emoji: { name: "🙋" }
+            },
             {
               type: 2,
               style: 4,
@@ -645,13 +656,59 @@ export async function createSupportTicket(userId: string, username: string) {
   return { channelId: channel.id, created: true };
 }
 
+export async function claimSupportTicket(
+  channelId: string,
+  staffId: string,
+  staffUsername: string
+) {
+  const channel = (await discordFetch(`/channels/${channelId}`)) as DiscordChannel;
+  const match = channel.topic?.match(/^nexus-ticket-owner:(\d+)(?:;claimed-by:(\d+))?$/);
+
+  if (!match) {
+    throw new Error("Este canal nao e um ticket aberto da NexusGames.");
+  }
+
+  const ownerId = match[1];
+  const claimedBy = match[2];
+
+  if (claimedBy) {
+    return {
+      ownerId,
+      claimedBy,
+      claimed: false,
+      alreadyMine: claimedBy === staffId
+    };
+  }
+
+  await updateChannel(channelId, {
+    topic: `nexus-ticket-owner:${ownerId};claimed-by:${staffId}`
+  });
+
+  await discordFetch(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({
+      allowed_mentions: { users: [staffId] },
+      embeds: [
+        {
+          color: 0x57f287,
+          title: "🙋 Atendimento assumido",
+          description: `<@${staffId}> assumiu este ticket e será o responsável pelo atendimento.`,
+          footer: { text: `NexusGames • atendente:${staffUsername}` }
+        }
+      ]
+    })
+  });
+
+  return { ownerId, claimedBy: staffId, claimed: true, alreadyMine: true };
+}
+
 export async function closeSupportTicket(
   channelId: string,
   userId: string,
   memberPermissions?: string
 ) {
   const channel = (await discordFetch(`/channels/${channelId}`)) as DiscordChannel;
-  const match = channel.topic?.match(/^nexus-ticket-owner:(\d+)$/);
+  const match = channel.topic?.match(/^nexus-ticket-owner:(\d+)(?:;claimed-by:(\d+))?$/);
 
   if (!match) throw new Error("Este canal nao e um ticket aberto da NexusGames.");
 
