@@ -86,7 +86,15 @@ async function lzt(path: string, init: RequestInit = {}) {
     throw error;
   }
   const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
+  if (contentType.includes("application/json")) {
+    const text = await response.text();
+    if (!text.trim()) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`LZT retornou JSON inválido (status ${response.status}).`);
+    }
+  }
   return response.arrayBuffer();
 }
 
