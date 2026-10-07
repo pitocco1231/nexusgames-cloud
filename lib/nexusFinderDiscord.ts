@@ -15,7 +15,7 @@ import {
   type NexusSearchInput
 } from "./nexusData";
 import { createFortniteCart } from "./fortniteOrders";
-import { searchFortniteAccounts } from "./lztFortnite";
+import { getFinderConfigurationStatus, searchFortniteAccounts } from "./lztFortnite";
 
 const APPLICATION_ID = "1547332142776975400";
 
@@ -443,6 +443,31 @@ export async function profilePayload(userId: string, username?: string) {
         ),
         "",
         "Os cupons são vinculados ao seu Discord e não funcionam em outra conta."
+      ].join("\n")
+    }]
+  };
+}
+
+export async function providerStatusPayload() {
+  const finder = getFinderConfigurationStatus();
+  const payments =
+    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
+    Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN) &&
+    Boolean(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+
+  return {
+    embeds: [{
+      color: finder.configured && payments ? 0x57f287 : 0xfee75c,
+      title: "📡 Status das integrações",
+      description: [
+        `${payments ? "🟢" : "🟡"} **Mercado Pago:** ${payments ? "pronto para Pix real" : "incompleto"}`,
+        `${finder.tokenConfigured ? "🟢" : "🔴"} **Token do fornecedor:** ${finder.tokenConfigured ? "configurado" : "ausente"}`,
+        `${finder.supplierCount > 0 ? "🟢" : "🔴"} **Fornecedores aprovados:** ${finder.supplierCount}`,
+        `${finder.configured ? "🟢" : "🟡"} **Nexus Finder:** ${finder.configured ? "pronto" : "aguardando configuração"}`,
+        "",
+        finder.configured
+          ? "O catálogo já pode consultar os fornecedores aprovados."
+          : "Configure o token e os IDs dos fornecedores diretamente nas variáveis privadas da Vercel. Não envie tokens no Discord."
       ].join("\n")
     }]
   };
