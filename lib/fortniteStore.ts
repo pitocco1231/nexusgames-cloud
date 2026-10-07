@@ -2,8 +2,32 @@ const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
 const NEON = 0x7c3aed;
 
-type Channel = { id: string; name: string; type: number; parent_id?: string | null; topic?: string | null };
-type Message = { id: string; author?: { bot?: boolean }; embeds?: Array<{ footer?: { text?: string } }>; components?: Array<Record<string, any>> };
+type Channel = {
+  id: string;
+  name: string;
+  type: number;
+  parent_id?: string | null;
+  topic?: string | null;
+};
+
+type Message = {
+  id: string;
+  author?: { bot?: boolean };
+  embeds?: Array<{ footer?: { text?: string } }>;
+};
+
+type ChannelConfig = {
+  target: string;
+  aliases: readonly string[];
+  topic: string;
+  type?: 0 | 2;
+};
+
+type GroupConfig = {
+  target: string;
+  aliases: readonly string[];
+  channels: readonly ChannelConfig[];
+};
 
 function token() {
   const value = process.env.DISCORD_BOT_TOKEN;
@@ -21,295 +45,396 @@ async function discord(path: string, init: RequestInit = {}) {
     },
     cache: "no-store"
   });
-  if (!response.ok) throw new Error(`Discord ${response.status}: ${(await response.text()).slice(0, 500)}`);
+
+  if (!response.ok) {
+    throw new Error(`Discord ${response.status}: ${(await response.text()).slice(0, 500)}`);
+  }
+
   if (response.status === 204) return null;
   return response.json();
 }
 
-const button = (label: string) => [{
-  type: 1,
-  components: [{
-    type: 2,
-    style: 1,
-    custom_id: "support:create-ticket",
-    label,
-    emoji: { name: "🛒" }
-  }]
-}];
-
-const GROUPS = [
+const GROUPS: readonly GroupConfig[] = [
   {
-    target: "📌・𝗜𝗡𝗙𝗢𝗥𝗠𝗔𝗖𝗢𝗘𝗦",
-    aliases: ["📌・𝗜𝗡𝗙𝗢𝗥𝗠𝗔𝗖𝗢𝗘𝗦", "📌 INFORMACOES", "📌 INFORMAÇÕES"],
+    target: "📌・𝗜𝗡𝗜𝗖𝗜𝗢",
+    aliases: ["📌・𝗜𝗡𝗜𝗖𝗜𝗢"],
     channels: [
-      { target: "✨・bem-vindo", aliases: ["✨・bem-vindo", "👋・bem-vindo"], topic: "Comece aqui: como funciona a NexusGames Fortnite." },
-      { target: "📣・anuncios", aliases: ["📣・anuncios", "📢・anuncios"], topic: "Novidades, reposições de estoque e avisos oficiais." },
-      { target: "🛍️・como-comprar", aliases: ["🛍️・como-comprar", "📖・como-comprar"], topic: "Passo a passo para escolher uma conta, pagar e receber os dados." },
-      { target: "❓・faq", aliases: ["❓・faq", "faq"], topic: "Perguntas frequentes sobre compra, entrega, garantia e segurança." },
-      { target: "📜・regras", aliases: ["🎮・xbox", "🟢・xbox", "xbox", "📜・regras"], topic: "Regras da loja, segurança, garantia e política de contas." },
-      { target: "💜・avaliacoes", aliases: ["💜・avaliacoes", "⭐・avaliacoes"], topic: "Avaliações de clientes da NexusGames." }
+      { target: "✨・comece-aqui", aliases: ["✨・comece-aqui"], topic: "Comece aqui e entenda como funciona a NexusGames." },
+      { target: "📜・regras", aliases: ["📜・regras"], topic: "Regras da comunidade, segurança e condições da loja." },
+      { target: "🧭・como-funciona", aliases: ["🧭・como-funciona"], topic: "Fluxo completo: buscar, escolher, pagar, atendimento e entrega." },
+      { target: "🛡️・termos-e-garantias", aliases: ["🛡️・termos-e-garantias"], topic: "Termos, garantias anunciadas e informações importantes antes da compra." },
+      { target: "🟢・status-nexus", aliases: ["🟢・status-nexus"], topic: "Status do bot, buscas, pagamentos e atendimento NexusGames." }
     ]
   },
   {
-    target: "🛒・𝗟𝗢𝗝𝗔 𝗙𝗢𝗥𝗧𝗡𝗜𝗧𝗘",
-    aliases: ["🛒・𝗟𝗢𝗝𝗔 𝗙𝗢𝗥𝗧𝗡𝗜𝗧𝗘", "🛒・𝗟𝗢𝗝𝗔", "🛒 NEXUS GAMES", "🎮・𝗣𝗥𝗢𝗗𝗨𝗧𝗢𝗦"],
+    target: "🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦",
+    aliases: ["🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦"],
     channels: [
-      { target: "🛒・contas-disponiveis", aliases: ["👾・roblox", "🟥・roblox", "roblox", "🛒・contas-disponiveis"], topic: "Estoque atual de contas Fortnite." },
-      { target: "💸・contas-baratas", aliases: ["🔮・valorant", "🔫・valorant", "valorant", "💸・contas-baratas"], topic: "Contas Fortnite de entrada e menor preço." },
-      { target: "💎・contas-premium", aliases: ["💳・steam", "steam", "💎・contas-premium"], topic: "Contas Fortnite premium com inventários maiores." },
-      { target: "👑・contas-raras", aliases: ["🪻・minecraft", "⛏️・minecraft", "minecraft", "👑・contas-raras"], topic: "Contas com cosméticos e itens anunciados como raros." },
-      { target: "🎨・skins-destaque", aliases: ["💠・playstation", "🔵・playstation", "playstation", "🎨・skins-destaque"], topic: "Destaques de skins e inventários disponíveis." },
-      { target: "⚡・ofertas", aliases: ["⚡・ofertas", "🔥・ofertas"], topic: "Ofertas e quedas de preço por tempo limitado." }
+      { target: "🔎・buscar-conta", aliases: ["🔎・buscar-conta"], topic: "Canal principal para pesquisar contas Fortnite por skin, picareta, emote, asa-delta e filtros." },
+      { target: "🧩・como-pesquisar", aliases: ["🧩・como-pesquisar"], topic: "Exemplos e dicas para encontrar a conta certa usando os filtros Nexus." },
+      { target: "🔥・contas-em-destaque", aliases: ["🔥・contas-em-destaque"], topic: "Melhores oportunidades encontradas pela NexusGames." },
+      { target: "🆕・novas-contas", aliases: ["🆕・novas-contas"], topic: "Novas contas encontradas nos fornecedores autorizados." },
+      { target: "🎯・procurando-conta", aliases: ["🎯・procurando-conta"], topic: "Salve o que você procura para ser avisado quando aparecer uma opção compatível." }
     ]
   },
   {
-    target: "👤・𝗖𝗟𝗜𝗘𝗡𝗧𝗘𝗦",
-    aliases: ["👤・𝗖𝗟𝗜𝗘𝗡𝗧𝗘𝗦", "👤 CLIENTES"],
+    target: "🛒・𝗖𝗢𝗠𝗣𝗥𝗔𝗦",
+    aliases: ["🛒・𝗖𝗢𝗠𝗣𝗥𝗔𝗦"],
     channels: [
-      { target: "📦・meus-pedidos", aliases: ["📦・meus-pedidos", "pedidos"], topic: "Acompanhe seus pedidos e entregas." },
-      { target: "🎟️・suporte", aliases: ["🎟️・suporte", "🎫・suporte", "suporte"], topic: "Abra um ticket privado para compra ou suporte." }
+      { target: "📦・meus-pedidos", aliases: ["📦・meus-pedidos"], topic: "Acompanhe os seus pedidos NexusGames." },
+      { target: "🛍️・como-comprar", aliases: ["🛍️・como-comprar"], topic: "Passo a passo da compra de uma conta pesquisada na Nexus." },
+      { target: "💠・formas-de-pagamento", aliases: ["💠・formas-de-pagamento"], topic: "Formas de pagamento aceitas no checkout oficial." },
+      { target: "💬・duvidas-de-compra", aliases: ["💬・duvidas-de-compra"], topic: "Dúvidas gerais antes de finalizar uma compra." }
+    ]
+  },
+  {
+    target: "⭐・𝗖𝗢𝗡𝗙𝗜𝗔𝗡𝗖𝗔",
+    aliases: ["⭐・𝗖𝗢𝗡𝗙𝗜𝗔𝗡𝗖𝗔"],
+    channels: [
+      { target: "💜・avaliacoes", aliases: ["💜・avaliacoes"], topic: "Avaliações e experiências dos clientes NexusGames." },
+      { target: "✅・vendas-realizadas", aliases: ["✅・vendas-realizadas"], topic: "Registro público e sem dados sensíveis de pedidos concluídos." },
+      { target: "❓・faq", aliases: ["❓・faq"], topic: "Perguntas frequentes sobre pesquisa, pagamento, atendimento e entrega." },
+      { target: "🎟️・suporte", aliases: ["🎟️・suporte"], topic: "Suporte geral da NexusGames." }
+    ]
+  },
+  {
+    target: "💬・𝗖𝗢𝗠𝗨𝗡𝗜𝗗𝗔𝗗𝗘",
+    aliases: ["💬・𝗖𝗢𝗠𝗨𝗡𝗜𝗗𝗔𝗗𝗘"],
+    channels: [
+      { target: "💬・chat-geral", aliases: ["💬・chat-geral"], topic: "Conversa geral da comunidade NexusGames." },
+      { target: "🎮・fortnite", aliases: ["🎮・fortnite"], topic: "Fortnite, novidades, temporadas e comunidade." },
+      { target: "🎨・skins-e-lockers", aliases: ["🎨・skins-e-lockers"], topic: "Converse sobre skins, lockers, picaretas e cosméticos." },
+      { target: "💡・sugestoes", aliases: ["💡・sugestoes"], topic: "Sugestões para melhorar a NexusGames." },
+      { target: "🔊・geral", aliases: ["🔊・geral"], topic: "Canal de voz geral da comunidade.", type: 2 }
     ]
   },
   {
     target: "🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦",
-    aliases: ["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦", "🎫 TICKETS"],
+    aliases: ["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦"],
     channels: []
+  },
+  {
+    target: "🔒・𝗔𝗗𝗠𝗜𝗡 𝗩𝗘𝗡𝗗𝗔𝗦",
+    aliases: ["🔒・𝗔𝗗𝗠𝗜𝗡 𝗩𝗘𝗡𝗗𝗔𝗦"],
+    channels: [
+      { target: "💰・novas-vendas", aliases: ["💰・novas-vendas"], topic: "Pagamentos aprovados e pedidos aguardando ação dos admins." },
+      { target: "🟡・pedidos-em-andamento", aliases: ["🟡・pedidos-em-andamento"], topic: "Pedidos com ticket aberto ou em preparação." },
+      { target: "✅・pedidos-concluidos", aliases: ["✅・pedidos-concluidos"], topic: "Histórico administrativo de pedidos entregues." },
+      { target: "↩️・reembolsos", aliases: ["↩️・reembolsos"], topic: "Pedidos cancelados, substituições e reembolsos." },
+      { target: "🚨・alertas", aliases: ["🚨・alertas"], topic: "Alertas de oferta indisponível, preço alterado, pagamento ou atendimento pendente." }
+    ]
+  },
+  {
+    target: "🔒・𝗔𝗗𝗠𝗜𝗡 𝗙𝗢𝗥𝗡𝗘𝗖𝗘𝗗𝗢𝗥𝗘𝗦",
+    aliases: ["🔒・𝗔𝗗𝗠𝗜𝗡 𝗙𝗢𝗥𝗡𝗘𝗖𝗘𝗗𝗢𝗥𝗘𝗦"],
+    channels: [
+      { target: "🌐・fornecedores", aliases: ["🌐・fornecedores"], topic: "Lista administrativa dos fornecedores autorizados." },
+      { target: "🔗・links-fornecedores", aliases: ["🔗・links-fornecedores"], topic: "Links originais e referências privadas dos fornecedores." },
+      { target: "📡・estoque-monitorado", aliases: ["📡・estoque-monitorado"], topic: "Monitoramento de ofertas, disponibilidade e alterações de preço." },
+      { target: "⚠️・contas-com-problema", aliases: ["⚠️・contas-com-problema"], topic: "Ofertas bloqueadas, removidas ou que exigem revisão." },
+      { target: "📈・precos-e-margens", aliases: ["📈・precos-e-margens"], topic: "Custos, preço Nexus, margem e limites internos." }
+    ]
+  },
+  {
+    target: "🔒・𝗔𝗗𝗠𝗜𝗡 𝗚𝗘𝗦𝗧𝗔𝗢",
+    aliases: ["🔒・𝗔𝗗𝗠𝗜𝗡 𝗚𝗘𝗦𝗧𝗔𝗢"],
+    channels: [
+      { target: "🧠・painel", aliases: ["🧠・painel"], topic: "Painel central de operações da NexusGames." },
+      { target: "📋・logs", aliases: ["📋・logs"], topic: "Logs do bot, tickets, buscas, pagamentos e ações administrativas." },
+      { target: "⚙️・config-bot", aliases: ["⚙️・config-bot"], topic: "Configurações e controles administrativos do bot Nexus." },
+      { target: "💭・sugestoes-clientes", aliases: ["💭・sugestoes-clientes"], topic: "Sugestões e feedbacks dos clientes para revisão da equipe." },
+      { target: "📊・metricas", aliases: ["📊・metricas"], topic: "Vendas, ticket médio, margem, buscas e conversão." }
+    ]
   }
 ] as const;
 
-const PANELS: Array<{ channel: string; marker: string; title: string; description: string; components?: any[] }> = [
+const PANELS = [
   {
-    channel: "✨・bem-vindo",
-    marker: "fortnite-welcome-v1",
-    title: "⚡ NEXUSGAMES // FORTNITE",
+    channel: "✨・comece-aqui",
+    marker: "nexus-start-v3",
+    title: "⚡ NEXUSGAMES // CONTAS FORTNITE",
     description: [
-      "> Loja focada exclusivamente em **contas Fortnite**.",
+      "> Encontre a conta que você quer sem precisar procurar anúncio por anúncio.",
       "",
       "**COMO FUNCIONA**",
-      "01 • escolha uma conta no estoque",
-      "02 • confira preço, skins e observações do anúncio",
-      "03 • abra o ticket de compra",
-      "04 • pagamento e entrega são tratados no canal privado",
+      "01 • pesquise por skin, picareta, emote ou outro cosmético",
+      "02 • a Nexus mostra as melhores opções dentro do seu orçamento",
+      "03 • escolha a conta e finalize o pagamento pelo fluxo oficial",
+      "04 • após a confirmação, nossa equipe valida a oferta e inicia seu atendimento privado",
+      "05 • seu ticket é aberto por um admin e a entrega acontece somente por lá",
       "",
-      "🔐 Nunca envie senha, código 2FA ou dados bancários em canal público.",
-      "⚠️ Compra e transferência de contas podem contrariar as regras da Epic; leia **📜・regras** antes de comprar."
+      "💰 As opções exibidas podem chegar a **R$ 500**.",
+      "🔐 Links, custos e fornecedores são informações internas da NexusGames."
+    ].join("\n")
+  },
+  {
+    channel: "🧭・como-funciona",
+    marker: "nexus-flow-v3",
+    title: "🧭 COMO FUNCIONA A NEXUS",
+    description: [
+      "**1. BUSCA** — escolha o cosmético e aplique seus filtros.",
+      "**2. RESULTADOS** — veja preço Nexus, skins principais, quantidade de cosméticos, V-Bucks, condições de e-mail e imagens disponíveis.",
+      "**3. COMPRA** — escolha a oferta e confirme o pedido.",
+      "**4. PAGAMENTO** — use apenas o checkout oficial.",
+      "**5. VALIDAÇÃO** — após o pagamento, a equipe confere novamente disponibilidade e condições da oferta.",
+      "**6. TICKET** — um admin abre um canal privado apenas com você, admins e o bot.",
+      "**7. ENTREGA** — os dados e orientações do pedido são enviados somente no ticket."
+    ].join("\n")
+  },
+  {
+    channel: "🔎・buscar-conta",
+    marker: "nexus-search-v3",
+    title: "🔎 BUSCADOR NEXUS",
+    description: [
+      "> Este é o canal principal para encontrar contas Fortnite.",
+      "",
+      "Você poderá pesquisar por:",
+      "• skin",
+      "• picareta",
+      "• emote",
+      "• asa-delta",
+      "• quantidade de skins",
+      "• V-Bucks",
+      "• possibilidade de alteração de e-mail",
+      "• orçamento de até **R$ 500**",
+      "",
+      "A Nexus mostra somente as melhores opções que passam pelos filtros internos de preço e fornecedor.",
+      "",
+      "⚙️ O comando de busca será ativado neste canal durante a implantação do buscador."
+    ].join("\n")
+  },
+  {
+    channel: "🧩・como-pesquisar",
+    marker: "nexus-search-help-v3",
+    title: "🧩 COMO PESQUISAR",
+    description: [
+      "**Exemplos do que você poderá pedir:**",
+      "• Travis Scott até R$ 300",
+      "• Travis Scott + Kratos",
+      "• Leviathan Axe até R$ 400",
+      "• conta com +100 skins e e-mail alterável",
+      "• melhor conta possível até R$ 500",
+      "",
+      "💡 Quando houver várias opções, a Nexus prioriza custo-benefício, qualidade da conta e segurança do fornecedor."
     ].join("\n")
   },
   {
     channel: "🛍️・como-comprar",
-    marker: "fortnite-howto-v1",
+    marker: "nexus-buy-v3",
     title: "🛍️ COMO COMPRAR",
     description: [
-      "**1.** Entre em **🛒・contas-disponiveis**.",
-      "**2.** Veja as informações da conta e o preço.",
-      "**3.** Clique em **Comprar / Abrir ticket**.",
-      "**4.** A equipe confirma se a conta ainda está disponível.",
-      "**5.** O pagamento só é solicitado dentro do fluxo oficial.",
-      "**6.** Após confirmação, os dados são entregues em privado.",
+      "**1.** Pesquise em **🔎・buscar-conta**.",
+      "**2.** Abra os detalhes da opção que você gostou e confira as imagens.",
+      "**3.** Clique em comprar e revise o resumo da conta.",
+      "**4.** Faça o pagamento pelo checkout oficial.",
+      "**5.** Após a aprovação, seu pedido entra na fila administrativa.",
+      "**6.** Um admin valida a oferta e abre seu ticket privado.",
+      "**7.** A entrega e qualquer suporte acontecem dentro do ticket.",
       "",
-      "✅ Sempre confira exatamente o que está incluído no anúncio antes de pagar."
+      "⚠️ A oferta pode ser vendida pelo fornecedor enquanto o pagamento é processado. Se isso ocorrer, a equipe apresenta alternativas ou trata o reembolso."
+    ].join("\n")
+  },
+  {
+    channel: "🛡️・termos-e-garantias",
+    marker: "nexus-terms-v3",
+    title: "🛡️ TERMOS & GARANTIAS",
+    description: [
+      "• Cada oferta deve mostrar exatamente as condições conhecidas antes do pagamento.",
+      "• Garantia só existe quando estiver informada no pedido/ticket.",
+      "• A equipe pode substituir uma oferta se ela ficar indisponível antes da compra no fornecedor.",
+      "• Nunca envie senha, token, código 2FA ou dados bancários em canal público.",
+      "• A Nexus não aceita fornecedores ou ofertas identificados como provenientes de invasão, phishing, stealer ou outro acesso não autorizado.",
+      "",
+      "⚠️ A Epic proíbe compra, venda e transferência de contas em seus termos. Isso pode gerar restrições ou perda de acesso; esse risco precisa ser considerado antes da compra."
     ].join("\n")
   },
   {
     channel: "❓・faq",
-    marker: "fortnite-faq-v1",
-    title: "❓ FAQ // DÚVIDAS FREQUENTES",
+    marker: "nexus-faq-v3",
+    title: "❓ FAQ",
     description: [
-      "**Como recebo a conta?**",
-      "Após a confirmação do pagamento, os dados são enviados somente no seu ticket privado.",
+      "**Recebo a conta imediatamente?**",
+      "Não necessariamente. Depois do pagamento, a equipe valida a oferta e abre seu atendimento privado.",
       "",
-      "**A entrega demora?**",
-      "Se a conta estiver disponível e o pagamento já estiver aprovado, a equipe segue com a entrega no próprio ticket.",
+      "**Onde recebo os dados?**",
+      "Somente no ticket privado criado por um admin.",
       "",
-      "**Vou receber acesso ao e-mail?**",
-      "Cada anúncio informa exatamente quais acessos acompanham a conta. Confira isso antes de pagar.",
+      "**Consigo ver as skins antes de comprar?**",
+      "Sim. Quando o fornecedor disponibilizar imagens, elas serão exibidas nos detalhes/carrinho da oferta.",
       "",
-      "**Posso alterar e-mail e senha?**",
-      "Depende das condições daquela conta. O anúncio deve informar qualquer prazo, bloqueio ou limitação de alteração.",
+      "**Consigo procurar uma skin específica?**",
+      "Sim. O buscador será focado exatamente nisso.",
       "",
-      "**Tem garantia?**",
-      "Somente quando a garantia estiver escrita no anúncio ou confirmada no ticket antes do pagamento. Não assumimos garantia que não tenha sido informada.",
+      "**Qual o preço máximo das opções?**",
+      "A busca pública será limitada a ofertas Nexus de até R$ 500.",
       "",
-      "**Como sei quais skins a conta possui?**",
-      "Use apenas as imagens e informações do anúncio correspondente ao ID da conta. Em caso de dúvida, confirme no ticket antes da compra.",
-      "",
-      "**Quais formas de pagamento?**",
-      "O pagamento disponível aparece no fluxo oficial da NexusGames. Nunca envie dinheiro por uma DM aleatória.",
-      "",
-      "**E se eu tiver um problema?**",
-      "Abra um ticket em **🎟️・suporte** e envie o número do pedido.",
-      "",
-      "⚠️ **Importante:** a Epic proíbe compra, venda e transferência de contas em seus termos, então existe risco de restrição. Leia **📜・regras** antes de comprar."
+      "**Posso ver o fornecedor?**",
+      "Não. Links, custos e identidade do fornecedor ficam restritos à equipe."
     ].join("\n")
-  },
-  {
-    channel: "📜・regras",
-    marker: "fortnite-rules-v1",
-    title: "📜 REGRAS & SEGURANÇA",
-    description: [
-      "• Cada anúncio deve informar com clareza o que está incluído.",
-      "• Não anunciamos contas obtidas por invasão, phishing ou acesso não autorizado.",
-      "• Não prometemos permanência vitalícia de uma conta.",
-      "• Qualquer garantia deve estar escrita no anúncio/ticket antes do pagamento.",
-      "• Nunca pague por DM fora do fluxo oficial da NexusGames.",
-      "• Nunca envie códigos de autenticação para terceiros.",
-      "",
-      "⚠️ A Epic proíbe compra, venda e transferência de contas em seus termos; isso pode gerar restrições na conta. Ao comprar, o cliente precisa estar ciente desse risco."
-    ].join("\n")
-  },
-  {
-    channel: "🛒・contas-disponiveis",
-    marker: "fortnite-stock-v1",
-    title: "🛒 CONTAS FORTNITE // ESTOQUE",
-    description: [
-      "> Aqui ficam as contas disponíveis no momento.",
-      "",
-      "Cada anúncio deve mostrar: **preço • skins principais • quantidade aproximada de cosméticos • plataforma/vínculos • observações • garantia, se houver**.",
-      "",
-      "Para comprar uma conta específica, abra um ticket e envie o nome/ID do anúncio."
-    ].join("\n"),
-    components: button("Comprar uma conta")
-  },
-  {
-    channel: "💸・contas-baratas",
-    marker: "fortnite-budget-v1",
-    title: "💸 CONTAS BARATAS",
-    description: [
-      "> Opções de entrada para quem quer gastar menos.",
-      "",
-      "Use este canal para contas com preço mais baixo e inventários menores. O anúncio precisa mostrar exatamente o conteúdo antes da compra."
-    ].join("\n"),
-    components: button("Ver / comprar")
-  },
-  {
-    channel: "💎・contas-premium",
-    marker: "fortnite-premium-v1",
-    title: "💎 CONTAS PREMIUM",
-    description: [
-      "> Inventários maiores e contas de faixa de preço mais alta.",
-      "",
-      "Destaque as melhores skins, quantidade de cosméticos, itens relevantes e qualquer limitação da conta."
-    ].join("\n"),
-    components: button("Solicitar conta premium")
-  },
-  {
-    channel: "👑・contas-raras",
-    marker: "fortnite-rare-v1",
-    title: "👑 CONTAS RARAS",
-    description: [
-      "> Contas anunciadas por possuírem cosméticos de maior raridade ou procura.",
-      "",
-      "A raridade deve ser baseada nos itens mostrados no anúncio. Evite promessas de valor futuro ou de recuperação impossível."
-    ].join("\n"),
-    components: button("Solicitar conta rara")
-  },
-  {
-    channel: "🎨・skins-destaque",
-    marker: "fortnite-skins-v1",
-    title: "🎨 SKINS EM DESTAQUE",
-    description: [
-      "> Vitrine para mostrar contas que possuem skins mais procuradas.",
-      "",
-      "Use imagens reais do inventário da conta anunciada e mantenha o ID do anúncio visível para facilitar a compra."
-    ].join("\n"),
-    components: button("Quero uma dessas contas")
-  },
-  {
-    channel: "⚡・ofertas",
-    marker: "fortnite-offers-v1",
-    title: "⚡ OFERTAS",
-    description: "Quedas de preço, lotes e promoções de contas Fortnite aparecem aqui. Sempre confira o ID do anúncio e a disponibilidade antes de pagar.",
-    components: button("Abrir ticket de compra")
   },
   {
     channel: "🎟️・suporte",
-    marker: "fortnite-support-v1",
-    title: "🎟️ COMPRA & SUPORTE",
+    marker: "nexus-support-v3",
+    title: "🎟️ SUPORTE NEXUS",
     description: [
-      "> Abra um ticket privado para comprar uma conta ou resolver um problema.",
+      "> Use este canal para dúvidas gerais ou problemas com um pedido.",
       "",
-      "Se for uma compra, envie o **ID/nome do anúncio** que você escolheu.",
-      "Se for suporte, envie o número do pedido e explique o ocorrido.",
+      "Pedidos pagos terão um **ticket de compra aberto pela equipe administrativa**.",
+      "Não é necessário abrir outro ticket enquanto seu pedido estiver aguardando atendimento.",
       "",
-      "🔐 Nunca envie senha, token do Discord ou dados bancários completos."
-    ].join("\n"),
-    components: button("Abrir ticket")
+      "🔐 Nunca publique credenciais ou dados privados fora do ticket."
+    ].join("\n")
+  },
+  {
+    channel: "💰・novas-vendas",
+    marker: "nexus-admin-sales-v3",
+    title: "💰 NOVAS VENDAS // ADMIN",
+    description: [
+      "> Canal privado para pedidos com pagamento aprovado.",
+      "",
+      "Cada venda deverá mostrar:",
+      "• número do pedido",
+      "• nome e @ do cliente",
+      "• Discord ID",
+      "• Nexus ID da conta",
+      "• valor pago",
+      "• custo do fornecedor",
+      "• margem estimada",
+      "• link privado do fornecedor",
+      "• status",
+      "",
+      "O card da venda terá o botão **ABRIR TICKET**. Ao clicar, o bot cria um canal privado somente com o cliente, admins e o próprio bot."
+    ].join("\n")
+  },
+  {
+    channel: "🌐・fornecedores",
+    marker: "nexus-admin-suppliers-v3",
+    title: "🌐 FORNECEDORES // ADMIN",
+    description: [
+      "> Controle interno dos fornecedores autorizados pela NexusGames.",
+      "",
+      "Aqui ficam IDs, observações, reputação interna e status de cada fornecedor.",
+      "Links originais e preços de custo nunca devem aparecer em canais públicos."
+    ].join("\n")
   }
-];
+] as const;
 
 function matches(name: string, aliases: readonly string[]) {
   return aliases.includes(name);
 }
 
 async function ensureCategory(existing: Channel[], target: string, aliases: readonly string[]) {
-  let category = existing.find(c => c.type === 4 && matches(c.name, aliases));
+  let category = existing.find((channel) => channel.type === 4 && matches(channel.name, aliases));
+
   if (!category) {
-    category = await discord(`/guilds/${GUILD_ID}/channels`, { method: "POST", body: JSON.stringify({ name: target, type: 4 }) }) as Channel;
+    category = await discord(`/guilds/${GUILD_ID}/channels`, {
+      method: "POST",
+      body: JSON.stringify({ name: target, type: 4 })
+    }) as Channel;
     existing.push(category);
   } else if (category.name !== target) {
-    category = await discord(`/channels/${category.id}`, { method: "PATCH", body: JSON.stringify({ name: target }) }) as Channel;
+    category = await discord(`/channels/${category.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: target })
+    }) as Channel;
   }
+
   return category;
 }
 
-async function ensureText(existing: Channel[], parentId: string, target: string, aliases: readonly string[], topic: string) {
-  let channel = existing.find(c => c.type === 0 && matches(c.name, aliases));
+async function ensureChannel(existing: Channel[], parentId: string, config: ChannelConfig) {
+  const desiredType = config.type ?? 0;
+  let channel = existing.find((candidate) => candidate.type === desiredType && matches(candidate.name, config.aliases));
+
   if (!channel) {
-    channel = await discord(`/guilds/${GUILD_ID}/channels`, { method: "POST", body: JSON.stringify({ name: target, type: 0, parent_id: parentId, topic }) }) as Channel;
+    channel = await discord(`/guilds/${GUILD_ID}/channels`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: config.target,
+        type: desiredType,
+        parent_id: parentId,
+        ...(desiredType === 0 ? { topic: config.topic } : {})
+      })
+    }) as Channel;
     existing.push(channel);
-  } else {
-    const changes: Record<string, unknown> = {};
-    if (channel.name !== target) changes.name = target;
-    if (channel.parent_id !== parentId) changes.parent_id = parentId;
-    if (channel.topic !== topic) changes.topic = topic;
-    if (Object.keys(changes).length) channel = await discord(`/channels/${channel.id}`, { method: "PATCH", body: JSON.stringify(changes) }) as Channel;
+    return channel;
   }
+
+  const changes: Record<string, unknown> = {};
+  if (channel.name !== config.target) changes.name = config.target;
+  if (channel.parent_id !== parentId) changes.parent_id = parentId;
+  if (desiredType === 0 && channel.topic !== config.topic) changes.topic = config.topic;
+
+  if (Object.keys(changes).length) {
+    channel = await discord(`/channels/${channel.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes)
+    }) as Channel;
+  }
+
   return channel;
 }
 
 async function ensurePanel(channelId: string, config: typeof PANELS[number]) {
   const messages = await discord(`/channels/${channelId}/messages?limit=50`) as Message[];
-  const official = messages.filter(m => m.author?.bot && m.embeds?.some(e => String(e.footer?.text || "").startsWith("NexusGames • canal:")));
+  const markerText = `NexusGames • canal:${config.marker}`;
+  const managed = messages.filter(
+    (message) =>
+      message.author?.bot &&
+      message.embeds?.some((embed) => String(embed.footer?.text || "").startsWith("NexusGames • canal:"))
+  );
+
   const payload = {
     allowed_mentions: { parse: [] },
-    attachments: [],
     embeds: [{
       color: NEON,
       title: config.title,
       description: config.description,
-      footer: { text: `NexusGames • canal:${config.marker}` }
-    }],
-    ...(config.components ? { components: config.components } : { components: [] })
+      footer: { text: markerText }
+    }]
   };
-  if (official[0]) {
-    await discord(`/channels/${channelId}/messages/${official[0].id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    for (const duplicate of official.slice(1)) await discord(`/channels/${channelId}/messages/${duplicate.id}`, { method: "DELETE" }).catch(() => null);
-    return official[0].id;
+
+  if (managed[0]) {
+    await discord(`/channels/${channelId}/messages/${managed[0].id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+
+    for (const duplicate of managed.slice(1)) {
+      await discord(`/channels/${channelId}/messages/${duplicate.id}`, {
+        method: "DELETE"
+      }).catch(() => null);
+    }
+    return;
   }
-  const created = await discord(`/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify(payload) }) as Message;
-  return created.id;
+
+  await discord(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function migrateToFortniteAccountStore() {
   const existing = await discord(`/guilds/${GUILD_ID}/channels`) as Channel[];
-  const byName = new Map<string, string>();
+  const channelIds = new Map<string, string>();
   const changes: string[] = [];
 
   for (const group of GROUPS) {
     const category = await ensureCategory(existing, group.target, group.aliases);
     changes.push(`Categoria pronta: ${group.target}`);
+
     for (const config of group.channels) {
-      const channel = await ensureText(existing, category.id, config.target, config.aliases, config.topic);
-      byName.set(config.target, channel.id);
+      const channel = await ensureChannel(existing, category.id, config);
+      channelIds.set(config.target, channel.id);
       changes.push(`Canal pronto: #${config.target}`);
     }
   }
 
   for (const panel of PANELS) {
-    const channelId = byName.get(panel.channel);
+    const channelId = channelIds.get(panel.channel);
     if (!channelId) continue;
     await ensurePanel(channelId, panel);
-    changes.push(`Painel Fortnite aplicado: #${panel.channel}`);
+    changes.push(`Painel aplicado: #${panel.channel}`);
   }
 
   return changes;
@@ -318,14 +443,19 @@ export async function migrateToFortniteAccountStore() {
 export async function getFortniteStoreNavigation() {
   const channels = await discord(`/guilds/${GUILD_ID}/channels`) as Channel[];
   const items = [
-    { key: "estoque", label: "Contas disponíveis", emoji: "🛒", names: ["🛒・contas-disponiveis"] },
-    { key: "baratas", label: "Contas baratas", emoji: "💸", names: ["💸・contas-baratas"] },
-    { key: "premium", label: "Contas premium", emoji: "💎", names: ["💎・contas-premium"] },
-    { key: "raras", label: "Contas raras", emoji: "👑", names: ["👑・contas-raras"] },
-    { key: "skins", label: "Skins em destaque", emoji: "🎨", names: ["🎨・skins-destaque"] }
+    { key: "buscar", label: "Buscar conta", emoji: "🔎", names: ["🔎・buscar-conta"] },
+    { key: "destaques", label: "Contas em destaque", emoji: "🔥", names: ["🔥・contas-em-destaque"] },
+    { key: "novas", label: "Novas contas", emoji: "🆕", names: ["🆕・novas-contas"] },
+    { key: "procurando", label: "Procurando conta", emoji: "🎯", names: ["🎯・procurando-conta"] },
+    { key: "pedidos", label: "Meus pedidos", emoji: "📦", names: ["📦・meus-pedidos"] }
   ];
-  return items.map(item => {
-    const channel = channels.find(c => c.type === 0 && item.names.includes(c.name));
-    return { ...item, channelId: channel?.id || null, mention: channel ? `<#${channel.id}>` : item.label };
+
+  return items.map((item) => {
+    const channel = channels.find((candidate) => candidate.type === 0 && item.names.includes(candidate.name));
+    return {
+      ...item,
+      channelId: channel?.id || null,
+      mention: channel ? `<#${channel.id}>` : item.label
+    };
   });
 }
