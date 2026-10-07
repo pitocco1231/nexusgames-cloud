@@ -450,24 +450,30 @@ export async function profilePayload(userId: string, username?: string) {
 
 export async function providerStatusPayload() {
   const finder = getFinderConfigurationStatus();
-  const payments =
-    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
+  const liveEnabled = process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true";
+  const botapixApi = Boolean(process.env.BOTAPIX_API_KEY);
+  const botapixWebhook = Boolean(process.env.BOTAPIX_WEBHOOK_SECRET);
+  const mercadoPago =
     Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN) &&
     Boolean(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+  const primaryPayments = liveEnabled && botapixApi && botapixWebhook;
+  const backupPayments = liveEnabled && mercadoPago;
 
   return {
     embeds: [{
-      color: finder.configured && payments ? 0x57f287 : 0xfee75c,
+      color: finder.configured && primaryPayments ? 0x57f287 : 0xfee75c,
       title: "📡 Status das integrações",
       description: [
-        `${payments ? "🟢" : "🟡"} **Mercado Pago:** ${payments ? "pronto para Pix real" : "incompleto"}`,
+        `${botapixApi ? "🟢" : "🔴"} **BotaPix API:** ${botapixApi ? "configurada" : "ausente"}`,
+        `${botapixWebhook ? "🟢" : "🟡"} **BotaPix Webhook:** ${botapixWebhook ? "assinado e configurado" : "aguardando segredo"}`,
+        `${backupPayments ? "🟢" : "🟡"} **Mercado Pago (backup):** ${backupPayments ? "pronto" : "incompleto"}`,
         `${finder.tokenConfigured ? "🟢" : "🔴"} **Token do fornecedor:** ${finder.tokenConfigured ? "configurado" : "ausente"}`,
         `${finder.supplierCount > 0 ? "🟢" : "🔴"} **Fornecedores aprovados:** ${finder.supplierCount}`,
         `${finder.configured ? "🟢" : "🟡"} **Nexus Finder:** ${finder.configured ? "pronto" : "aguardando configuração"}`,
         "",
-        finder.configured
-          ? "O catálogo já pode consultar os fornecedores aprovados."
-          : "Configure o token e os IDs dos fornecedores diretamente nas variáveis privadas da Vercel. Não envie tokens no Discord."
+        primaryPayments
+          ? "BotaPix está definido como provedor principal; Mercado Pago permanece como contingência."
+          : "O BotaPix já pode gerar cobranças, mas o webhook precisa estar totalmente configurado antes do lançamento."
       ].join("\n")
     }]
   };
