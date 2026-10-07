@@ -1,5 +1,5 @@
 import { isMercadoPagoProductionConfigured, isMercadoPagoWebhookConfigured } from "./mercadopago";
-import { bindCartOrder, createCartChannel, upsertCartPanel } from "./cart";
+import { bindCartOrder, createCartChannel, notifyCartStatus, upsertCartPanel } from "./cart";
 import { ensureDiscordUser } from "./supabase";
 import { grantRewardRole } from "./roles";
 import { getListing, creditDeliveredOrder } from "./nexusData";
@@ -363,6 +363,12 @@ export async function postPurchaseTicketSummary(channelId: string, orderNumber: 
       ]
     })
   });
+  await notifyCartStatus({
+    orderNumber,
+    status: "validating",
+    details: "Um atendente assumiu o pedido e iniciou a validação da conta."
+  }).catch(() => null);
+
 }
 
 export async function revalidateOrderListing(orderNumber: string) {
@@ -390,6 +396,15 @@ export async function setOrderDelivered(orderNumber: string) {
   if (userId && reward?.vip_level) {
     await grantRewardRole(userId, reward.vip_level).catch(() => null);
   }
+
+  await notifyCartStatus({
+    orderNumber,
+    status: "delivered",
+    details: reward?.cashback
+      ? `Você recebeu ${money(Number(reward.cashback))} de saldo Nexus nesta compra.`
+      : "Entrega confirmada pela equipe."
+  }).catch(() => null);
+
   return { order: rows?.[0] || data.order, user: data.user, reward };
 }
 
