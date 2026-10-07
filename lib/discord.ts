@@ -1,3 +1,4 @@
+import { getFortniteStoreNavigation, migrateToFortniteAccountStore } from "./fortniteStore";
 const DISCORD_API = "https://discord.com/api/v10";
 
 export const applicationId = "1547332142776975400";
@@ -41,10 +42,10 @@ async function discordFetch(path: string, init: RequestInit = {}) {
 }
 
 export const guildCommands = [
-  { name: "loja", description: "Mostra os atalhos para as categorias da NexusGames" },
-  { name: "comprar", description: "Abre o catalogo rapido da NexusGames" },
+  { name: "loja", description: "Mostra as categorias de contas Fortnite da NexusGames" },
+  { name: "comprar", description: "Abre o catálogo de contas Fortnite da NexusGames" },
   { name: "pedidos", description: "Mostra seus pedidos" },
-  { name: "suporte", description: "Abre o painel de suporte da NexusGames" }
+  { name: "suporte", description: "Abre o suporte privado da NexusGames" }
 ];
 
 export async function registerGuildCommands() {
@@ -512,77 +513,7 @@ function matchesName(channel: DiscordChannel, desired: string, aliases: string[]
 }
 
 export async function ensureServerStructure() {
-  const existing = (await discordFetch(`/guilds/${guildId}/channels`)) as DiscordChannel[];
-  const result: string[] = [];
-  const channelIds = new Map<string, string>();
-
-  for (const group of serverStructure) {
-    let category = existing.find(
-      (channel) => channel.type === 4 && matchesName(channel, group.category, group.categoryAliases)
-    );
-
-    if (!category) {
-      category = (await createChannel({ name: group.category, type: 4 })) as DiscordChannel;
-      existing.push(category);
-      result.push(`Categoria criada: ${group.category}`);
-    } else if (category.name !== group.category) {
-      const oldName = category.name;
-      category = (await updateChannel(category.id, { name: group.category })) as DiscordChannel;
-      const index = existing.findIndex((channel) => channel.id === category!.id);
-      if (index >= 0) existing[index] = category;
-      result.push(`Categoria renomeada: ${oldName} -> ${group.category}`);
-    }
-
-    for (const config of group.channels) {
-      let found = existing.find(
-        (channel) => channel.type === 0 && matchesName(channel, config.name, config.aliases)
-      );
-
-      if (!found) {
-        found = (await createChannel({
-          name: config.name,
-          type: 0,
-          parent_id: category.id,
-          topic: config.topic
-        })) as DiscordChannel;
-        existing.push(found);
-        result.push(`Canal criado: #${config.name}`);
-      } else {
-        const changes: Record<string, unknown> = {};
-        const descriptions: string[] = [];
-
-        if (found.name !== config.name) {
-          descriptions.push(`${found.name} -> ${config.name}`);
-          changes.name = config.name;
-        }
-        if (found.parent_id !== category.id) {
-          descriptions.push("movido de categoria");
-          changes.parent_id = category.id;
-        }
-        if (found.topic !== config.topic) changes.topic = config.topic;
-
-        if (Object.keys(changes).length > 0) {
-          found = (await updateChannel(found.id, changes)) as DiscordChannel;
-          const index = existing.findIndex((channel) => channel.id === found!.id);
-          if (index >= 0) existing[index] = found;
-          if (descriptions.length) {
-            result.push(`Canal atualizado: ${descriptions.join(" | ")}`);
-          }
-        }
-      }
-
-      channelIds.set(config.name, found.id);
-    }
-  }
-
-  for (const message of officialMessages) {
-    const channelId = channelIds.get(message.channelName);
-    if (!channelId) continue;
-    const action = await ensureOfficialMessage(channelId, message.marker, message.payload);
-    result.push(`Mensagem oficial ${action}: #${message.channelName}`);
-  }
-
-  return result;
+  return migrateToFortniteAccountStore();
 }
 
 const navigationChannels = [
@@ -625,21 +556,7 @@ const navigationChannels = [
 ];
 
 export async function getStoreNavigation() {
-  const channels = (await discordFetch(`/guilds/${guildId}/channels`)) as DiscordChannel[];
-
-  return navigationChannels.map((item) => {
-    const channel = channels.find(
-      (candidate) => candidate.type === 0 && item.names.includes(candidate.name)
-    );
-
-    return {
-      key: item.key,
-      label: item.label,
-      emoji: item.emoji,
-      channelId: channel?.id || null,
-      mention: channel ? `<#${channel.id}>` : item.label
-    };
-  });
+  return getFortniteStoreNavigation();
 }
 
 function findTicketCategory(channels: DiscordChannel[]) {
