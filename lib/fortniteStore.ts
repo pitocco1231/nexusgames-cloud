@@ -148,6 +148,36 @@ const GROUPS: readonly GroupConfig[] = [
   }
 ] as const;
 
+function publicSystemStatusDescription() {
+  const paymentsOnline =
+    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
+    Boolean(process.env.MERCADO_PAGO_ACCESS_TOKEN) &&
+    Boolean(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+
+  const supplierCount = String(process.env.LZT_SUPPLIER_USER_IDS || "")
+    .split(/[;,\s]+/)
+    .map((value) => value.trim())
+    .filter((value) => /^\d+$/.test(value))
+    .length;
+
+  const finderOnline = Boolean(process.env.LZT_MARKET_TOKEN) && supplierCount > 0;
+
+  return [
+    "**Sistemas NexusGames**",
+    "",
+    `${paymentsOnline ? "🟢" : "🟡"} **Pagamentos Pix:** ${paymentsOnline ? "online" : "em configuração"}`,
+    `🟢 **Bot e tickets:** online`,
+    `🟢 **Pedidos e painel administrativo:** online`,
+    `${finderOnline ? "🟢" : "🟡"} **Nexus Finder:** ${finderOnline ? "online" : "catálogo em preparação"}`,
+    "",
+    finderOnline
+      ? "Você já pode pesquisar contas normalmente em **🔎・buscar-conta**."
+      : "As compras só serão liberadas quando o catálogo estiver conectado e validado.",
+    "",
+    "🔐 Nunca envie senha, token, código 2FA ou dados bancários em canais públicos."
+  ].join("\n");
+}
+
 const PANELS = [
   {
     channel: "✨・comece-aqui",
@@ -180,6 +210,12 @@ const PANELS = [
       "**6. TICKET** — um admin abre um canal privado apenas com você, admins e o bot.",
       "**7. ENTREGA** — os dados e orientações do pedido são enviados somente no ticket."
     ].join("\n")
+  },
+  {
+    channel: "🟢・status-nexus",
+    marker: "nexus-status-v1",
+    title: "🟢 STATUS NEXUS",
+    description: publicSystemStatusDescription()
   },
   {
     channel: "🔎・buscar-conta",
@@ -402,14 +438,30 @@ const PANELS = [
   },
   {
     channel: "🌐・fornecedores",
-    marker: "nexus-admin-suppliers-v3",
+    marker: "nexus-admin-suppliers-v4",
     title: "🌐 FORNECEDORES // ADMIN",
     description: [
       "> Controle interno dos fornecedores autorizados pela NexusGames.",
       "",
       "Aqui ficam IDs, observações, reputação interna e status de cada fornecedor.",
-      "Links originais e preços de custo nunca devem aparecer em canais públicos."
-    ].join("\n")
+      "Links originais e preços de custo nunca devem aparecer em canais públicos.",
+      "",
+      "Use **Verificar integração** para confirmar se o Finder já possui token e fornecedores configurados."
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 1,
+            custom_id: "admin:provider-status",
+            label: "Verificar integração",
+            emoji: { name: "📡" }
+          }
+        ]
+      }
+    ]
   }
 ] as const;
 
