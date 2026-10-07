@@ -1,8 +1,6 @@
 import { ensureServerStructure, registerGuildCommands } from "../../../../lib/discord";
-import { applyFuturisticTheme } from "../../../../lib/futuristicTheme";
 import { registerPanelCommand } from "../../../../lib/panelEditor";
 import { normalizeOfficialMessages } from "../../../../lib/officialMessages";
-import { refreshProductPanels } from "../../../../lib/productPanels";
 import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
@@ -24,19 +22,15 @@ export async function POST(request: Request) {
     const cleanupChanges = await normalizeOfficialMessages();
     const channelChanges = await ensureServerStructure();
     const roleChanges = await ensureRolesAndPermissions();
-    const themeChanges = await applyFuturisticTheme();
-    const productChanges = await refreshProductPanels();
     const changes = [
       ...cleanupChanges,
       ...channelChanges,
-      ...roleChanges,
-      ...themeChanges,
-      ...productChanges
+      ...roleChanges
     ];
 
     return Response.json({
       ok: true,
-      message: "NexusGames configurada com catálogo multi-opções no Discord.",
+      message: "NexusGames configurada como loja de contas Fortnite no Discord.",
       changes
     });
   } catch (error) {
