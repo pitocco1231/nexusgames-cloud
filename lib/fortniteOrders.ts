@@ -1,6 +1,7 @@
 import { isMercadoPagoProductionConfigured, isMercadoPagoWebhookConfigured } from "./mercadopago";
 import { bindCartOrder, createCartChannel, upsertCartPanel } from "./cart";
 import { ensureDiscordUser } from "./supabase";
+import { grantRewardRole } from "./roles";
 import { getListing, creditDeliveredOrder } from "./nexusData";
 import { revalidateListing } from "./lztFortnite";
 
@@ -386,6 +387,9 @@ export async function setOrderDelivered(orderNumber: string) {
   const userId = String(data.user?.discord_user_id || "");
   const total = Number(data.order.total_price_brl || 0);
   const reward = userId && total > 0 ? await creditDeliveredOrder(userId, total) : null;
+  if (userId && reward?.vip_level) {
+    await grantRewardRole(userId, reward.vip_level).catch(() => null);
+  }
   return { order: rows?.[0] || data.order, user: data.user, reward };
 }
 
