@@ -22,7 +22,7 @@ export type FinderResult = {
 
 function token() {
   const value = process.env.LZT_MARKET_TOKEN?.trim();
-  if (!value) throw new Error("LZT_MARKET_TOKEN ainda não foi configurado na Vercel.");
+  if (!value) throw new Error("O catálogo da Nexus está temporariamente indisponível.");
   return value;
 }
 
@@ -304,10 +304,19 @@ export function isFinderConfigured() {
   return Boolean(process.env.LZT_MARKET_TOKEN && supplierIds().length);
 }
 
+export function getFinderConfigurationStatus() {
+  const sellers = supplierIds();
+  return {
+    configured: Boolean(process.env.LZT_MARKET_TOKEN && sellers.length),
+    tokenConfigured: Boolean(process.env.LZT_MARKET_TOKEN),
+    supplierCount: sellers.length
+  };
+}
+
 export async function searchFortniteAccounts(input: NexusSearchInput): Promise<FinderResult[]> {
   const sellers = supplierIds();
   if (!sellers.length) {
-    throw new Error("Nenhum fornecedor foi configurado. Defina LZT_SUPPLIER_USER_IDS na Vercel.");
+    throw new Error("O catálogo da Nexus está temporariamente indisponível.");
   }
 
   const filterValue = await resolveFilterValue(input.itemType, input.itemQuery);
