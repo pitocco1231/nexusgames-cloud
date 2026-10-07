@@ -457,6 +457,21 @@ export async function migrateToFortniteAccountStore() {
   return changes;
 }
 
+export async function refreshSupportPanel() {
+  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as Channel[];
+  const supportChannel = channels.find(
+    (channel) => channel.type === 0 && channel.name === "🎟️・suporte"
+  );
+  const supportPanel = PANELS.find((panel) => panel.channel === "🎟️・suporte");
+
+  if (!supportChannel || !supportPanel) {
+    throw new Error("Canal ou painel de suporte nao encontrado.");
+  }
+
+  await ensurePanel(supportChannel.id, supportPanel);
+  return { channelId: supportChannel.id, updated: true };
+}
+
 export async function getFortniteStoreNavigation() {
   const channels = await discord(`/guilds/${GUILD_ID}/channels`) as Channel[];
   const items = [
