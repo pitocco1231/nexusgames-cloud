@@ -45,6 +45,7 @@ const GROUPS = [
       { target: "✨・bem-vindo", aliases: ["✨・bem-vindo", "👋・bem-vindo"], topic: "Comece aqui: como funciona a NexusGames Fortnite." },
       { target: "📣・anuncios", aliases: ["📣・anuncios", "📢・anuncios"], topic: "Novidades, reposições de estoque e avisos oficiais." },
       { target: "🛍️・como-comprar", aliases: ["🛍️・como-comprar", "📖・como-comprar"], topic: "Passo a passo para escolher uma conta, pagar e receber os dados." },
+      { target: "❓・faq", aliases: ["❓・faq", "faq"], topic: "Perguntas frequentes sobre compra, entrega, garantia e segurança." },
       { target: "📜・regras", aliases: ["🎮・xbox", "🟢・xbox", "xbox", "📜・regras"], topic: "Regras da loja, segurança, garantia e política de contas." },
       { target: "💜・avaliacoes", aliases: ["💜・avaliacoes", "⭐・avaliacoes"], topic: "Avaliações de clientes da NexusGames." }
     ]
@@ -107,6 +108,38 @@ const PANELS: Array<{ channel: string; marker: string; title: string; descriptio
       "**6.** Após confirmação, os dados são entregues em privado.",
       "",
       "✅ Sempre confira exatamente o que está incluído no anúncio antes de pagar."
+    ].join("\n")
+  },
+  {
+    channel: "❓・faq",
+    marker: "fortnite-faq-v1",
+    title: "❓ FAQ // DÚVIDAS FREQUENTES",
+    description: [
+      "**Como recebo a conta?**",
+      "Após a confirmação do pagamento, os dados são enviados somente no seu ticket privado.",
+      "",
+      "**A entrega demora?**",
+      "Se a conta estiver disponível e o pagamento já estiver aprovado, a equipe segue com a entrega no próprio ticket.",
+      "",
+      "**Vou receber acesso ao e-mail?**",
+      "Cada anúncio informa exatamente quais acessos acompanham a conta. Confira isso antes de pagar.",
+      "",
+      "**Posso alterar e-mail e senha?**",
+      "Depende das condições daquela conta. O anúncio deve informar qualquer prazo, bloqueio ou limitação de alteração.",
+      "",
+      "**Tem garantia?**",
+      "Somente quando a garantia estiver escrita no anúncio ou confirmada no ticket antes do pagamento. Não assumimos garantia que não tenha sido informada.",
+      "",
+      "**Como sei quais skins a conta possui?**",
+      "Use apenas as imagens e informações do anúncio correspondente ao ID da conta. Em caso de dúvida, confirme no ticket antes da compra.",
+      "",
+      "**Quais formas de pagamento?**",
+      "O pagamento disponível aparece no fluxo oficial da NexusGames. Nunca envie dinheiro por uma DM aleatória.",
+      "",
+      "**E se eu tiver um problema?**",
+      "Abra um ticket em **🎟️・suporte** e envie o número do pedido.",
+      "",
+      "⚠️ **Importante:** a Epic proíbe compra, venda e transferência de contas em seus termos, então existe risco de restrição. Leia **📜・regras** antes de comprar."
     ].join("\n")
   },
   {
