@@ -1,4 +1,5 @@
 import { getFortniteStoreNavigation, migrateToFortniteAccountStore } from "./fortniteStore";
+import { getTicketState, patchTicketState, upsertTicketState } from "./nexusData";
 const DISCORD_API = "https://discord.com/api/v10";
 
 export const applicationId = "1547332142776975400";
@@ -607,6 +608,14 @@ export async function createSupportTicket(userId: string, username: string) {
     ]
   })) as DiscordChannel;
 
+  await upsertTicketState({
+    channelId: channel.id,
+    ownerDiscordId: userId,
+    ownerUsername: username,
+    source: "support",
+    state: "open"
+  }).catch(() => null);
+
   await discordFetch(`/channels/${channel.id}/messages`, {
     method: "POST",
     body: JSON.stringify({
@@ -684,6 +693,13 @@ export async function claimSupportTicket(
     topic: `nexus-ticket-owner:${ownerId};claimed-by:${staffId}`
   });
 
+  await patchTicketState(channelId, {
+    state: "claimed",
+    claimed_by_discord_id: staffId,
+    claimed_by_username: staffUsername,
+    claimed_at: new Date().toISOString()
+  }).catch(() => null);
+
   await discordFetch(`/channels/${channelId}/messages`, {
     method: "POST",
     body: JSON.stringify({
@@ -700,6 +716,106 @@ export async function claimSupportTicket(
   });
 
   return { ownerId, claimedBy: staffId, claimed: true, alreadyMine: true };
+}
+
+export async function releaseSupportTicket(
+  channelId: string,
+  staffId: string
+) {
+  const channel = (await discordFetch(`/channels/${channelId}`)) as DiscordChannel;
+  const match = channel.topic?.match(/^nexus-ticket-owner:(\d+)(?:;claimed-by:(\d+))?$/);
+  if (!match) throw new Error("Este canal nao e um ticket aberto da NexusGames.");
+
+  const ownerId = match[1];
+  const claimedBy = match[2];
+  if (claimedBy && claimedBy !== staffId) {
+    throw new Error("Este ticket está sendo atendido por outro membro da equipe.");
+  }
+
+  await updateChannel(channelId, { topic: `nexus-ticket-owner:${ownerId}` });
+  await patchTicketState(channelId, {
+    state: "transferred",
+    claimed_by_discord_id: null,
+    claimed_by_username: null,
+    claimed_at: null
+  }).catch(() => null);
+
+  await discordFetch(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({
+      embeds: [{
+        color: 0xfee75c,
+        title: "🔁 Ticket transferido",
+        description: "O atendimento foi liberado para outro membro da equipe assumir."
+      }]
+    })
+  });
+
+  return { ownerId };
+}
+
+export async function setSupportTicketWaiting(
+  channelId: string,
+  staffId: string
+) {
+  const channel = (await discordFetch(`/channels/${channelId}`)) as DiscordChannel;
+  const match = channel.topic?.match(/^nexus-ticket-owner:(\d+)(?:;claimed-by:(\d+))?$/);
+  if (!match) throw new Error("Este canal nao e um ticket aberto da NexusGames.");
+
+  const claimedBy = match[2];
+  if (claimedBy && claimedBy !== staffId) {
+    throw new Error("Este ticket está sendo atendido por outro membro da equipe.");
+  }
+
+  await patchTicketState(channelId, { state: "waiting_customer" }).catch(() => null);
+  await discordFetch(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({
+      embeds: [{
+        color: 0xfee75c,
+        title: "⏳ Aguardando cliente",
+        description: "O atendimento foi marcado como aguardando uma resposta do cliente."
+      }]
+    })
+  });
+
+  return { ownerId: match[1] };
+}
+
+async function sendReviewRequest(userId: string, orderNumber?: string | null) {
+  try {
+    const dm = await discordFetch("/users/@me/channels", {
+      method: "POST",
+      body: JSON.stringify({ recipient_id: userId })
+    }) as { id: string };
+
+    const suffix = orderNumber ? orderNumber.slice(0, 45) : "support";
+    await discordFetch(`/channels/${dm.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({
+        embeds: [{
+          color: 0x7c3aed,
+          title: "⭐ Como foi seu atendimento?",
+          description: [
+            orderNumber ? `Pedido **${orderNumber}** concluído.` : "Seu ticket foi encerrado.",
+            "",
+            "Escolha uma nota. Sua avaliação ajuda a NexusGames a melhorar."
+          ].join("\n")
+        }],
+        components: [{
+          type: 1,
+          components: [1,2,3,4,5].map((rating) => ({
+            type: 2,
+            style: rating >= 4 ? 3 : 2,
+            custom_id: `review:${rating}:${suffix}`,
+            label: `${rating} ⭐`
+          }))
+        }]
+      })
+    });
+  } catch (error) {
+    console.warn("NexusGames: não foi possível enviar pedido de avaliação por DM", error);
+  }
 }
 
 export async function closeSupportTicket(
@@ -720,6 +836,8 @@ export async function closeSupportTicket(
     throw new Error("Apenas o dono do ticket ou um administrador pode fecha-lo.");
   }
 
+  const ticketState = await getTicketState(channelId).catch(() => null);
+
   await updateChannel(channelId, {
     name: `fechado-${ownerId.slice(-8)}`,
     topic: `nexus-ticket-closed-owner:${ownerId}`,
@@ -730,5 +848,11 @@ export async function closeSupportTicket(
     ]
   });
 
+  await patchTicketState(channelId, {
+    state: "closed",
+    closed_at: new Date().toISOString()
+  }).catch(() => null);
+
+  await sendReviewRequest(ownerId, ticketState?.order_number || null);
   return { ownerId };
 }
