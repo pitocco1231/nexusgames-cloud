@@ -1,6 +1,10 @@
 import { after } from "next/server";
 import { notifyCartStatus } from "../../../../lib/cart";
 import { notifyFortnitePaidSale } from "../../../../lib/fortniteOrders";
+import {
+  consumeReservedCoupon,
+  releaseReservedCoupon
+} from "../../../../lib/nexusData";
 import { fulfillPaidOrder } from "../../../../lib/fulfillmentWithCart";
 import {
   getMercadoPagoOrder,
@@ -32,17 +36,20 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
 
     if (synced?.order?.order_number) {
       if (synced.isPaid) {
+        await consumeReservedCoupon(synced.order.order_number).catch(() => null);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "paid"
         }).catch(() => null);
       } else if (["CANCELLED", "FAILED"].includes(String(synced.order.status || ""))) {
+        await releaseReservedCoupon(synced.order.order_number).catch(() => null);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "failed",
           details: `Status do pagamento: ${synced.order.status}`
         }).catch(() => null);
       } else if (String(synced.order.status || "") === "REFUNDED") {
+        await releaseReservedCoupon(synced.order.order_number).catch(() => null);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "refunded"
