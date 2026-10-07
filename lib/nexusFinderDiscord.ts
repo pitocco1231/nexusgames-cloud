@@ -447,9 +447,14 @@ export async function metricsPayload() {
         `**Faturamento hoje:** ${money(m.revenueToday)}`,
         `**Clientes com perfil:** ${m.customers}`,
         `**VIP/Elite:** ${m.vipCustomers}`,
+        `**Tickets abertos:** ${m.openTickets}`,
+        `**Tickets sem atendente:** ${m.unclaimedTickets}`,
         "",
         "**Mais procurados:**",
-        ...(m.topQueries.length ? m.topQueries.map(([q,n],i) => `${i+1}. **${q}** — ${n} buscas`) : ["Sem dados ainda."])
+        ...(m.topQueries.length ? m.topQueries.map(([q,n],i) => `${i+1}. **${q}** — ${n} buscas`) : ["Sem dados ainda."]),
+        "",
+        "**Demanda sem resultado:**",
+        ...(m.unmetDemand.length ? m.unmetDemand.map(([q,n],i) => `${i+1}. **${q}** — ${n} buscas sem oferta`) : ["Nenhuma demanda perdida registrada."])
       ].join("\n")
     }]
   };
