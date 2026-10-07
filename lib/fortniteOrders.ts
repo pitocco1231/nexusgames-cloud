@@ -2,7 +2,7 @@ import { isMercadoPagoProductionConfigured, isMercadoPagoWebhookConfigured } fro
 import { bindCartOrder, createCartChannel, notifyCartStatus, upsertCartPanel } from "./cart";
 import { ensureDiscordUser } from "./supabase";
 import { grantRewardRole } from "./roles";
-import { getListing, creditDeliveredOrder } from "./nexusData";
+import { claimOrderEvent, creditDeliveredOrder, getListing, releaseOrderEvent } from "./nexusData";
 import { revalidateListing } from "./lztFortnite";
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -236,8 +236,14 @@ async function findChannel(name: string) {
 export async function notifyFortnitePaidSale(orderNumber: string) {
   const data = await getOrderForAdmin(orderNumber);
   if (!data?.order || data.order.product_id !== "fortnite-account") return null;
+  const claimed = await claimOrderEvent(orderNumber, "admin_paid_sale");
+  if (!claimed) return { duplicate: true };
+
   const channel = await findChannel("💰・novas-vendas");
-  if (!channel) throw new Error("Canal #novas-vendas não encontrado.");
+  if (!channel) {
+    await releaseOrderEvent(orderNumber, "admin_paid_sale").catch(() => null);
+    throw new Error("Canal #novas-vendas não encontrado.");
+  }
 
   const fulfillment = data.order.fulfillment_data || {};
   const nexusId = String(fulfillment.nexus_id || "");
@@ -250,7 +256,8 @@ export async function notifyFortnitePaidSale(orderNumber: string) {
   const username = String(data.user?.discord_username || "cliente");
   const supplierUrl = String(fulfillment.supplier_url || listing?.private_snapshot?.supplier_url || "");
 
-  return discord(`/channels/${channel.id}/messages`, {
+  try {
+    return await discord(`/channels/${channel.id}/messages`, {
     method: "POST",
     body: JSON.stringify({
       allowed_mentions: { parse: [] },
@@ -300,13 +307,27 @@ export async function notifyFortnitePaidSale(orderNumber: string) {
         }
       ]
     })
-  });
+    });
+  } catch (error) {
+    await releaseOrderEvent(orderNumber, "admin_paid_sale").catch(() => null);
+    throw error;
+  }
 }
 
 
 export async function postPurchaseTicketSummary(channelId: string, orderNumber: string) {
   const data = await getOrderForAdmin(orderNumber);
   if (!data?.order) throw new Error("Pedido não encontrado.");
+
+  const claimedSummary = await claimOrderEvent(orderNumber, "purchase_ticket_summary");
+  if (!claimedSummary) {
+    await notifyCartStatus({
+      orderNumber,
+      status: "validating",
+      details: "Seu ticket de compra já está aberto com a equipe."
+    }).catch(() => null);
+    return { duplicate: true };
+  }
   const fulfillment = data.order.fulfillment_data || {};
   const nexusId = String(fulfillment.nexus_id || "");
   const listing = nexusId ? await getListing(nexusId) : null;
@@ -411,8 +432,14 @@ export async function setOrderDelivered(orderNumber: string) {
 export async function publicSaleReceipt(orderNumber: string) {
   const data = await getOrderForAdmin(orderNumber);
   if (!data?.order) return null;
+  const claimed = await claimOrderEvent(orderNumber, "public_sale_receipt");
+  if (!claimed) return { duplicate: true };
+
   const channel = await findChannel("✅・vendas-realizadas");
-  if (!channel) return null;
+  if (!channel) {
+    await releaseOrderEvent(orderNumber, "public_sale_receipt").catch(() => null);
+    return null;
+  }
   const fulfillment = data.order.fulfillment_data || {};
   return discord(`/channels/${channel.id}/messages`, {
     method: "POST",
