@@ -7,6 +7,7 @@ import {
   getRewardProfile,
   listComparison,
   listFavorites,
+  listUserCoupons,
   listWatches,
   toggleFavorite,
   type NexusItemType,
@@ -418,7 +419,14 @@ export async function watchesPayload(userId: string) {
 }
 
 export async function profilePayload(userId: string, username?: string) {
-  const reward = await getRewardProfile(userId);
+  const [reward, coupons] = await Promise.all([
+    getRewardProfile(userId),
+    listUserCoupons(userId).catch(() => [])
+  ]);
+  const activeCoupons = coupons
+    .filter((coupon) => !coupon.used_at && (!coupon.expires_at || new Date(coupon.expires_at).getTime() > Date.now()))
+    .slice(0, 3);
+
   return {
     embeds: [{
       color: 0x7c3aed,
@@ -429,7 +437,12 @@ export async function profilePayload(userId: string, username?: string) {
         `**Total em compras:** ${money(Number(reward.lifetime_spend_brl || 0))}`,
         `**Saldo Nexus:** ${money(Number(reward.balance_brl || 0))}`,
         "",
-        "O saldo Nexus é crédito interno para benefícios e compras futuras."
+        activeCoupons.length ? "**Cupons pessoais:**" : "**Cupons pessoais:** nenhum ativo",
+        ...activeCoupons.map((coupon) =>
+          `🎟️ **${coupon.code}** • ${Number(coupon.discount_percent || 0)}% OFF • limite ${money(Number(coupon.max_discount_brl || 0))}`
+        ),
+        "",
+        "Os cupons são vinculados ao seu Discord e não funcionam em outra conta."
       ].join("\n")
     }]
   };
