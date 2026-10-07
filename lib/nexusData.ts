@@ -413,6 +413,25 @@ export async function markTicketAlerted(channelId: string) {
   return rows?.[0] || null;
 }
 
+export async function claimOrderEvent(orderNumber: string, eventType: string) {
+  const rows = await request<any[]>(
+    "nexus_order_events?on_conflict=order_number,event_type",
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({ order_number: orderNumber, event_type: eventType })
+    }
+  );
+  return Boolean(rows?.[0]);
+}
+
+export async function releaseOrderEvent(orderNumber: string, eventType: string) {
+  await request(
+    `nexus_order_events?order_number=eq.${encodeURIComponent(orderNumber)}&event_type=eq.${encodeURIComponent(eventType)}`,
+    { method: "DELETE" }
+  );
+}
+
 export async function adminMetrics() {
   const [searches, orders, rewards, tickets] = await Promise.all([
     request<any[]>("nexus_searches?select=item_type,item_query,results_count,created_at&order=created_at.desc&limit=500"),
