@@ -127,10 +127,17 @@ export async function toggleFavorite(discordUserId: string, nexusId: string) {
     );
     return { active: Boolean(updated?.[0]?.active) };
   }
+  const listing = await getListing(nexusId);
   await request("nexus_favorites", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ discord_user_id: discordUserId, nexus_id: nexusId, active: true })
+    body: JSON.stringify({
+      discord_user_id: discordUserId,
+      nexus_id: nexusId,
+      active: true,
+      last_seen_price_brl: listing ? Number(listing.sale_price_brl || 0) : null,
+      last_notified_status: listing?.status || null
+    })
   });
   return { active: true };
 }
@@ -202,6 +209,63 @@ export async function createWatch(input: NexusSearchInput) {
 export async function listWatches(discordUserId: string) {
   return request<any[]>(
     `nexus_watches?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&active=eq.true&order=created_at.desc&limit=10`
+  );
+}
+
+export async function listActiveWatches(limit = 500) {
+  return request<any[]>(
+    `nexus_watches?select=*&active=eq.true&order=created_at.asc&limit=${Math.max(1, Math.min(limit, 1000))}`
+  );
+}
+
+export async function markWatchNotified(watchId: string, nexusId: string) {
+  const rows = await request<any[]>(
+    `nexus_watches?id=eq.${encodeURIComponent(watchId)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        last_nexus_id: nexusId,
+        last_notified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+  return rows?.[0] || null;
+}
+
+export async function listActiveFavoritesForListing(nexusId: string) {
+  return request<any[]>(
+    `nexus_favorites?select=*&nexus_id=eq.${encodeURIComponent(nexusId)}&active=eq.true&limit=500`
+  );
+}
+
+export async function updateFavoriteNotice(params: {
+  favoriteId: string;
+  priceBrl?: number | null;
+  status?: string | null;
+}) {
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (params.priceBrl !== undefined) patch.last_seen_price_brl = params.priceBrl;
+  if (params.status !== undefined) patch.last_notified_status = params.status;
+
+  const rows = await request<any[]>(
+    `nexus_favorites?id=eq.${encodeURIComponent(params.favoriteId)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(patch)
+    }
+  );
+  return rows?.[0] || null;
+}
+
+export async function getListingsByIds(nexusIds: string[]) {
+  const ids = [...new Set(nexusIds.filter(Boolean))].slice(0, 100);
+  if (!ids.length) return [] as NexusListing[];
+  const encoded = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+  return request<NexusListing[]>(
+    `nexus_account_cache?select=*&nexus_id=in.(${encodeURIComponent(encoded)})`
   );
 }
 
