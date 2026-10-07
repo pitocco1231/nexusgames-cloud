@@ -281,6 +281,47 @@ export async function disableWatch(discordUserId: string, watchId: string) {
   return rows?.[0] || null;
 }
 
+async function rpc<T>(functionName: string, body: Record<string, unknown>) {
+  return request<T>(`rpc/${functionName}`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+}
+
+export async function cleanupNexusCredit(discordUserId: string) {
+  const result = await rpc<number>("cleanup_nexus_credit_reservations", {
+    p_discord_user_id: discordUserId
+  }).catch(() => 0);
+  return Number(result || 0);
+}
+
+export async function reserveNexusCredit(params: {
+  discordUserId: string;
+  orderNumber: string;
+  maxAmountBrl: number;
+}) {
+  const result = await rpc<number>("reserve_nexus_credit", {
+    p_discord_user_id: params.discordUserId,
+    p_order_number: params.orderNumber,
+    p_max_amount: params.maxAmountBrl
+  });
+  return Number(result || 0);
+}
+
+export async function consumeNexusCredit(orderNumber: string) {
+  const result = await rpc<number>("consume_nexus_credit", {
+    p_order_number: orderNumber
+  }).catch(() => 0);
+  return Number(result || 0);
+}
+
+export async function releaseNexusCredit(orderNumber: string) {
+  const result = await rpc<number>("release_nexus_credit", {
+    p_order_number: orderNumber
+  }).catch(() => 0);
+  return Number(result || 0);
+}
+
 export async function listUserCoupons(discordUserId: string) {
   return request<any[]>(
     `nexus_user_coupons?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&active=eq.true&order=created_at.desc&limit=20`
@@ -410,6 +451,8 @@ async function ensureMilestoneCoupon(discordUserId: string, purchases: number) {
 }
 
 export async function getRewardProfile(discordUserId: string) {
+  await cleanupNexusCredit(discordUserId).catch(() => null);
+
   const rows = await request<any[]>(
     `nexus_rewards?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&limit=1`
   );
