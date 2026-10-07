@@ -28,6 +28,7 @@ import {
   handleFinderAction,
   metricsPayload,
   profilePayload,
+  providerStatusPayload,
   runFinderSearch,
   watchesPayload
 } from "../../../../lib/nexusFinderDiscord";
@@ -1067,6 +1068,13 @@ export async function POST(request: Request) {
         const staff = await isStaffMember(roleIds, interaction.member?.permissions);
         if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Este painel é exclusivo da equipe." } });
         return json({ type: 4, data: { flags: 64, ...(await metricsPayload()) } });
+      }
+
+      if (customId === "admin:provider-status") {
+        const roleIds = Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const staff = await isStaffMember(roleIds, interaction.member?.permissions);
+        if (!staff) return json({ type: 4, data: { flags: 64, content: "⛔ Este painel é exclusivo da equipe." } });
+        return json({ type: 4, data: { flags: 64, ...(await providerStatusPayload()) } });
       }
 
       if (customId === "product_select") {
