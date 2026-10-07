@@ -279,11 +279,25 @@ const PANELS = [
     description: [
       "> Use este canal para dúvidas gerais ou problemas com um pedido.",
       "",
-      "Pedidos pagos terão um **ticket de compra aberto pela equipe administrativa**.",
-      "Não é necessário abrir outro ticket enquanto seu pedido estiver aguardando atendimento.",
+      "Clique no botão abaixo para abrir um **ticket privado** com a equipe.",
+      "Pedidos pagos também poderão ter um ticket de compra aberto pela administração.",
       "",
       "🔐 Nunca publique credenciais ou dados privados fora do ticket."
-    ].join("\n")
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 1,
+            custom_id: "support:create-ticket",
+            label: "Abrir ticket",
+            emoji: { name: "🎟️" }
+          }
+        ]
+      }
+    ]
   },
   {
     channel: "💰・novas-vendas",
@@ -391,7 +405,10 @@ async function ensurePanel(channelId: string, config: typeof PANELS[number]) {
       title: config.title,
       description: config.description,
       footer: { text: markerText }
-    }]
+    }],
+    ...("components" in config && config.components
+      ? { components: config.components }
+      : {})
   };
 
   if (managed[0]) {
