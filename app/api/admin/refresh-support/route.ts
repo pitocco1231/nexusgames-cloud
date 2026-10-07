@@ -1,4 +1,4 @@
-import { ensureServerStructure } from "../../../../../lib/discord";
+import { ensureServerStructure } from "../../../../lib/discord";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
