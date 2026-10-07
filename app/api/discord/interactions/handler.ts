@@ -13,9 +13,33 @@ import {
   claimSupportTicket,
   closeSupportTicket,
   createSupportTicket,
-  getStoreNavigation
+  getStoreNavigation,
+  releaseSupportTicket,
+  setSupportTicketWaiting
 } from "../../../../lib/discord";
 import { maybeHandlePanelInteraction } from "../../../../lib/panelEditor";
+import {
+  comparePayload,
+  favoritesPayload,
+  finderInputFromCommand,
+  finderInputFromModal,
+  finderModal,
+  handleFinderAction,
+  metricsPayload,
+  profilePayload,
+  runFinderSearch,
+  watchesPayload
+} from "../../../../lib/nexusFinderDiscord";
+import {
+  getOrderForAdmin,
+  notifyFortnitePaidSale,
+  postPurchaseTicketSummary,
+  publicSaleReceipt,
+  revalidateOrderListing,
+  setOrderDelivered
+} from "../../../../lib/fortniteOrders";
+import { patchTicketState } from "../../../../lib/nexusData";
+import { recordAndPublishReview } from "../../../../lib/nexusReviews";
 import {
   createPixOrder,
   createSandboxPixOrder,
@@ -412,6 +436,66 @@ async function processDeferredLivePix(params: {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro inesperado";
     await editDeferredInteraction(params.interactionToken, { content: `❌ Não foi possível gerar/atualizar o Pix. ${message}`, embeds: [], components: [] }).catch(() => null);
+  }
+}
+
+async function processDeferredFinderAction(params: {
+  customId: string;
+  userId: string;
+  username: string;
+  interactionId: string;
+  interactionToken: string;
+}) {
+  try {
+    const result = await handleFinderAction(params);
+    if (!result) throw new Error("Ação do Finder não reconhecida.");
+    await editDeferredInteraction(params.interactionToken, result.data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não foi possível concluir esta ação. ${message}`,
+      embeds: [],
+      components: []
+    }).catch(() => null);
+  }
+}
+
+async function processDeferredAdminFortnite(params: {
+  action: "revalidate" | "delivered";
+  orderNumber: string;
+  interactionToken: string;
+}) {
+  try {
+    if (params.action === "revalidate") {
+      const result = await revalidateOrderListing(params.orderNumber);
+      await editDeferredInteraction(params.interactionToken, {
+        content: result.available
+          ? `✅ ${params.orderNumber}: a oferta continua disponível e foi atualizada.`
+          : `⚠️ ${params.orderNumber}: a oferta não está mais disponível. Procure uma alternativa antes da entrega.`,
+        embeds: [],
+        components: []
+      });
+      return;
+    }
+
+    const delivered = await setOrderDelivered(params.orderNumber);
+    await publicSaleReceipt(params.orderNumber).catch(() => null);
+    const cashback = Number(delivered.reward?.cashback || 0);
+    await editDeferredInteraction(params.interactionToken, {
+      content: [
+        `✅ Pedido **${params.orderNumber}** marcado como entregue.`,
+        cashback > 0 ? `Cashback do cliente: **${money(cashback)}**.` : null
+      ].filter(Boolean).join("\n"),
+      embeds: [],
+      components: []
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro inesperado";
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não foi possível atualizar o pedido. ${message}`,
+      embeds: [],
+      components: []
+    }).catch(() => null);
   }
 }
 
