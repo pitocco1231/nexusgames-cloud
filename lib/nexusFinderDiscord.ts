@@ -260,6 +260,60 @@ export async function runFinderSearch(params: {
   }
 }
 
+export async function alternativesForUnavailable(params: {
+  nexusId: string;
+  discordUserId: string;
+  discordUsername?: string | null;
+}) {
+  const previous = await getListing(params.nexusId);
+  if (!previous) {
+    return {
+      content: "⚠️ Essa oferta ficou indisponível. Use o Nexus Finder para fazer uma nova busca.",
+      embeds: [],
+      components: [{
+        type: 1,
+        components: [{ type: 2, style: 1, custom_id: "finder:open:best", label: "Buscar alternativa", emoji: { name: "🔎" } }]
+      }]
+    };
+  }
+
+  const skins = snapshotNames(previous.public_snapshot || {}, "skins", 1);
+  const query = skins[0] || null;
+  const input: NexusSearchInput = {
+    discordUserId: params.discordUserId,
+    discordUsername: params.discordUsername || null,
+    itemType: query ? "skin" : "best",
+    itemQuery: query,
+    maxPriceBrl: Math.max(20, Math.min(500, Number(previous.sale_price_brl || 500))),
+    minSkins: Math.max(0, Math.floor((previous.skin_count || 0) * 0.7)),
+    changeEmail: previous.change_email === "yes" ? "yes" : "nomatter"
+  };
+
+  const results = (await searchFortniteAccounts(input))
+    .filter((result) => result.listing.nexus_id !== params.nexusId)
+    .slice(0, 3);
+
+  if (!results.length) {
+    return {
+      content: "⚠️ Essa oferta ficou indisponível e não encontrei uma substituta parecida agora.",
+      embeds: [],
+      components: [{
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: `finder:open:${input.itemType}`, label: "Alterar busca", emoji: { name: "🔎" } },
+          { type: 2, style: 2, custom_id: watchCustomId(input), label: "Criar alerta", emoji: { name: "🔔" } }
+        ]
+      }]
+    };
+  }
+
+  const payload = searchResultsPayload(results, input);
+  return {
+    ...payload,
+    content: "⚠️ **A conta escolhida foi vendida.** Separei estas alternativas para você:"
+  };
+}
+
 export async function detailsPayload(nexusId: string) {
   const listing = await getListing(nexusId);
   if (!listing) return { content: "❌ Essa oferta não está mais disponível.", embeds: [], components: [] };
