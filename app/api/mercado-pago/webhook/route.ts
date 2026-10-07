@@ -2,7 +2,9 @@ import { after } from "next/server";
 import { notifyCartStatus } from "../../../../lib/cart";
 import { notifyFortnitePaidSale } from "../../../../lib/fortniteOrders";
 import {
+  consumeNexusCredit,
   consumeReservedCoupon,
+  releaseNexusCredit,
   releaseReservedCoupon
 } from "../../../../lib/nexusData";
 import { fulfillPaidOrder } from "../../../../lib/fulfillmentWithCart";
@@ -36,20 +38,29 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
 
     if (synced?.order?.order_number) {
       if (synced.isPaid) {
-        await consumeReservedCoupon(synced.order.order_number).catch(() => null);
+        await Promise.allSettled([
+          consumeReservedCoupon(synced.order.order_number),
+          consumeNexusCredit(synced.order.order_number)
+        ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "paid"
         }).catch(() => null);
       } else if (["CANCELLED", "FAILED"].includes(String(synced.order.status || ""))) {
-        await releaseReservedCoupon(synced.order.order_number).catch(() => null);
+        await Promise.allSettled([
+          releaseReservedCoupon(synced.order.order_number),
+          releaseNexusCredit(synced.order.order_number)
+        ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "failed",
           details: `Status do pagamento: ${synced.order.status}`
         }).catch(() => null);
       } else if (String(synced.order.status || "") === "REFUNDED") {
-        await releaseReservedCoupon(synced.order.order_number).catch(() => null);
+        await Promise.allSettled([
+          releaseReservedCoupon(synced.order.order_number),
+          releaseNexusCredit(synced.order.order_number)
+        ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "refunded"
