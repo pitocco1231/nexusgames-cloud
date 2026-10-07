@@ -1,5 +1,5 @@
-import { ensureServerStructure } from "../../../../../lib/discord";
-import { ensureRolesAndPermissions } from "../../../../../lib/roles";
+import { ensureServerStructure } from "../../../../lib/discord";
+import { ensureRolesAndPermissions } from "../../../../lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
