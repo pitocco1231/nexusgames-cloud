@@ -66,6 +66,71 @@ function normalizeText(value: unknown) {
   return String(value || "").trim();
 }
 
+function countFromTitle(title: string, kind: "skin" | "pickaxe" | "emote" | "glider") {
+  const patterns: Record<typeof kind, RegExp[]> = {
+    skin: [/\b(\d{1,4})\s*skins?\b/i],
+    pickaxe: [/\b(\d{1,4})\s*pickaxes?\b/i, /\b(\d{1,4})\s*pickaxe\b/i],
+    emote: [/\b(\d{1,4})\s*emotes?\b/i, /\b(\d{1,4})\s*dances?\b/i],
+    glider: [/\b(\d{1,4})\s*gliders?\b/i]
+  };
+  for (const pattern of patterns[kind]) {
+    const match = title.match(pattern);
+    if (match) return Number(match[1] || 0);
+  }
+  return 0;
+}
+
+function vbucksFromTitle(title: string) {
+  const match = title.match(/\b([\d.,]{1,10})\s*v[- ]?bucks?\b/i);
+  if (!match) return 0;
+  return Number(String(match[1]).replace(/[^\d]/g, "")) || 0;
+}
+
+function changeEmailFromTitle(title: string) {
+  const normalized = title.toLowerCase();
+  if (/\b(no|not)\s+(mail|email)\s+change\b/.test(normalized) ||
+      /\b(mail|email)\s+(not\s+changeable|unchangeable)\b/.test(normalized)) {
+    return "no";
+  }
+  if (/\b(mail|email)\s+change\b/.test(normalized) ||
+      /\bchange\s+(mail|email)\b/.test(normalized)) {
+    return "yes";
+  }
+  return null;
+}
+
+export function formatFortniteListingTitle(rawTitle: unknown) {
+  const raw = normalizeText(rawTitle);
+  if (!raw) return "Conta Fortnite";
+
+  const translated = raw
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      if (/^(mail|email)\s+change$/i.test(part) || /^change\s+(mail|email)$/i.test(part)) {
+        return "E-mail alterável";
+      }
+      if (/^(no|not)\s+(mail|email)\s+change$/i.test(part)) {
+        return "E-mail não alterável";
+      }
+      if (/^full\s+access$/i.test(part)) return "Acesso completo";
+      if (/^(mail|email)\s+access$/i.test(part)) return "Acesso ao e-mail";
+
+      const days = part.match(/^last\s+active\s+(\d+)\+?d\s+ago$/i);
+      if (days) return `Último acesso há +${days[1]} dias`;
+
+      const year = part.match(/^last\s+active\s+(20\d{2})$/i);
+      if (year) return `Último acesso em ${year[1]}`;
+
+      if (/^last\s+active$/i.test(part)) return "Último acesso";
+      return part;
+    })
+    .join(" • ");
+
+  return translated.slice(0, 240);
+}
+
 async function lzt(path: string, init: RequestInit = {}) {
   const response = await fetch(`${API}${path}`, {
     ...init,
@@ -269,14 +334,17 @@ function listingFromItem(item: any, maxPriceBrl: number): NexusListing | null {
   if (!pricing.eligible || pricing.salePrice > maxPriceBrl || pricing.salePrice > 500) return null;
 
   const sellerId = sellerIdOf(item);
-  const title = normalizeText(firstValue(item, ["title", "item_title", "account.title"])) || `Conta Fortnite ${id}`;
+  const rawTitle = normalizeText(firstValue(item, ["title", "title_en", "item_title", "account.title"])) || `Conta Fortnite ${id}`;
+  const title = formatFortniteListingTitle(rawTitle);
   const nexusId = deterministicNexusId(id);
-  const skinCount = firstNumber(item, ["s_count", "skins_count", "skin_count", "fortnite_skin_count", "account.skin_count"], 0);
-  const pickaxeCount = firstNumber(item, ["pickaxe_count", "pickaxes_count", "account.pickaxe_count"], 0);
-  const emoteCount = firstNumber(item, ["d_count", "dance_count", "dances_count", "emote_count", "account.emote_count"], 0);
-  const gliderCount = firstNumber(item, ["glider_count", "gliders_count", "account.glider_count"], 0);
-  const vbucks = firstNumber(item, ["vb", "vbucks", "v_bucks", "account.vbucks"], 0);
-  const changeEmail = normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"]));
+  const skinCount = firstNumber(item, ["s_count", "skins_count", "skin_count", "fortnite_skin_count", "account.skin_count"], 0) || countFromTitle(rawTitle, "skin");
+  const pickaxeCount = firstNumber(item, ["pickaxe_count", "pickaxes_count", "account.pickaxe_count"], 0) || countFromTitle(rawTitle, "pickaxe");
+  const emoteCount = firstNumber(item, ["d_count", "dance_count", "dances_count", "emote_count", "account.emote_count"], 0) || countFromTitle(rawTitle, "emote");
+  const gliderCount = firstNumber(item, ["glider_count", "gliders_count", "account.glider_count"], 0) || countFromTitle(rawTitle, "glider");
+  const vbucks = firstNumber(item, ["vb", "vbucks", "v_bucks", "account.vbucks"], 0) || vbucksFromTitle(rawTitle);
+  const changeEmail =
+    normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"])) ||
+    changeEmailFromTitle(rawTitle);
 
   return {
     nexus_id: nexusId,
@@ -299,7 +367,11 @@ function listingFromItem(item: any, maxPriceBrl: number): NexusListing | null {
       `${STORE_URL}/api/fortnite/image/${encodeURIComponent(nexusId)}?type=skins`,
       `${STORE_URL}/api/fortnite/image/${encodeURIComponent(nexusId)}?type=pickaxes`
     ],
-    public_snapshot: makePublicSnapshot(item),
+    public_snapshot: {
+      ...makePublicSnapshot(item),
+      raw_title: rawTitle,
+      display_title: title
+    },
     private_snapshot: {
       supplier_item_id: id,
       supplier_user_id: sellerId || null,
@@ -453,19 +525,39 @@ export async function getLztImage(nexusId: string, type: "skins" | "pickaxes" | 
   const { getListing } = await import("./nexusData");
   const listing = await getListing(nexusId);
   if (!listing || listing.supplier !== "lzt") throw new Error("Oferta não encontrada.");
+
   const response = await fetch(
     `${API}/${encodeURIComponent(listing.supplier_item_id)}/image?type=${encodeURIComponent(type)}`,
     {
       headers: {
         Authorization: `Bearer ${token()}`,
-        Accept: "image/*,application/json"
+        Accept: "application/json,image/*"
       },
       cache: "no-store",
       signal: AbortSignal.timeout(55_000)
     }
   );
+
   if (!response.ok) throw new Error(`LZT image ${response.status}`);
-  const contentType = response.headers.get("content-type") || "image/png";
-  const bytes = await response.arrayBuffer();
-  return { bytes, contentType };
+
+  const responseType = response.headers.get("content-type") || "";
+  if (responseType.includes("application/json")) {
+    const payload = await response.json().catch(() => null);
+    const rawBase64 = String(payload?.base64 || payload?.image || payload?.data?.base64 || "").trim();
+    if (!rawBase64) throw new Error("Imagem não disponível.");
+
+    const dataUrlMatch = rawBase64.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
+    const contentType = dataUrlMatch?.[1] || "image/png";
+    const base64 = dataUrlMatch?.[2] || rawBase64;
+    const decoded = Buffer.from(base64, "base64");
+
+    if (!decoded.length) throw new Error("Imagem vazia.");
+    return { bytes: new Uint8Array(decoded), contentType };
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return {
+    bytes,
+    contentType: responseType.startsWith("image/") ? responseType : "image/png"
+  };
 }
