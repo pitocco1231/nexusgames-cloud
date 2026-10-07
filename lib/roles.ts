@@ -68,6 +68,7 @@ type DiscordChannel = {
   id: string;
   name: string;
   type: number;
+  parent_id?: string | null;
   permission_overwrites?: PermissionOverwrite[];
 };
 
@@ -233,25 +234,47 @@ async function applyChannelPermissions(roles: DiscordRole[]) {
   const owner = roleByName(roles, ROLE_NAMES.owner);
   const admin = roleByName(roles, ROLE_NAMES.admin);
   const support = roleByName(roles, ROLE_NAMES.support);
-  const staffAllow = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ATTACH_FILES | READ_MESSAGE_HISTORY;
+
+  const staffAllow =
+    VIEW_CHANNEL |
+    SEND_MESSAGES |
+    EMBED_LINKS |
+    ATTACH_FILES |
+    READ_MESSAGE_HISTORY;
+
+  const adminAllow = staffAllow | MANAGE_MESSAGES;
 
   const readOnlyChannels = new Set<string>([
-    "✨・bem-vindo",
-    "📣・anuncios",
-    "🛍️・como-comprar",
-    "⚡・ofertas",
-    "👾・roblox",
-    "🔮・valorant",
-    "💳・steam",
-    "🪻・minecraft",
-    "🎮・xbox",
-    "💠・playstation",
+    "✨・comece-aqui",
+    "📜・regras",
+    "🧭・como-funciona",
+    "🛡️・termos-e-garantias",
+    "🟢・status-nexus",
+    "🔎・buscar-conta",
+    "🧩・como-pesquisar",
+    "🔥・contas-em-destaque",
+    "🆕・novas-contas",
+    "🎯・procurando-conta",
     "📦・meus-pedidos",
-    "🎫・cupons",
+    "🛍️・como-comprar",
+    "💠・formas-de-pagamento",
+    "✅・vendas-realizadas",
+    "❓・faq",
     "🎟️・suporte"
   ]);
 
-  const ticketCategories = new Set<string>(["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦", "🎫 TICKETS"]);
+  const ticketCategories = new Set<string>(["🎫・𝗧𝗜𝗖𝗞𝗘𝗧𝗦"]);
+  const adminCategories = new Set<string>([
+    "🔒・𝗔𝗗𝗠𝗜𝗡 𝗩𝗘𝗡𝗗𝗔𝗦",
+    "🔒・𝗔𝗗𝗠𝗜𝗡 𝗙𝗢𝗥𝗡𝗘𝗖𝗘𝗗𝗢𝗥𝗘𝗦",
+    "🔒・𝗔𝗗𝗠𝗜𝗡 𝗚𝗘𝗦𝗧𝗔𝗢"
+  ]);
+
+  const adminCategoryIds = new Set(
+    channels
+      .filter((channel) => channel.type === 4 && adminCategories.has(channel.name))
+      .map((channel) => channel.id)
+  );
 
   for (const channel of channels) {
     if (channel.type === 0 && readOnlyChannels.has(channel.name)) {
@@ -269,6 +292,18 @@ async function applyChannelPermissions(roles: DiscordRole[]) {
         { id: owner.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" },
         { id: admin.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" },
         { id: support.id, type: 0, allow: TICKET_ALLOW.toString(), deny: "0" }
+      ]);
+    }
+
+    const isAdminCategory = channel.type === 4 && adminCategories.has(channel.name);
+    const isAdminChild = Boolean(channel.parent_id && adminCategoryIds.has(channel.parent_id));
+
+    if (isAdminCategory || isAdminChild) {
+      await patchChannelOverwrites(channel, [
+        { id: GUILD_ID, type: 0, allow: "0", deny: VIEW_CHANNEL.toString() },
+        { id: owner.id, type: 0, allow: adminAllow.toString(), deny: "0" },
+        { id: admin.id, type: 0, allow: adminAllow.toString(), deny: "0" },
+        { id: support.id, type: 0, allow: "0", deny: VIEW_CHANNEL.toString() }
       ]);
     }
   }
