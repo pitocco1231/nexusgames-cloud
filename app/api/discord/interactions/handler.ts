@@ -54,6 +54,12 @@ import {
   MERCADO_PAGO_SANDBOX_AMOUNT_BRL,
   type MercadoPagoOrder
 } from "../../../../lib/mercadopago";
+import {
+  createBotaPixCharge,
+  getBotaPixCharge,
+  isBotaPixConfigured,
+  type BotaPixCharge
+} from "../../../../lib/botapix";
 import { quoteAndAttachOrder } from "../../../../lib/pricing";
 import {
   ensureMemberRole,
@@ -63,11 +69,14 @@ import {
 } from "../../../../lib/roles";
 import { validateShop2TopupPlayer } from "../../../../lib/shop2topup";
 import {
+  attachBotaPixCharge,
   attachMercadoPagoSandboxOrder,
   createDiscordOrder,
   findDiscordOrderByNumber,
+  getBotaPixPaymentForOrder,
   getMercadoPagoPaymentForOrder,
   listDiscordOrders,
+  syncBotaPixCharge,
   syncMercadoPagoOrder,
   type NexusOrder
 } from "../../../../lib/supabase";
@@ -102,11 +111,9 @@ function money(value: number) {
 }
 
 function realPaymentsReady() {
-  return (
-    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
-    isMercadoPagoProductionConfigured() &&
-    isMercadoPagoWebhookConfigured("production")
-  );
+  if (process.env.NEXUS_REAL_PAYMENTS_ENABLED !== "true") return false;
+  if (isBotaPixConfigured()) return true;
+  return isMercadoPagoProductionConfigured() && isMercadoPagoWebhookConfigured("production");
 }
 
 function purchaseCatalogPayload() {
@@ -343,6 +350,64 @@ function pixLiveMessageData(orderNumber: string, providerOrder: MercadoPagoOrder
   };
 }
 
+function botapixLiveMessageData(orderNumber: string, charge: BotaPixCharge) {
+  const amount = Number(charge.amount || 0) / 100;
+  const components: Array<Record<string, unknown>> = [];
+  if (charge.payment_url) {
+    components.push({
+      type: 2,
+      style: 5,
+      label: "Abrir Pix",
+      url: charge.payment_url,
+      emoji: { name: "💠" }
+    });
+  }
+  components.push({
+    type: 2,
+    style: 1,
+    custom_id: `pix-live-refresh:${orderNumber}`,
+    label: "Atualizar status",
+    emoji: { name: "🔄" }
+  });
+
+  const status = String(charge.status || "pending").toLowerCase();
+  const statusText =
+    status === "paid" ? "✅ Pago" :
+    status === "expired" ? "⌛ Expirado" :
+    ["canceled", "cancelled"].includes(status) ? "❌ Cancelado" :
+    "⏳ Aguardando pagamento";
+
+  return {
+    embeds: [{
+      color: status === "paid" ? 0x57f287 : 0x00a650,
+      title: "💠 Pix NexusGames",
+      description: [
+        `Pedido: **${orderNumber}**`,
+        amount > 0 ? `Valor: **${money(amount)}**` : null,
+        `Status: **${statusText}**`,
+        charge.expires_at ? `Expira em: **${charge.expires_at}**` : null,
+        "",
+        charge.payment_url
+          ? "Clique em **Abrir Pix** para ver o QR Code e o código Copia e Cola."
+          : null,
+        "",
+        "A entrega só começa depois que o BotaPix confirmar o pagamento."
+      ].filter(Boolean).join("\n")
+    }],
+    components: [{ type: 1, components }]
+  };
+}
+
+async function syncBotaPixAndGrantCustomer(charge: BotaPixCharge) {
+  const synced = await syncBotaPixCharge(charge);
+  if (synced?.isPaid && synced.discordUserId) {
+    await grantCustomerRole(synced.discordUserId).catch((error) =>
+      console.error("Nao foi possivel aplicar o cargo Cliente", error)
+    );
+  }
+  return synced;
+}
+
 async function syncAndGrantCustomer(providerOrder: MercadoPagoOrder) {
   const synced = await syncMercadoPagoOrder(providerOrder);
   if (synced?.isPaid && synced.discordUserId) {
@@ -440,6 +505,7 @@ async function processDeferredLivePix(params: {
 }) {
   try {
     if (!realPaymentsReady()) throw new Error("Pagamentos reais ainda não estão habilitados.");
+
     const localOrder = await findDiscordOrderByNumber(params.userId, params.orderNumber);
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
 
@@ -464,23 +530,75 @@ async function processDeferredLivePix(params: {
     }
 
     const amount = Number(localOrder.total_price_brl || 0);
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Pedido ainda não possui preço final válido.");
-    const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Pedido ainda não possui preço final válido.");
+    }
+
+    const [botapixPayment, mercadoPagoPayment] = await Promise.all([
+      getBotaPixPaymentForOrder(localOrder.id),
+      getMercadoPagoPaymentForOrder(localOrder.id)
+    ]);
+
+    if (params.refresh && !botapixPayment?.provider_payment_id && !mercadoPagoPayment?.provider_payment_id) {
+      throw new Error("Este pedido ainda não possui Pix criado.");
+    }
+
+    const useBotaPix =
+      Boolean(botapixPayment?.provider_payment_id) ||
+      (!mercadoPagoPayment?.provider_payment_id && isBotaPixConfigured());
+
+    if (useBotaPix) {
+      let charge: BotaPixCharge;
+      if (botapixPayment?.provider_payment_id) {
+        charge = await getBotaPixCharge(botapixPayment.provider_payment_id);
+      } else {
+        charge = await createBotaPixCharge({
+          orderNumber: localOrder.order_number,
+          amountBrl: amount
+        });
+        await attachBotaPixCharge({ localOrder, charge });
+      }
+
+      await syncBotaPixAndGrantCustomer(charge);
+      await editDeferredInteraction(
+        params.interactionToken,
+        botapixLiveMessageData(localOrder.order_number, charge)
+      );
+      return;
+    }
+
     let providerOrder: MercadoPagoOrder;
     if (params.refresh) {
-      if (!payment?.provider_payment_id) throw new Error("Este pedido ainda não possui Pix criado.");
-      providerOrder = await getMercadoPagoOrder(payment.provider_payment_id, "production");
-    } else if (payment?.provider_payment_id) providerOrder = await getMercadoPagoOrder(payment.provider_payment_id, "production");
-    else {
-      if (!params.payerEmail || !validEmail(params.payerEmail)) throw new Error("Informe um e-mail válido para gerar o Pix.");
-      providerOrder = await createPixOrder({ mode: "production", localOrderId: localOrder.id, orderNumber: localOrder.order_number, amountBrl: amount, payerEmail: params.payerEmail });
+      if (!mercadoPagoPayment?.provider_payment_id) throw new Error("Este pedido ainda não possui Pix criado.");
+      providerOrder = await getMercadoPagoOrder(mercadoPagoPayment.provider_payment_id, "production");
+    } else if (mercadoPagoPayment?.provider_payment_id) {
+      providerOrder = await getMercadoPagoOrder(mercadoPagoPayment.provider_payment_id, "production");
+    } else {
+      if (!params.payerEmail || !validEmail(params.payerEmail)) {
+        throw new Error("Informe um e-mail válido para gerar o Pix.");
+      }
+      providerOrder = await createPixOrder({
+        mode: "production",
+        localOrderId: localOrder.id,
+        orderNumber: localOrder.order_number,
+        amountBrl: amount,
+        payerEmail: params.payerEmail
+      });
       await attachMercadoPagoSandboxOrder({ localOrder, providerOrder });
     }
+
     await syncAndGrantCustomer(providerOrder);
-    await editDeferredInteraction(params.interactionToken, pixLiveMessageData(localOrder.order_number, providerOrder));
+    await editDeferredInteraction(
+      params.interactionToken,
+      pixLiveMessageData(localOrder.order_number, providerOrder)
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro inesperado";
-    await editDeferredInteraction(params.interactionToken, { content: `❌ Não foi possível gerar/atualizar o Pix. ${message}`, embeds: [], components: [] }).catch(() => null);
+    await editDeferredInteraction(params.interactionToken, {
+      content: `❌ Não foi possível gerar/atualizar o Pix. ${message}`,
+      embeds: [],
+      components: []
+    }).catch(() => null);
   }
 }
 
@@ -870,7 +988,21 @@ export async function POST(request: Request) {
       return json({ type: 5, data: { flags: 64 } });
     }
 
-    if (earlyCustomId.startsWith("pix-live:") && !earlyCustomId.startsWith("pix-live-refresh:")) return json(livePixEmailModal(earlyCustomId.slice("pix-live:".length)));
+    if (earlyCustomId.startsWith("pix-live:") && !earlyCustomId.startsWith("pix-live-refresh:")) {
+      if (!actor?.id || !interaction.token) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Operação inválida." } });
+      }
+      const orderNumber = earlyCustomId.slice("pix-live:".length);
+      if (isBotaPixConfigured()) {
+        after(() => processDeferredLivePix({
+          orderNumber,
+          userId: actor.id,
+          interactionToken: interaction.token
+        }));
+        return json({ type: 5, data: { flags: 64 } });
+      }
+      return json(livePixEmailModal(orderNumber));
+    }
 
     if (earlyCustomId.startsWith("pix-test:") || earlyCustomId.startsWith("pix-refresh:")) {
       if (!actor?.id || !interaction.token) return json({ type: 4, data: { flags: 64, content: "❌ Operação inválida." } });
