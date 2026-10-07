@@ -7,7 +7,9 @@ import {
   creditDeliveredOrder,
   getAvailableUserCoupon,
   getListing,
+  getRewardProfile,
   releaseOrderEvent,
+  reserveNexusCredit,
   reserveUserCoupon
 } from "./nexusData";
 import { revalidateListing } from "./lztFortnite";
@@ -100,34 +102,12 @@ export async function createFortniteOrder(params: {
   if (!validation.available || !validation.listing) {
     throw new Error("Essa conta ficou indisponível. Faça uma nova busca para ver alternativas.");
   }
+
   const listing = validation.listing;
   const basePrice = Number(listing.sale_price_brl || 0);
-  if (!Number.isFinite(basePrice) || basePrice <= 0 || basePrice > 500) throw new Error("Preço da oferta inválido.");
-
-  const cost = Number(listing.cost_brl || 0);
-  const coupon = await getAvailableUserCoupon(params.discordUserId).catch(() => null);
-  let couponDiscount = 0;
-
-  if (
-    coupon &&
-    basePrice >= Number(coupon.min_order_brl || 0)
-  ) {
-    const requestedDiscount = Math.min(
-      basePrice * (Number(coupon.discount_percent || 0) / 100),
-      Number(coupon.max_discount_brl || 0)
-    );
-
-    // Nunca deixa um cupom derrubar a margem bruta abaixo de 30%.
-    const minimumSaleForMargin = cost > 0 ? cost / 0.7 : 0;
-    const maxSafeDiscount = Math.max(0, basePrice - minimumSaleForMargin);
-    couponDiscount = Math.max(
-      0,
-      Math.min(requestedDiscount, maxSafeDiscount)
-    );
-    couponDiscount = Math.floor(couponDiscount * 100) / 100;
+  if (!Number.isFinite(basePrice) || basePrice <= 0 || basePrice > 500) {
+    throw new Error("Preço da oferta inválido.");
   }
-
-  const price = Math.max(0.01, Math.round((basePrice - couponDiscount) * 100) / 100);
 
   const idempotencyKey = `fortnite:${params.interactionId}`;
   const existing = await db<any[]>(
@@ -135,16 +115,48 @@ export async function createFortniteOrder(params: {
   );
   if (existing?.[0]) return { order: existing[0], listing, created: false };
 
+  const cost = Number(listing.cost_brl || 0);
+  const minimumSaleForMargin = cost > 0 ? cost / 0.7 : 0;
+
+  const [coupon, reward] = await Promise.all([
+    getAvailableUserCoupon(params.discordUserId).catch(() => null),
+    getRewardProfile(params.discordUserId).catch(() => null)
+  ]);
+
+  let requestedCouponDiscount = 0;
+  if (coupon && basePrice >= Number(coupon.min_order_brl || 0)) {
+    requestedCouponDiscount = Math.min(
+      basePrice * (Number(coupon.discount_percent || 0) / 100),
+      Number(coupon.max_discount_brl || 0)
+    );
+  }
+
+  // Primeiro protege a margem; depois aplica cupom e saldo dentro do espaço seguro.
+  const maxTotalDiscount = Math.max(0, basePrice - minimumSaleForMargin);
+  const couponDiscount = Math.floor(
+    Math.max(0, Math.min(requestedCouponDiscount, maxTotalDiscount)) * 100
+  ) / 100;
+
+  const remainingDiscountRoom = Math.max(0, maxTotalDiscount - couponDiscount);
+  const requestedCredit = Math.floor(
+    Math.max(
+      0,
+      Math.min(Number(reward?.balance_brl || 0), remainingDiscountRoom)
+    ) * 100
+  ) / 100;
+
   const user = await ensureDiscordUser(params.discordUserId, params.discordUsername);
-  const rows = await db<any[]>("orders", {
+
+  // Cria o pedido pelo preço-base; benefícios são reservados antes de reduzir o valor final.
+  const createdRows = await db<any[]>("orders", {
     method: "POST",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
       user_id: user.id,
       product_id: "fortnite-account",
       quantity: 1,
-      unit_price_brl: price,
-      total_price_brl: price,
+      unit_price_brl: basePrice,
+      total_price_brl: basePrice,
       status: "CREATED",
       idempotency_key: idempotencyKey,
       fulfillment_data: {
@@ -152,61 +164,87 @@ export async function createFortniteOrder(params: {
         supplier: listing.supplier,
         supplier_item_id: listing.supplier_item_id,
         supplier_user_id: listing.supplier_user_id,
-        supplier_cost_brl: Number(listing.cost_brl || 0),
+        supplier_cost_brl: cost,
         base_sale_price_brl: basePrice,
-        sale_price_brl: price,
-        coupon_id: couponDiscount > 0 ? coupon?.id || null : null,
-        coupon_code: couponDiscount > 0 ? coupon?.code || null : null,
-        coupon_discount_brl: couponDiscount,
-        margin_percent: price > 0 && cost > 0 ? ((price - cost) / price) * 100 : Number(listing.margin_percent || 0),
+        sale_price_brl: basePrice,
+        coupon_id: null,
+        coupon_code: null,
+        coupon_discount_brl: 0,
+        nexus_credit_brl: 0,
+        margin_percent: Number(listing.margin_percent || 0),
         supplier_url: listing.private_snapshot?.supplier_url || null,
         account_snapshot: listing.public_snapshot,
         manual_delivery: true
       }
     })
   });
-  if (!rows?.[0]) throw new Error("Não foi possível criar o pedido Fortnite.");
 
+  const created = createdRows?.[0];
+  if (!created) throw new Error("Não foi possível criar o pedido Fortnite.");
+
+  let appliedCoupon: any = null;
   if (couponDiscount > 0 && coupon?.id) {
-    const reserved = await reserveUserCoupon({
+    appliedCoupon = await reserveUserCoupon({
       couponId: String(coupon.id),
       discordUserId: params.discordUserId,
-      orderNumber: rows[0].order_number
+      orderNumber: created.order_number
     }).catch(() => null);
-
-    if (!reserved) {
-      const restoredFulfillment = {
-        ...(rows[0].fulfillment_data || {}),
-        sale_price_brl: basePrice,
-        coupon_id: null,
-        coupon_code: null,
-        coupon_discount_brl: 0,
-        margin_percent: Number(listing.margin_percent || 0)
-      };
-
-      const restored = await db<any[]>(
-        `orders?id=eq.${encodeURIComponent(rows[0].id)}`,
-        {
-          method: "PATCH",
-          headers: { Prefer: "return=representation" },
-          body: JSON.stringify({
-            unit_price_brl: basePrice,
-            total_price_brl: basePrice,
-            fulfillment_data: restoredFulfillment,
-            updated_at: new Date().toISOString()
-          })
-        }
-      ).catch(() => null);
-
-      return {
-        order: restored?.[0] || { ...rows[0], total_price_brl: basePrice, unit_price_brl: basePrice, fulfillment_data: restoredFulfillment },
-        listing,
-        created: true
-      };
-    }
   }
 
-  return { order: rows[0], listing, created: true };
+  const actualCouponDiscount = appliedCoupon ? couponDiscount : 0;
+  const creditRoom = Math.max(0, maxTotalDiscount - actualCouponDiscount);
+  const creditToReserve = Math.min(requestedCredit, creditRoom);
+  const reservedCredit = creditToReserve > 0
+    ? await reserveNexusCredit({
+        discordUserId: params.discordUserId,
+        orderNumber: created.order_number,
+        maxAmountBrl: creditToReserve
+      }).catch(() => 0)
+    : 0;
+
+  const finalPrice = Math.max(
+    0.01,
+    Math.round((basePrice - actualCouponDiscount - reservedCredit) * 100) / 100
+  );
+
+  const finalMargin =
+    finalPrice > 0 && cost > 0
+      ? ((finalPrice - cost) / finalPrice) * 100
+      : Number(listing.margin_percent || 0);
+
+  const fulfillmentData = {
+    ...(created.fulfillment_data || {}),
+    base_sale_price_brl: basePrice,
+    sale_price_brl: finalPrice,
+    coupon_id: appliedCoupon?.id || null,
+    coupon_code: appliedCoupon?.code || null,
+    coupon_discount_brl: actualCouponDiscount,
+    nexus_credit_brl: reservedCredit,
+    margin_percent: finalMargin
+  };
+
+  const updatedRows = await db<any[]>(
+    `orders?id=eq.${encodeURIComponent(created.id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        unit_price_brl: finalPrice,
+        total_price_brl: finalPrice,
+        fulfillment_data: fulfillmentData,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  const order = updatedRows?.[0] || {
+    ...created,
+    unit_price_brl: finalPrice,
+    total_price_brl: finalPrice,
+    fulfillment_data: fulfillmentData
+  };
+
+  return { order, listing, created: true };
 }
 
 export async function createFortniteCart(params: {
@@ -232,6 +270,7 @@ export async function createFortniteCart(params: {
   const basePrice = Number(order.fulfillment_data?.base_sale_price_brl || listing.sale_price_brl || price);
   const couponCode = String(order.fulfillment_data?.coupon_code || "");
   const couponDiscount = Number(order.fulfillment_data?.coupon_discount_brl || 0);
+  const nexusCredit = Number(order.fulfillment_data?.nexus_credit_brl || 0);
   const names = skinNames(listing.public_snapshot || {});
   const live = paymentsReady();
 
@@ -250,8 +289,9 @@ export async function createFortniteCart(params: {
           listing.vbucks ? `**V-Bucks:** ${listing.vbucks}` : null,
           `**Troca de e-mail:** ${listing.change_email === "yes" ? "✅ Sim" : listing.change_email === "no" ? "❌ Não" : "ℹ️ Verificar"}`,
           "",
-          couponDiscount > 0 ? `Preço original: ~~${money(basePrice)}~~` : null,
+          couponDiscount > 0 || nexusCredit > 0 ? `Preço original: ~~${money(basePrice)}~~` : null,
           couponDiscount > 0 ? `🎟️ **Cupom pessoal ${couponCode}: -${money(couponDiscount)}**` : null,
+          nexusCredit > 0 ? `💜 **Saldo Nexus usado: -${money(nexusCredit)}**` : null,
           `### ${money(price)}`,
           "",
           "🔄 A disponibilidade e o preço foram revalidados antes de abrir este carrinho.",
