@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { notifyCartStatus } from "../../../../lib/cart";
+import { notifyFortnitePaidSale } from "../../../../lib/fortniteOrders";
 import { fulfillPaidOrder } from "../../../../lib/fulfillmentWithCart";
 import {
   getMercadoPagoOrder,
@@ -56,12 +57,21 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
     }
 
     if (synced?.isPaid && synced.order?.id) {
-      await fulfillPaidOrder(synced.order.id).catch((error) => {
-        console.error(
-          "NexusGames: pagamento aprovado, mas fulfillment automatico falhou",
-          error instanceof Error ? error.message : error
-        );
-      });
+      if (synced.order.product_id === "fortnite-account") {
+        await notifyFortnitePaidSale(synced.order.order_number).catch((error) => {
+          console.error(
+            "NexusGames: pagamento Fortnite aprovado, mas aviso administrativo falhou",
+            error instanceof Error ? error.message : error
+          );
+        });
+      } else {
+        await fulfillPaidOrder(synced.order.id).catch((error) => {
+          console.error(
+            "NexusGames: pagamento aprovado, mas fulfillment automatico falhou",
+            error instanceof Error ? error.message : error
+          );
+        });
+      }
     }
   } catch (error) {
     console.error(
