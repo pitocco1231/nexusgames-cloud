@@ -371,6 +371,14 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
     .sort((a,b) => b.score - a.score || asNumber(a.listing.sale_price_brl) - asNumber(b.listing.sale_price_brl))
     .slice(0, 5);
 
+  if (ranked.length) {
+    const { publishDiscoveredListings } = await import("./nexusNotifications");
+    await publishDiscoveredListings({
+      newListings: unique.filter((listing) => !previous.has(listing.nexus_id)),
+      ranked
+    }).catch(() => null);
+  }
+
   const special = tags(ranked.map((r) => r.listing));
   return ranked.map((result, index) => ({
     ...result,
