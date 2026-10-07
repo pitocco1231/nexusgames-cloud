@@ -41,6 +41,7 @@ import {
 } from "../../../../lib/fortniteOrders";
 import { patchTicketState } from "../../../../lib/nexusData";
 import { recordAndPublishReview } from "../../../../lib/nexusReviews";
+import { alertOverdueTickets } from "../../../../lib/nexusTicketMonitor";
 import {
   createPixOrder,
   createSandboxPixOrder,
@@ -785,6 +786,10 @@ export async function POST(request: Request) {
 
   const interaction = JSON.parse(body);
   if (interaction.type === 1) return json({ type: 1 });
+
+  after(() => alertOverdueTickets().catch((error) => {
+    console.warn("NexusGames: falha ao verificar tickets atrasados", error);
+  }));
 
   const panelInteraction = await maybeHandlePanelInteraction(interaction);
   if (panelInteraction) return json(panelInteraction);
