@@ -61,7 +61,13 @@ async function request<T>(path: string, init: RequestInit = {}) {
     throw new Error(`Supabase ${response.status}: ${body.slice(0, 400)}`);
   }
   if (response.status === 204) return null as T;
-  return (await response.json()) as T;
+  const text = await response.text();
+  if (!text.trim()) return null as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Supabase retornou uma resposta inválida (status ${response.status}).`);
+  }
 }
 
 export async function recordSearch(input: NexusSearchInput, resultsCount: number, payload: Record<string, unknown> = {}) {
