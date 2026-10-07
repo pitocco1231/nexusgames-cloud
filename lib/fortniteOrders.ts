@@ -1,4 +1,5 @@
 import { isMercadoPagoProductionConfigured, isMercadoPagoWebhookConfigured } from "./mercadopago";
+import { isBotaPixConfigured } from "./botapix";
 import { bindCartOrder, createCartChannel, notifyCartStatus, upsertCartPanel } from "./cart";
 import { ensureDiscordUser } from "./supabase";
 import { grantRewardRole } from "./roles";
@@ -74,11 +75,9 @@ function money(value: number) {
 }
 
 function paymentsReady() {
-  return (
-    process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true" &&
-    isMercadoPagoProductionConfigured() &&
-    isMercadoPagoWebhookConfigured("production")
-  );
+  if (process.env.NEXUS_REAL_PAYMENTS_ENABLED !== "true") return false;
+  if (isBotaPixConfigured()) return true;
+  return isMercadoPagoProductionConfigured() && isMercadoPagoWebhookConfigured("production");
 }
 
 function skinNames(snapshot: Record<string, any>) {
