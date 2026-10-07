@@ -391,11 +391,34 @@ export async function getTicketState(channelId: string) {
   return rows?.[0] || null;
 }
 
+export async function listUnclaimedTickets(minutes = 30) {
+  const cutoff = new Date(Date.now() - Math.max(5, minutes) * 60_000).toISOString();
+  return request<any[]>(
+    `nexus_ticket_state?select=*&state=in.(open,transferred)&claimed_by_discord_id=is.null&opened_at=lt.${encodeURIComponent(cutoff)}&order=opened_at.asc&limit=100`
+  );
+}
+
+export async function markTicketAlerted(channelId: string) {
+  const rows = await request<any[]>(
+    `nexus_ticket_state?channel_id=eq.${encodeURIComponent(channelId)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        last_alerted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+  return rows?.[0] || null;
+}
+
 export async function adminMetrics() {
-  const [searches, orders, rewards] = await Promise.all([
+  const [searches, orders, rewards, tickets] = await Promise.all([
     request<any[]>("nexus_searches?select=item_type,item_query,results_count,created_at&order=created_at.desc&limit=500"),
     request<any[]>("orders?select=order_number,product_id,status,total_price_brl,created_at,paid_at&order=created_at.desc&limit=500"),
-    request<any[]>("nexus_rewards?select=discord_user_id,lifetime_spend_brl,purchases,vip_level")
+    request<any[]>("nexus_rewards?select=discord_user_id,lifetime_spend_brl,purchases,vip_level"),
+    request<any[]>("nexus_ticket_state?select=channel_id,state,claimed_by_discord_id,opened_at,updated_at&state=neq.closed&order=opened_at.asc&limit=200")
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -409,12 +432,25 @@ export async function adminMetrics() {
     top.set(key, (top.get(key) || 0) + 1);
   }
   const topQueries = [...top.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8);
+
+  const unmet = new Map<string, number>();
+  for (const row of searches.filter((s) => Number(s.results_count || 0) === 0)) {
+    const key = String(row.item_query || row.item_type || "outros").trim().toLowerCase();
+    if (!key) continue;
+    unmet.set(key, (unmet.get(key) || 0) + 1);
+  }
+  const unmetDemand = [...unmet.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8);
+  const unclaimedTickets = tickets.filter((t) => !t.claimed_by_discord_id && ["open","transferred"].includes(String(t.state))).length;
+
   return {
     searchesToday: searches.filter((s) => String(s.created_at || "").startsWith(today)).length,
     paidToday: paidToday.length,
     revenueToday,
     customers: rewards.length,
     vipCustomers: rewards.filter((r) => r.vip_level !== "cliente").length,
-    topQueries
+    openTickets: tickets.length,
+    unclaimedTickets,
+    topQueries,
+    unmetDemand
   };
 }
