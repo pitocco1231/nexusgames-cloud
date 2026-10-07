@@ -118,6 +118,14 @@ function sellerIdOf(item: any) {
   return String(firstValue(item, ["user_id", "seller.user_id", "seller.id", "owner_id"]) || "").trim();
 }
 
+function normalizeChangeEmail(value: unknown) {
+  const raw = normalizeText(value).toLowerCase();
+  if (!raw) return null;
+  if (["yes", "true", "1", "sim", "available", "changeable"].includes(raw)) return "yes";
+  if (["no", "false", "0", "nao", "não", "unavailable", "not_changeable", "unchangeable"].includes(raw)) return "no";
+  return raw;
+}
+
 function deterministicNexusId(supplierItemId: string) {
   const digest = createHash("sha256").update(`lzt:${supplierItemId}`).digest("hex").slice(0, 9).toUpperCase();
   return `NX-${digest}`;
@@ -260,7 +268,7 @@ function listingFromItem(item: any, maxPriceBrl: number): NexusListing | null {
   const emoteCount = firstNumber(item, ["d_count", "dance_count", "dances_count", "emote_count", "account.emote_count"], 0);
   const gliderCount = firstNumber(item, ["glider_count", "gliders_count", "account.glider_count"], 0);
   const vbucks = firstNumber(item, ["vb", "vbucks", "v_bucks", "account.vbucks"], 0);
-  const changeEmail = normalizeText(firstValue(item, ["change_email", "email_change", "can_change_email"])) || null;
+  const changeEmail = normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"]));
 
   return {
     nexus_id: nexusId,
