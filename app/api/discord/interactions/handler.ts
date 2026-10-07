@@ -369,6 +369,27 @@ async function processDeferredSandboxPix(params: { customId: string; userId: str
   try {
     const localOrder = await findDiscordOrderByNumber(params.userId, orderNumber);
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
+
+    if (localOrder.product_id === "fortnite-account" && isCreate) {
+      const validation = await revalidateOrderListing(localOrder.order_number);
+      if (!validation.available) {
+        const nexusId = String(localOrder.fulfillment_data?.nexus_id || "");
+        const alternatives = nexusId
+          ? await alternativesForUnavailable({
+              nexusId,
+              discordUserId: params.userId
+            }).catch(() => null)
+          : null;
+
+        if (alternatives) {
+          await editDeferredInteraction(params.interactionToken, alternatives);
+          return;
+        }
+
+        throw new Error("A conta ficou indisponível antes do pagamento.");
+      }
+    }
+
     const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
     let providerOrder: MercadoPagoOrder;
     if (isCreate) {
@@ -419,6 +440,27 @@ async function processDeferredLivePix(params: {
     if (!realPaymentsReady()) throw new Error("Pagamentos reais ainda não estão habilitados.");
     const localOrder = await findDiscordOrderByNumber(params.userId, params.orderNumber);
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
+
+    if (localOrder.product_id === "fortnite-account" && !params.refresh) {
+      const validation = await revalidateOrderListing(localOrder.order_number);
+      if (!validation.available) {
+        const nexusId = String(localOrder.fulfillment_data?.nexus_id || "");
+        const alternatives = nexusId
+          ? await alternativesForUnavailable({
+              nexusId,
+              discordUserId: params.userId
+            }).catch(() => null)
+          : null;
+
+        if (alternatives) {
+          await editDeferredInteraction(params.interactionToken, alternatives);
+          return;
+        }
+
+        throw new Error("A conta ficou indisponível antes do pagamento. Faça uma nova busca.");
+      }
+    }
+
     const amount = Number(localOrder.total_price_brl || 0);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("Pedido ainda não possui preço final válido.");
     const payment = await getMercadoPagoPaymentForOrder(localOrder.id);
