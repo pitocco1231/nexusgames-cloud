@@ -157,7 +157,30 @@ function rawListingTitle(listing: NexusListing) {
 }
 
 function displayListingTitle(listing: NexusListing) {
-  return formatFortniteListingTitle(rawListingTitle(listing) || listing.title || "Conta Fortnite");
+  const raw = rawListingTitle(listing) || String(listing.title || "").trim();
+  const formatted = formatFortniteListingTitle(raw || "Conta Fortnite");
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  const looksWeak =
+    !raw ||
+    raw.length < 12 ||
+    /^(fort|fortnite|epic|epic games|account|conta|full access|alf|urk|mnk|nbd)$/i.test(normalized);
+
+  if (!looksWeak) return formatted;
+
+  const titleSkinMatch = raw.match(/\b(\d{1,4})\s*skins?\b/i);
+  const skinCount = Number(listing.skin_count || titleSkinMatch?.[1] || 0);
+  const names = snapshotNames(listing.public_snapshot || {}, "skins", 3);
+  const vbucks = Number(listing.vbucks || 0);
+
+  const parts = [
+    skinCount ? `${skinCount} skins` : null,
+    ...names,
+    vbucks ? `${vbucks.toLocaleString("pt-BR")} V-Bucks` : null,
+    listing.change_email === "yes" ? "E-mail alterável" : null
+  ].filter(Boolean);
+
+  return parts.length ? `Conta Fortnite • ${parts.join(" • ")}` : "Conta Fortnite";
 }
 
 function countInTitle(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
