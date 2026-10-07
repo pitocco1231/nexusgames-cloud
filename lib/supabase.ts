@@ -1,3 +1,5 @@
+import type { BotaPixCharge } from "./botapix";
+
 type NexusUser = {
   id: string;
   discord_user_id: string;
@@ -199,6 +201,191 @@ export async function listDiscordOrders(discordUserId: string, limit = 5) {
       user.id
     )}&order=created_at.desc&limit=${Math.max(1, Math.min(limit, 10))}`
   );
+}
+
+export async function getBotaPixPaymentForOrder(orderId: string) {
+  const rows = await supabaseRequest<NexusPayment[]>(
+    `payments?select=id,order_id,provider,provider_payment_id,amount_brl,status,pix_qr_code,pix_copy_paste,raw_payload,created_at&order_id=eq.${encodeURIComponent(
+      orderId
+    )}&provider=eq.botapix&order=created_at.desc&limit=1`
+  );
+  return rows?.[0] || null;
+}
+
+async function getBotaPixPaymentByProviderId(providerPaymentId: string) {
+  const rows = await supabaseRequest<NexusPayment[]>(
+    `payments?select=id,order_id,provider,provider_payment_id,amount_brl,status,pix_qr_code,pix_copy_paste,raw_payload,created_at&provider=eq.botapix&provider_payment_id=eq.${encodeURIComponent(
+      providerPaymentId
+    )}&limit=1`
+  );
+  return rows?.[0] || null;
+}
+
+export async function attachBotaPixCharge(params: {
+  localOrder: NexusOrder;
+  charge: BotaPixCharge;
+}) {
+  if (!params.localOrder.id) throw new Error("Pedido local sem ID.");
+  const providerPaymentId = String(params.charge.reference || params.charge.id || "").trim();
+  if (!providerPaymentId) throw new Error("BotaPix não retornou referência da cobrança.");
+
+  const amount = Number(params.charge.amount || 0) / 100;
+  const expected = Number(params.localOrder.total_price_brl || 0);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Valor inválido na cobrança BotaPix.");
+  if (expected > 0 && Math.abs(amount - expected) > 0.01) {
+    throw new Error("Valor retornado pelo BotaPix não confere com o pedido.");
+  }
+
+  const now = new Date().toISOString();
+  const existing = await getBotaPixPaymentByProviderId(providerPaymentId);
+  const paymentBody = {
+    order_id: params.localOrder.id,
+    provider: "botapix",
+    provider_payment_id: providerPaymentId,
+    method: "pix",
+    amount_brl: amount,
+    status: "PENDING",
+    raw_payload: params.charge,
+    expires_at: params.charge.expires_at || null,
+    updated_at: now
+  };
+
+  if (existing) {
+    await supabaseRequest<NexusPayment[]>(
+      `payments?id=eq.${encodeURIComponent(existing.id)}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(paymentBody)
+      }
+    );
+  } else {
+    await supabaseRequest<NexusPayment[]>("payments", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(paymentBody)
+    });
+  }
+
+  if (["CREATED", "AWAITING_PAYMENT"].includes(params.localOrder.status)) {
+    await supabaseRequest<NexusOrder[]>(
+      `orders?id=eq.${encodeURIComponent(params.localOrder.id)}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ status: "AWAITING_PAYMENT", updated_at: now })
+      }
+    );
+  }
+
+  return getBotaPixPaymentByProviderId(providerPaymentId);
+}
+
+function mapBotaPixStatus(statusValue: string) {
+  const status = String(statusValue || "pending").toLowerCase();
+  if (status === "paid") return { orderStatus: "PAID", paymentStatus: "APPROVED" };
+  if (status === "expired") return { orderStatus: "CANCELLED", paymentStatus: "EXPIRED" };
+  if (["canceled", "cancelled"].includes(status)) return { orderStatus: "CANCELLED", paymentStatus: "CANCELLED" };
+  if (["refunded", "reversed"].includes(status)) return { orderStatus: "REFUNDED", paymentStatus: "REFUNDED" };
+  if (["failed", "rejected"].includes(status)) return { orderStatus: "FAILED", paymentStatus: "REJECTED" };
+  return { orderStatus: "AWAITING_PAYMENT", paymentStatus: "PENDING" };
+}
+
+export async function syncBotaPixCharge(charge: BotaPixCharge) {
+  const providerPaymentId = String(charge.reference || charge.id || "").trim();
+  if (!providerPaymentId) throw new Error("Cobrança BotaPix sem referência.");
+
+  let paymentRecord = await getBotaPixPaymentByProviderId(providerPaymentId);
+
+  if (!paymentRecord && charge.external_reference) {
+    const orders = await supabaseRequest<NexusOrder[]>(
+      `orders?select=${ORDER_SELECT}&order_number=eq.${encodeURIComponent(String(charge.external_reference))}&limit=1`
+    );
+    const order = orders?.[0];
+    if (order) {
+      paymentRecord = await attachBotaPixCharge({ localOrder: order, charge });
+    }
+  }
+
+  if (!paymentRecord) return null;
+
+  const localOrders = await supabaseRequest<NexusOrder[]>(
+    `orders?select=${ORDER_SELECT}&id=eq.${encodeURIComponent(paymentRecord.order_id)}&limit=1`
+  );
+  const localOrder = localOrders?.[0];
+  if (!localOrder?.id || !localOrder.user_id) return null;
+
+  const amount = Number(charge.amount || 0) / 100;
+  const expected = Number(localOrder.total_price_brl || 0);
+  if (!Number.isFinite(amount) || amount <= 0 || (expected > 0 && Math.abs(amount - expected) > 0.01)) {
+    throw new Error("Cobrança BotaPix com valor divergente do pedido.");
+  }
+
+  const mapped = mapBotaPixStatus(charge.status);
+  const now = new Date().toISOString();
+
+  let nextOrderStatus = mapped.orderStatus;
+  if (
+    ["PAID", "PURCHASING", "DELIVERED"].includes(localOrder.status) &&
+    nextOrderStatus === "AWAITING_PAYMENT"
+  ) nextOrderStatus = localOrder.status;
+  if (localOrder.status === "DELIVERED" && nextOrderStatus === "PAID") nextOrderStatus = "DELIVERED";
+
+  await supabaseRequest<NexusPayment[]>(
+    `payments?id=eq.${encodeURIComponent(paymentRecord.id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        amount_brl: amount,
+        status: mapped.paymentStatus,
+        paid_at: mapped.paymentStatus === "APPROVED" ? now : undefined,
+        raw_payload: charge,
+        expires_at: charge.expires_at || null,
+        updated_at: now
+      })
+    }
+  );
+
+  const orderPatch: Record<string, unknown> = {
+    status: nextOrderStatus,
+    updated_at: now
+  };
+  if (mapped.orderStatus === "PAID" && !localOrder.paid_at) orderPatch.paid_at = now;
+
+  const updatedOrders = await supabaseRequest<NexusOrder[]>(
+    `orders?id=eq.${encodeURIComponent(localOrder.id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(orderPatch)
+    }
+  );
+
+  const users = await supabaseRequest<NexusUser[]>(
+    `users?select=id,discord_user_id,discord_username,is_customer&id=eq.${encodeURIComponent(localOrder.user_id)}&limit=1`
+  );
+  const user = users?.[0] || null;
+  const isPaid = ["PAID", "PURCHASING", "DELIVERED"].includes(nextOrderStatus);
+
+  if (isPaid && user?.id && !user.is_customer) {
+    await supabaseRequest<NexusUser[]>(
+      `users?id=eq.${encodeURIComponent(user.id)}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ is_customer: true, updated_at: now })
+      }
+    );
+  }
+
+  return {
+    order: updatedOrders?.[0] || { ...localOrder, status: nextOrderStatus },
+    discordUserId: user?.discord_user_id || null,
+    isPaid,
+    providerStatus: charge.status || "unknown",
+    providerStatusDetail: ""
+  };
 }
 
 export async function getMercadoPagoPaymentForOrder(orderId: string) {
