@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import {
+  getListingsByIds,
   markListingStatus,
   recordSearch,
   upsertListings,
@@ -346,7 +347,18 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
   }
 
   const unique = [...new Map(collected.map((item) => [item.nexus_id, item])).values()];
+  const previousRows = await getListingsByIds(unique.map((item) => item.nexus_id)).catch(() => []);
+  const previous = new Map(previousRows.map((item) => [item.nexus_id, item]));
   await upsertListings(unique);
+
+  if (unique.length) {
+    const { notifyFavoriteChanges, notifyMatchingWatches } = await import("./nexusNotifications");
+    await Promise.allSettled([
+      notifyMatchingWatches(unique),
+      notifyFavoriteChanges({ previous, current: unique })
+    ]);
+  }
+
   await recordSearch(input, unique.length, {
     suppliers_checked: sellers.length,
     filter_value: filterValue,
@@ -382,6 +394,8 @@ export async function revalidateListing(nexusId: string) {
     const refreshed = listingFromItem(item, 500);
     if (!refreshed) {
       await markListingStatus(nexusId, "sold");
+      const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
+      await notifyFavoriteUnavailable({ ...listing, status: "sold" }).catch(() => null);
       return { available: false as const, listing: null };
     }
     if (listing.supplier_user_id && refreshed.supplier_user_id && listing.supplier_user_id !== refreshed.supplier_user_id) {
@@ -394,6 +408,8 @@ export async function revalidateListing(nexusId: string) {
   } catch (error: any) {
     if ([403,404].includes(Number(error?.status))) {
       await markListingStatus(nexusId, "sold");
+      const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
+      await notifyFavoriteUnavailable({ ...listing, status: "sold" }).catch(() => null);
       return { available: false as const, listing: null };
     }
     throw error;
