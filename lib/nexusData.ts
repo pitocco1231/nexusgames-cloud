@@ -263,9 +263,9 @@ export async function updateFavoriteNotice(params: {
 export async function getListingsByIds(nexusIds: string[]) {
   const ids = [...new Set(nexusIds.filter(Boolean))].slice(0, 100);
   if (!ids.length) return [] as NexusListing[];
-  const encoded = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+  const encoded = ids.map((id) => encodeURIComponent(id)).join(",");
   return request<NexusListing[]>(
-    `nexus_account_cache?select=*&nexus_id=in.(${encodeURIComponent(encoded)})`
+    `nexus_account_cache?select=*&nexus_id=in.(${encoded})`
   );
 }
 
