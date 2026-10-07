@@ -1,19 +1,12 @@
-import { ensureServerStructure } from "../../../../lib/discord";
+import { refreshSupportPanel } from "../../../../lib/fortniteStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const expected = process.env.TEMP_DISCORD_SETUP_SECRET || "";
-  const provided = new URL(request.url).searchParams.get("key") || "";
-
-  if (!expected || provided !== expected) {
-    return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET() {
   try {
-    const changes = await ensureServerStructure();
-    return Response.json({ ok: true, changes });
+    const result = await refreshSupportPanel();
+    return Response.json({ ok: true, result });
   } catch (error) {
     return Response.json(
       { ok: false, error: error instanceof Error ? error.message : "Erro desconhecido" },
