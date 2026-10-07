@@ -281,6 +281,134 @@ export async function disableWatch(discordUserId: string, watchId: string) {
   return rows?.[0] || null;
 }
 
+export async function listUserCoupons(discordUserId: string) {
+  return request<any[]>(
+    `nexus_user_coupons?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&active=eq.true&order=created_at.desc&limit=20`
+  );
+}
+
+export async function getAvailableUserCoupon(discordUserId: string) {
+  const rows = await listUserCoupons(discordUserId);
+  const now = Date.now();
+
+  for (const coupon of rows) {
+    if (coupon.expires_at && new Date(coupon.expires_at).getTime() <= now) continue;
+    if (coupon.used_at) continue;
+
+    if (coupon.reserved_order_number && coupon.reserved_at) {
+      const reservedAt = new Date(coupon.reserved_at).getTime();
+      if (now - reservedAt > 2 * 60 * 60_000) {
+        await request(
+          `nexus_user_coupons?id=eq.${encodeURIComponent(coupon.id)}`,
+          {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({
+              reserved_order_number: null,
+              reserved_at: null,
+              updated_at: new Date().toISOString()
+            })
+          }
+        ).catch(() => null);
+        coupon.reserved_order_number = null;
+        coupon.reserved_at = null;
+      }
+    }
+
+    if (!coupon.reserved_order_number) return coupon;
+  }
+
+  return null;
+}
+
+export async function reserveUserCoupon(params: {
+  couponId: string;
+  discordUserId: string;
+  orderNumber: string;
+}) {
+  const rows = await request<any[]>(
+    `nexus_user_coupons?id=eq.${encodeURIComponent(params.couponId)}&discord_user_id=eq.${encodeURIComponent(params.discordUserId)}&active=eq.true&used_at=is.null&reserved_order_number=is.null`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        reserved_order_number: params.orderNumber,
+        reserved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+  return rows?.[0] || null;
+}
+
+export async function consumeReservedCoupon(orderNumber: string) {
+  const rows = await request<any[]>(
+    `nexus_user_coupons?reserved_order_number=eq.${encodeURIComponent(orderNumber)}&active=eq.true&used_at=is.null`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        active: false,
+        used_order_number: orderNumber,
+        used_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+  return rows?.[0] || null;
+}
+
+export async function releaseReservedCoupon(orderNumber: string) {
+  const rows = await request<any[]>(
+    `nexus_user_coupons?reserved_order_number=eq.${encodeURIComponent(orderNumber)}&active=eq.true&used_at=is.null`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        reserved_order_number: null,
+        reserved_at: null,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+  return rows?.[0] || null;
+}
+
+async function ensureMilestoneCoupon(discordUserId: string, purchases: number) {
+  const config =
+    purchases === 3
+      ? { milestone: "purchases-3", percent: 5, max: 20, min: 120, days: 30 }
+      : purchases === 10
+        ? { milestone: "purchases-10", percent: 8, max: 40, min: 180, days: 45 }
+        : null;
+
+  if (!config) return null;
+
+  const suffix = discordUserId.slice(-6).toUpperCase();
+  const code = `NX-${suffix}-${purchases}X`;
+  const expiresAt = new Date(Date.now() + config.days * 24 * 60 * 60_000).toISOString();
+
+  const rows = await request<any[]>(
+    "nexus_user_coupons?on_conflict=discord_user_id,source_milestone",
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({
+        discord_user_id: discordUserId,
+        code,
+        source_milestone: config.milestone,
+        discount_percent: config.percent,
+        max_discount_brl: config.max,
+        min_order_brl: config.min,
+        active: true,
+        expires_at: expiresAt
+      })
+    }
+  );
+
+  return rows?.[0] || null;
+}
+
 export async function getRewardProfile(discordUserId: string) {
   const rows = await request<any[]>(
     `nexus_rewards?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&limit=1`
@@ -316,7 +444,8 @@ export async function creditDeliveredOrder(discordUserId: string, orderTotalBrl:
     })
   });
 
-  return { ...(rows?.[0] || {}), cashback };
+  const coupon = await ensureMilestoneCoupon(discordUserId, purchases).catch(() => null);
+  return { ...(rows?.[0] || {}), cashback, coupon };
 }
 
 export async function saveReview(params: {
