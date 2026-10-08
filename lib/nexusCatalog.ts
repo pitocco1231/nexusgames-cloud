@@ -1,0 +1,350 @@
+import { createHash } from "crypto";
+import type { NexusListing } from "./nexusData";
+
+const DISCORD_API = "https://discord.com/api/v10";
+const GUILD_ID = "1547332734794334319";
+const CHANNEL_NAME = "📚・todas-as-contas";
+const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
+
+type CatalogRow = {
+  nexus_id: string;
+  discord_channel_id: string;
+  discord_message_id: string;
+  content_hash: string | null;
+  status: string;
+};
+
+function money(value: number) {
+  return `R$ ${Number(value || 0).toFixed(2).replace(".", ",")}`;
+}
+
+function discordToken() {
+  const value = process.env.DISCORD_BOT_TOKEN;
+  if (!value) throw new Error("DISCORD_BOT_TOKEN não configurado.");
+  return value;
+}
+
+async function discord(path: string, init: RequestInit = {}) {
+  const response = await fetch(`${DISCORD_API}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bot ${discordToken()}`,
+      "Content-Type": "application/json",
+      ...(init.headers || {})
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    const error = new Error(`Discord ${response.status}: ${body.slice(0, 300)}`);
+    (error as any).status = response.status;
+    throw error;
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+function supabaseConfig() {
+  const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !secretKey) throw new Error("Supabase não configurado.");
+  return { url, secretKey };
+}
+
+async function db<T>(path: string, init: RequestInit = {}) {
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: secretKey,
+      Authorization: `Bearer ${secretKey}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init.headers || {})
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Supabase ${response.status}: ${body.slice(0, 300)}`);
+  }
+
+  if (response.status === 204) return null as T;
+  const text = await response.text();
+  if (!text.trim()) return null as T;
+  return JSON.parse(text) as T;
+}
+
+async function catalogChannel() {
+  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  return channels.find((channel) => channel.type === 0 && channel.name === CHANNEL_NAME) || null;
+}
+
+function rawTitle(listing: NexusListing) {
+  return String(
+    listing.public_snapshot?.display_title ||
+    listing.title ||
+    listing.public_snapshot?.raw_title ||
+    listing.public_snapshot?.title ||
+    ""
+  ).trim();
+}
+
+function countFromTitle(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
+  const raw = String(listing.public_snapshot?.raw_title || listing.title || "");
+  const pattern =
+    kind === "skin" ? /\b(\d{1,4})\s*skins?\b/i :
+    kind === "pickaxe" ? /\b(\d{1,4})\s*pickaxes?\b/i :
+    kind === "emote" ? /\b(\d{1,4})\s*(?:emotes?|dances?)\b/i :
+    /\b(\d{1,4})\s*gliders?\b/i;
+  return Number(raw.match(pattern)?.[1] || 0);
+}
+
+function effectiveCount(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
+  const direct =
+    kind === "skin" ? Number(listing.skin_count || 0) :
+    kind === "pickaxe" ? Number(listing.pickaxe_count || 0) :
+    kind === "emote" ? Number(listing.emote_count || 0) :
+    Number(listing.glider_count || 0);
+  return direct || countFromTitle(listing, kind);
+}
+
+function displayTitle(listing: NexusListing) {
+  const title = rawTitle(listing);
+  const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const weak = !title || title.length < 10 || /^(fort|fortnite|epic|epic games|account|conta|full access)$/i.test(normalized);
+
+  if (!weak) return title.slice(0, 240);
+
+  const skins = effectiveCount(listing, "skin");
+  const vbucks = Number(listing.vbucks || 0);
+  return [
+    "Conta Fortnite",
+    skins ? `${skins} skins` : null,
+    vbucks ? `${vbucks.toLocaleString("pt-BR")} V-Bucks` : null,
+    listing.change_email === "yes" ? "E-mail alterável" : null
+  ].filter(Boolean).join(" • ").slice(0, 240);
+}
+
+function payload(listing: NexusListing) {
+  const skins = effectiveCount(listing, "skin");
+  const pickaxes = effectiveCount(listing, "pickaxe");
+  const emotes = effectiveCount(listing, "emote");
+  const gliders = effectiveCount(listing, "glider");
+
+  const stats = [
+    skins ? `🎨 **${skins} skins**` : null,
+    pickaxes ? `⛏️ **${pickaxes} picaretas**` : null,
+    emotes ? `🎉 **${emotes} emotes**` : null,
+    gliders ? `🪂 **${gliders} asas-delta**` : null
+  ].filter(Boolean);
+
+  return {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      color: 0x7c3aed,
+      title: `🎮 ${displayTitle(listing)}`,
+      description: [
+        stats.length ? stats.join(" • ") : null,
+        listing.vbucks ? `💠 **V-Bucks:** ${Number(listing.vbucks).toLocaleString("pt-BR")}` : null,
+        listing.change_email === "yes"
+          ? "📧 **E-mail alterável:** ✅ Sim"
+          : listing.change_email === "no"
+            ? "📧 **E-mail alterável:** ❌ Não"
+            : null,
+        "",
+        `## ${money(Number(listing.sale_price_brl || 0))}`
+      ].filter(Boolean).join("\n"),
+      image: {
+        url: `${STORE_URL}/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
+      },
+      footer: {
+        text: `${listing.nexus_id} • NexusGames • preço e disponibilidade revalidados no checkout`
+      }
+    }],
+    components: [{
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 1,
+          custom_id: `nexus:details:${listing.nexus_id}`,
+          label: "Ver detalhes",
+          emoji: { name: "🖼️" }
+        },
+        {
+          type: 2,
+          style: 2,
+          custom_id: `nexus:favorite:${listing.nexus_id}`,
+          label: "Favoritar",
+          emoji: { name: "❤️" }
+        },
+        {
+          type: 2,
+          style: 3,
+          custom_id: `nexus:buy:${listing.nexus_id}`,
+          label: "Comprar",
+          emoji: { name: "🛒" }
+        }
+      ]
+    }]
+  };
+}
+
+function contentHash(listing: NexusListing) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      title: displayTitle(listing),
+      price: Number(listing.sale_price_brl || 0),
+      skins: effectiveCount(listing, "skin"),
+      pickaxes: effectiveCount(listing, "pickaxe"),
+      emotes: effectiveCount(listing, "emote"),
+      gliders: effectiveCount(listing, "glider"),
+      vbucks: Number(listing.vbucks || 0),
+      email: listing.change_email,
+      status: listing.status
+    }))
+    .digest("hex");
+}
+
+async function rowFor(nexusId: string) {
+  const rows = await db<CatalogRow[]>(
+    `nexus_catalog_messages?select=nexus_id,discord_channel_id,discord_message_id,content_hash,status&nexus_id=eq.${encodeURIComponent(nexusId)}&limit=1`
+  );
+  return rows?.[0] || null;
+}
+
+async function saveRow(params: {
+  nexusId: string;
+  channelId: string;
+  messageId: string;
+  hash: string;
+}) {
+  await db("nexus_catalog_messages?on_conflict=nexus_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({
+      nexus_id: params.nexusId,
+      discord_channel_id: params.channelId,
+      discord_message_id: params.messageId,
+      content_hash: params.hash,
+      status: "available",
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+  });
+}
+
+async function removeRow(nexusId: string) {
+  await db(`nexus_catalog_messages?nexus_id=eq.${encodeURIComponent(nexusId)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  }).catch(() => null);
+}
+
+export async function removeCatalogListing(nexusId: string) {
+  const row = await rowFor(nexusId);
+  if (!row) return { removed: false };
+
+  await discord(`/channels/${row.discord_channel_id}/messages/${row.discord_message_id}`, {
+    method: "DELETE"
+  }).catch(() => null);
+  await removeRow(nexusId);
+  return { removed: true };
+}
+
+export async function syncCatalogListings(listings: NexusListing[]) {
+  const channel = await catalogChannel();
+  if (!channel) return { synced: 0, skipped: listings.length, channelMissing: true };
+
+  let synced = 0;
+  let skipped = 0;
+
+  for (const listing of listings) {
+    if (listing.status !== "available") {
+      await removeCatalogListing(listing.nexus_id).catch(() => null);
+      continue;
+    }
+
+    const hash = contentHash(listing);
+    const existing = await rowFor(listing.nexus_id).catch(() => null);
+    if (
+      existing &&
+      existing.discord_channel_id === channel.id &&
+      existing.content_hash === hash &&
+      existing.status === "available"
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    const messagePayload = payload(listing);
+    let message: any = null;
+
+    if (existing && existing.discord_channel_id === channel.id) {
+      try {
+        message = await discord(
+          `/channels/${channel.id}/messages/${existing.discord_message_id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify(messagePayload)
+          }
+        );
+      } catch (error: any) {
+        if (Number(error?.status) !== 404) throw error;
+      }
+    }
+
+    if (!message) {
+      message = await discord(`/channels/${channel.id}/messages`, {
+        method: "POST",
+        body: JSON.stringify(messagePayload)
+      });
+    }
+
+    await saveRow({
+      nexusId: listing.nexus_id,
+      channelId: channel.id,
+      messageId: String(message.id),
+      hash
+    });
+    synced += 1;
+  }
+
+  return { synced, skipped, channelMissing: false };
+}
+
+export async function syncFullCatalog(listings: NexusListing[], scanComplete = false) {
+  const result = await syncCatalogListings(listings);
+  if (!scanComplete) return { ...result, removed: 0 };
+
+  const rows = await db<CatalogRow[]>(
+    "nexus_catalog_messages?select=nexus_id,discord_channel_id,discord_message_id,content_hash,status"
+  ).catch(() => []);
+
+  const available = new Set(listings.map((listing) => listing.nexus_id));
+  let removed = 0;
+
+  for (const row of rows || []) {
+    if (available.has(row.nexus_id)) continue;
+
+    try {
+      const { revalidateListing } = await import("./lztFortnite");
+      const check = await revalidateListing(row.nexus_id);
+      if (check.available && check.listing) {
+        await syncCatalogListings([check.listing]);
+        continue;
+      }
+    } catch {
+      // Se a revalidação falhar por indisponibilidade, removemos do catálogo público.
+    }
+
+    await removeCatalogListing(row.nexus_id).catch(() => null);
+    removed += 1;
+  }
+
+  return { ...result, removed };
+}
