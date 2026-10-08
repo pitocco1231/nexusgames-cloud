@@ -275,6 +275,12 @@ export async function getListingsByIds(nexusIds: string[]) {
   );
 }
 
+export async function listAvailableListings(limit = 100) {
+  return request<NexusListing[]>(
+    `nexus_account_cache?select=*&status=eq.available&order=sale_price_brl.asc&limit=${Math.max(1, Math.min(limit, 500))}`
+  );
+}
+
 export async function disableWatch(discordUserId: string, watchId: string) {
   const rows = await request<any[]>(
     `nexus_watches?id=eq.${encodeURIComponent(watchId)}&discord_user_id=eq.${encodeURIComponent(discordUserId)}`,
@@ -697,11 +703,13 @@ export async function releaseOrderEvent(orderNumber: string, eventType: string) 
 }
 
 export async function adminMetrics() {
-  const [searches, orders, rewards, tickets] = await Promise.all([
+  const [searches, orders, rewards, tickets, auditLogs, listings] = await Promise.all([
     request<any[]>("nexus_searches?select=item_type,item_query,results_count,created_at&order=created_at.desc&limit=500"),
-    request<any[]>("orders?select=order_number,product_id,status,total_price_brl,created_at,paid_at&order=created_at.desc&limit=500"),
+    request<any[]>("orders?select=order_number,product_id,status,total_price_brl,created_at,paid_at,fulfillment_data&order=created_at.desc&limit=500"),
     request<any[]>("nexus_rewards?select=discord_user_id,lifetime_spend_brl,purchases,vip_level"),
-    request<any[]>("nexus_ticket_state?select=channel_id,state,claimed_by_discord_id,opened_at,updated_at&state=neq.closed&order=opened_at.asc&limit=200")
+    request<any[]>("nexus_ticket_state?select=channel_id,state,claimed_by_discord_id,opened_at,updated_at&state=neq.closed&order=opened_at.asc&limit=200"),
+    request<any[]>("audit_logs?select=action,entity_type,entity_id,actor_discord_user_id,metadata,created_at&order=created_at.desc&limit=1000"),
+    request<NexusListing[]>("nexus_account_cache?select=nexus_id,supplier_user_id,sale_price_brl,cost_brl,margin_percent,status,skin_count,change_email,last_verified_at&limit=500")
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -725,8 +733,74 @@ export async function adminMetrics() {
   const unmetDemand = [...unmet.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8);
   const unclaimedTickets = tickets.filter((t) => !t.claimed_by_discord_id && ["open","transferred"].includes(String(t.state))).length;
 
+  const todayLogs = auditLogs.filter((row) => String(row.created_at || "").startsWith(today));
+  const detailsToday = todayLogs.filter((row) => row.action === "funnel.details").length;
+  const cartsToday = todayLogs.filter((row) => row.action === "funnel.cart").length;
+  const favoritesToday = todayLogs.filter((row) => row.action === "funnel.favorite").length;
+  const paidEventsToday = todayLogs.filter((row) =>
+    ["payment.approved","mercadopago.paid"].includes(String(row.action || ""))
+  ).length;
+
+  const searchCountToday = searches.filter((s) => String(s.created_at || "").startsWith(today)).length;
+  const searchToCart = searchCountToday > 0 ? (cartsToday / searchCountToday) * 100 : 0;
+  const cartToPaid = cartsToday > 0 ? (Math.max(paidToday.length, paidEventsToday) / cartsToday) * 100 : 0;
+
+  const availableListings = listings.filter((listing) => listing.status === "available");
+  const avgMargin = availableListings.length
+    ? availableListings.reduce((sum, listing) => sum + Number(listing.margin_percent || 0), 0) / availableListings.length
+    : 0;
+
+  const supplierMap = new Map<string, {
+    listings: number;
+    avgMargin: number;
+    emailChangeable: number;
+    errors: number;
+    delivered: number;
+  }>();
+
+  for (const listing of availableListings) {
+    const id = String(listing.supplier_user_id || "desconhecido");
+    const row = supplierMap.get(id) || { listings: 0, avgMargin: 0, emailChangeable: 0, errors: 0, delivered: 0 };
+    row.listings += 1;
+    row.avgMargin += Number(listing.margin_percent || 0);
+    if (listing.change_email === "yes") row.emailChangeable += 1;
+    supplierMap.set(id, row);
+  }
+
+  for (const log of auditLogs) {
+    if (!["supplier.catalog_scan_error","supplier.search_error"].includes(String(log.action || ""))) continue;
+    const id = String(log.entity_id || "desconhecido");
+    const row = supplierMap.get(id) || { listings: 0, avgMargin: 0, emailChangeable: 0, errors: 0, delivered: 0 };
+    row.errors += 1;
+    supplierMap.set(id, row);
+  }
+
+  for (const order of orders.filter((order) => String(order.status) === "DELIVERED")) {
+    const id = String(order.fulfillment_data?.supplier_user_id || "desconhecido");
+    const row = supplierMap.get(id) || { listings: 0, avgMargin: 0, emailChangeable: 0, errors: 0, delivered: 0 };
+    row.delivered += 1;
+    supplierMap.set(id, row);
+  }
+
+  const supplierScores = [...supplierMap.entries()]
+    .filter(([id]) => id !== "desconhecido")
+    .map(([id, row]) => {
+      const margin = row.listings ? row.avgMargin / row.listings : 0;
+      const emailRatio = row.listings ? row.emailChangeable / row.listings : 0;
+      const score = Math.max(1, Math.min(100, Math.round(
+        55 +
+        Math.min(15, row.listings * 1.5) +
+        Math.min(12, margin / 4) +
+        emailRatio * 10 +
+        Math.min(8, row.delivered * 2) -
+        Math.min(30, row.errors * 6)
+      )));
+      return { id, score, listings: row.listings, avgMargin: margin, errors: row.errors, delivered: row.delivered };
+    })
+    .sort((a, b) => b.score - a.score);
+
   return {
-    searchesToday: searches.filter((s) => String(s.created_at || "").startsWith(today)).length,
+    searchesToday: searchCountToday,
     paidToday: paidToday.length,
     revenueToday,
     customers: rewards.length,
@@ -734,6 +808,14 @@ export async function adminMetrics() {
     openTickets: tickets.length,
     unclaimedTickets,
     topQueries,
-    unmetDemand
+    unmetDemand,
+    detailsToday,
+    favoritesToday,
+    cartsToday,
+    searchToCart,
+    cartToPaid,
+    availableListings: availableListings.length,
+    avgMargin,
+    supplierScores
   };
 }
