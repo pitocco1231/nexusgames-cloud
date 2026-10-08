@@ -6,17 +6,21 @@ import {
 } from "../../../../lib/botapix";
 import { notifyCartStatus } from "../../../../lib/cart";
 import {
-  notifyFortnitePaidSale
+  notifyFortnitePaidSale,
+  revalidateOrderListing
 } from "../../../../lib/fortniteOrders";
 import { fulfillPaidOrder } from "../../../../lib/fulfillmentWithCart";
 import {
   consumeNexusCredit,
   consumeReservedCoupon,
+  extendListingReservation,
+  releaseListingReservation,
   releaseNexusCredit,
   releaseReservedCoupon
 } from "../../../../lib/nexusData";
 import { grantCustomerRole } from "../../../../lib/roles";
 import { syncBotaPixCharge } from "../../../../lib/supabase";
+import { nexusLog, nexusLogError } from "../../../../lib/nexusLogger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +75,12 @@ async function processEvent(body: any) {
   if (status === "paid" && synced.isPaid) {
     await Promise.allSettled([
       consumeReservedCoupon(orderNumber),
-      consumeNexusCredit(orderNumber)
+      consumeNexusCredit(orderNumber),
+      extendListingReservation({
+        orderNumber,
+        status: "paid",
+        minutes: 180
+      })
     ]);
 
     await notifyCartStatus({
@@ -86,6 +95,27 @@ async function processEvent(body: any) {
     }
 
     if (synced.order.product_id === "fortnite-account") {
+      const postPaymentValidation = await revalidateOrderListing(orderNumber).catch(() => null);
+
+      if (!postPaymentValidation?.available) {
+        await notifyCartStatus({
+          orderNumber,
+          status: "paid",
+          details: "Pagamento confirmado. A conta escolhida ficou indisponível durante a confirmação; a equipe vai oferecer alternativas equivalentes ou tratar o reembolso."
+        }).catch(() => null);
+
+        await nexusLog({
+          level: "warning",
+          action: "order.paid_listing_unavailable",
+          entityType: "order",
+          entityId: orderNumber,
+          actorDiscordUserId: synced.discordUserId || null,
+          title: "⚠️ Conta indisponível após pagamento",
+          message: "O pagamento foi aprovado, mas a oferta não passou na revalidação pós-pagamento.",
+          metadata: { provider: "botapix" }
+        }).catch(() => null);
+      }
+
       await notifyFortnitePaidSale(orderNumber).catch((error) => {
         console.error(
           "NexusGames: BotaPix aprovado, mas aviso administrativo Fortnite falhou",
@@ -107,7 +137,8 @@ async function processEvent(body: any) {
   if (["expired", "canceled", "cancelled", "failed", "rejected"].includes(status)) {
     await Promise.allSettled([
       releaseReservedCoupon(orderNumber),
-      releaseNexusCredit(orderNumber)
+      releaseNexusCredit(orderNumber),
+      releaseListingReservation(orderNumber)
     ]);
 
     await notifyCartStatus({
@@ -118,7 +149,8 @@ async function processEvent(body: any) {
   } else if (["refunded", "reversed"].includes(status)) {
     await Promise.allSettled([
       releaseReservedCoupon(orderNumber),
-      releaseNexusCredit(orderNumber)
+      releaseNexusCredit(orderNumber),
+      releaseListingReservation(orderNumber)
     ]);
 
     await notifyCartStatus({
@@ -173,6 +205,14 @@ export async function POST(request: Request) {
         "NexusGames: falha no webhook BotaPix",
         error instanceof Error ? error.message : error
       );
+      await nexusLogError({
+        action: "botapix.webhook_error",
+        entityType: "payment",
+        entityId: chargeLocator(body) || null,
+        title: "Erro no webhook BotaPix",
+        message: "Falha ao processar uma atualização do BotaPix.",
+        error
+      }).catch(() => null);
     }
   });
 
