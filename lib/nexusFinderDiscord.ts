@@ -673,7 +673,7 @@ export async function metricsPayload() {
             )
           : ["Sem dados de fornecedores."]),
         "",
-        "**Mais procurados:**
+        "**Mais procurados:**",
         ...(m.topQueries.length ? m.topQueries.map(([q,n],i) => `${i+1}. **${q}** — ${n} buscas`) : ["Sem dados ainda."]),
         "",
         "**Demanda sem resultado:**",
