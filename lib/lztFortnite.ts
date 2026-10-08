@@ -460,7 +460,7 @@ export async function fetchAllSupplierListings() {
           collected.push(listing);
         }
 
-        if (page < maxPages) await sleep(250);
+        if (page < maxPages) await sleep(3100);
       } catch (error) {
         sellerOk = false;
         console.error("Nexus catalog supplier scan error", sellerId, page, error);
