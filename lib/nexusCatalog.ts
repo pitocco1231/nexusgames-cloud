@@ -345,9 +345,93 @@ export async function syncCatalogListings(listings: NexusListing[]) {
   return { synced, skipped, channelMissing: false };
 }
 
+async function syncFeaturedDeal(listings: NexusListing[]) {
+  const available = listings
+    .filter((listing) => listing.status === "available")
+    .filter((listing) => Number(listing.margin_percent || 0) >= 30)
+    .filter((listing) => Number(listing.sale_price_brl || 0) > 0 && Number(listing.sale_price_brl || 0) <= 500);
+
+  if (!available.length) return { updated: false };
+
+  const ranked = [...available].sort((a, b) => {
+    const score = (listing: NexusListing) =>
+      Math.min(35, effectiveCount(listing, "skin") / 4) +
+      Math.min(12, Number(listing.vbucks || 0) / 500) +
+      Math.min(18, Number(listing.margin_percent || 0) / 3) +
+      (listing.change_email === "yes" ? 12 : 0) +
+      Math.max(0, 20 - Number(listing.sale_price_brl || 0) / 25);
+    return score(b) - score(a);
+  });
+
+  const listing = ranked[0];
+  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  const channel = channels.find((item) => item.type === 0 && item.name === "🔥・contas-em-destaque");
+  if (!channel) return { updated: false };
+
+  const messages = await discord(`/channels/${channel.id}/messages?limit=50`) as any[];
+  const marker = "NexusGames • oferta-do-dia";
+  const current = messages.find((message) =>
+    message.author?.bot &&
+    message.embeds?.some((embed: any) => String(embed.footer?.text || "").startsWith(marker))
+  );
+
+  const sale = Number(listing.sale_price_brl || 0);
+  const highlights = Array.isArray(listing.public_snapshot?.skins)
+    ? listing.public_snapshot.skins
+        .slice(0, 3)
+        .map((item: any) => typeof item === "string" ? item : String(item?.name || item?.title || ""))
+        .filter(Boolean)
+    : [];
+
+  const dealPayload = {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      color: 0xfee75c,
+      title: `🔥 Oferta em destaque • ${displayTitle(listing)}`,
+      description: [
+        highlights.length ? `✨ **Destaques:** ${highlights.join(" • ")}` : null,
+        effectiveCount(listing, "skin") ? `🎨 **${effectiveCount(listing, "skin")} skins**` : null,
+        listing.change_email === "yes" ? "📧 **E-mail alterável:** ✅ Sim" : null,
+        "",
+        `## ${money(sale)}`,
+        "",
+        "⚡ Selecionada automaticamente entre as ofertas disponíveis da Nexus."
+      ].filter(Boolean).join("\n"),
+      image: {
+        url: `${STORE_URL}/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
+      },
+      footer: { text: `${marker} • ${listing.nexus_id}` }
+    }],
+    components: [{
+      type: 1,
+      components: [
+        { type: 2, style: 1, custom_id: `nexus:details:${listing.nexus_id}`, label: "Ver conta", emoji: { name: "🖼️" } },
+        { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
+      ]
+    }]
+  };
+
+  if (current) {
+    await discord(`/channels/${channel.id}/messages/${current.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(dealPayload)
+    });
+  } else {
+    await discord(`/channels/${channel.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify(dealPayload)
+    });
+  }
+
+  return { updated: true, nexusId: listing.nexus_id };
+}
+
 export async function syncFullCatalog(listings: NexusListing[], scanComplete = false) {
-  const result = await syncCatalogListings(listings);
-  if (!scanComplete) return { ...result, removed: 0 };
+  const [result, featured] = await Promise.all([
+    syncCatalogListings(listings),
+    syncFeaturedDeal(listings).catch(() => ({ updated: false }))
+  ]);
+  if (!scanComplete) return { ...result, removed: 0, featured };
 
   const rows = await db<CatalogRow[]>(
     "nexus_catalog_messages?select=nexus_id,discord_channel_id,discord_message_id,content_hash,status"
@@ -389,5 +473,5 @@ export async function syncFullCatalog(listings: NexusListing[], scanComplete = f
     }
   }).catch(() => null);
 
-  return { ...result, removed };
+  return { ...result, removed, featured };
 }
