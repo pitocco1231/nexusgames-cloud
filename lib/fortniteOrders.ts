@@ -11,7 +11,9 @@ import {
   getRewardProfile,
   releaseListingReservation,
   releaseListingReservationByUser,
+  releaseNexusCredit,
   releaseOrderEvent,
+  releaseReservedCoupon,
   reserveListingForCheckout,
   attachListingReservation,
   extendListingReservation,
@@ -352,24 +354,26 @@ export async function createFortniteCart(params: {
     embeds: [
       {
         color: 0x7c3aed,
-        title: `🎮 ${listing.nexus_id} • Conta Fortnite`,
+        title: `🎮 ${String(listing.title || "Conta Fortnite").slice(0, 92)}`,
         description: [
-          names.length ? `**Destaques:** ${names.join(" • ")}` : null,
-          `**Skins:** ${listing.skin_count || "não informado"}`,
-          `**Picaretas:** ${listing.pickaxe_count || "não informado"}`,
-          `**Emotes:** ${listing.emote_count || "não informado"}`,
-          listing.vbucks ? `**V-Bucks:** ${listing.vbucks}` : null,
-          `**Troca de e-mail:** ${listing.change_email === "yes" ? "✅ Sim" : listing.change_email === "no" ? "❌ Não" : "ℹ️ Verificar"}`,
+          "📍 **Etapa 1/3 • Revisão**",
+          names.length ? `✨ ${names.slice(0, 3).join(" • ")}` : null,
+          [
+            listing.skin_count ? `${listing.skin_count} skins` : null,
+            listing.pickaxe_count ? `${listing.pickaxe_count} picaretas` : null,
+            listing.emote_count ? `${listing.emote_count} emotes` : null
+          ].filter(Boolean).join(" • ") || null,
+          listing.vbucks ? `💠 ${Number(listing.vbucks).toLocaleString("pt-BR")} V-Bucks` : null,
+          `📧 E-mail alterável: ${listing.change_email === "yes" ? "✅ Sim" : listing.change_email === "no" ? "❌ Não" : "ℹ️ Verificar"}`,
           "",
-          couponDiscount > 0 || nexusCredit > 0 ? `Preço original: ~~${money(basePrice)}~~` : null,
-          couponDiscount > 0 ? `🎟️ **Cupom pessoal ${couponCode}: -${money(couponDiscount)}**` : null,
-          nexusCredit > 0 ? `💜 **Saldo Nexus usado: -${money(nexusCredit)}**` : null,
-          `### ${money(price)}`,
+          couponDiscount > 0 || nexusCredit > 0 ? `De: ~~${money(basePrice)}~~` : null,
+          couponDiscount > 0 ? `🎟️ Cupom: **-${money(couponDiscount)}**` : null,
+          nexusCredit > 0 ? `💜 Saldo Nexus: **-${money(nexusCredit)}**` : null,
+          `## ${money(price)}`,
           "",
-          "🔒 Esta conta fica reservada para você durante a etapa inicial do checkout.",
-          "🔄 Antes de gerar o Pix, a Nexus valida estoque, preço e margem novamente.",
-          "📱 No celular, use **Ver imagens** para conferir o locker sem carregar vários cards de uma vez.",
-          "⏳ Após o pagamento, a equipe valida a conta e abre o ticket de entrega."
+          "🔒 Reservada temporariamente para você.",
+          "🔄 Antes do Pix: nova checagem de estoque + preço + margem.",
+          "📱 Toque em **Ver imagens** para navegar pelo locker."
         ].filter(Boolean).join("\n"),
         image: {
           url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
@@ -401,10 +405,18 @@ export async function createFortniteCart(params: {
             custom_id: `nexus:details:${listing.nexus_id}`,
             label: "Ver imagens",
             emoji: { name: "🖼️" }
+          },
+          {
+            type: 2,
+            style: 4,
+            custom_id: `fortnite:cancel:${order.order_number}`,
+            label: "Cancelar",
+            emoji: { name: "✖️" }
           }
         ]
       }
-    ]
+    ],
+    footer: { text: `${listing.nexus_id} • Pedido ${order.order_number}` }
   });
 
   return { channelId: cart.channelId, orderNumber: order.order_number, listing };
@@ -481,6 +493,58 @@ export async function revalidateOrderForPayment(orderNumber: string, discordUser
   ).catch(() => null);
 
   return { available: true as const, listing, marginPercent: margin * 100 };
+}
+
+export async function cancelFortniteOrder(orderNumber: string, discordUserId: string) {
+  const data = await getOrderForAdmin(orderNumber);
+  if (!data?.order) throw new Error("Pedido não encontrado.");
+
+  const ownerId = String(data.user?.discord_user_id || "");
+  if (ownerId && ownerId !== discordUserId) throw new Error("Este pedido não pertence a você.");
+
+  const status = String(data.order.status || "");
+  if (["PAID","PURCHASING","DELIVERED"].includes(status)) {
+    throw new Error("Este pedido já avançou e não pode ser cancelado pelo carrinho.");
+  }
+
+  const now = new Date().toISOString();
+  await db(
+    `orders?id=eq.${encodeURIComponent(data.order.id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        status: "CANCELLED",
+        failure_reason: "Cancelado pelo cliente no checkout Fortnite.",
+        updated_at: now
+      })
+    }
+  );
+
+  await Promise.allSettled([
+    releaseReservedCoupon(orderNumber),
+    releaseNexusCredit(orderNumber),
+    releaseListingReservation(orderNumber)
+  ]);
+
+  await notifyCartStatus({
+    orderNumber,
+    status: "failed",
+    details: "Pedido cancelado pelo cliente. A reserva da conta foi liberada."
+  }).catch(() => null);
+
+  await nexusLog({
+    level: "info",
+    action: "order.cancelled",
+    entityType: "order",
+    entityId: orderNumber,
+    actorDiscordUserId: discordUserId,
+    title: "Pedido cancelado",
+    message: "O cliente cancelou o checkout antes do pagamento.",
+    discord: false
+  }).catch(() => null);
+
+  return { cancelled: true };
 }
 
 export async function getOrderForAdmin(orderNumber: string) {
