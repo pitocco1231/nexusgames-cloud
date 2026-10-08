@@ -426,13 +426,48 @@ export async function notifyCartStatus(params: {
   if (!channel) return { found: false };
 
   const configs = {
-    paid: { color: 0x57f287, title: "✅ Pagamento aprovado", text: "O Pix foi confirmado pelo Mercado Pago. Você não precisa fazer mais nada." },
-    validating: { color: 0x7c3aed, title: "🔎 Conta em validação", text: "A equipe iniciou seu atendimento e está validando a disponibilidade e os dados da conta antes da entrega." },
-    purchasing: { color: 0x5865f2, title: "⚡ Pedido em processamento", text: "Pagamento confirmado. Estamos enviando a solicitação ao fornecedor." },
-    delivered: { color: 0x57f287, title: "🎉 Pedido entregue", text: "A entrega foi confirmada. Confira a mensagem abaixo e também sua DM do Discord." },
-    failed: { color: 0xed4245, title: "❌ Falha na entrega", text: "Seu pagamento está registrado, mas a entrega precisa de atenção da equipe." },
-    refunded: { color: 0xfee75c, title: "↩️ Pedido reembolsado", text: "O fornecedor marcou este pedido como reembolsado. A equipe pode acompanhar pelo histórico do pedido." },
-    review: { color: 0xfee75c, title: "🛠️ Pedido em análise", text: "O pedido foi pausado para revisão de segurança antes de continuar." }
+    paid: {
+      color: 0x57f287,
+      title: "💠 Etapa 2/3 • Pagamento aprovado",
+      text: "Pix confirmado. Agora a Nexus valida a conta e prepara a entrega.",
+      progress: "✅ Revisão  →  ✅ Pagamento  →  ⏳ Entrega"
+    },
+    validating: {
+      color: 0x7c3aed,
+      title: "🔎 Etapa 2/3 • Validação",
+      text: "A equipe está conferindo disponibilidade e condições da conta.",
+      progress: "✅ Revisão  →  ✅ Pagamento  →  🔎 Validação"
+    },
+    purchasing: {
+      color: 0x5865f2,
+      title: "⚡ Etapa 2/3 • Preparando conta",
+      text: "Pagamento confirmado. A equipe está processando a oferta no fornecedor.",
+      progress: "✅ Revisão  →  ✅ Pagamento  →  ⚡ Preparando"
+    },
+    delivered: {
+      color: 0x57f287,
+      title: "🎉 Etapa 3/3 • Pedido entregue",
+      text: "Entrega concluída. Confira os dados somente no ticket privado.",
+      progress: "✅ Revisão  →  ✅ Pagamento  →  ✅ Entrega"
+    },
+    failed: {
+      color: 0xed4245,
+      title: "❌ Pedido interrompido",
+      text: "O checkout foi interrompido ou precisa de atenção. Veja o motivo abaixo.",
+      progress: "⛔ Fluxo interrompido"
+    },
+    refunded: {
+      color: 0xfee75c,
+      title: "↩️ Pedido reembolsado",
+      text: "O pagamento foi marcado como reembolsado.",
+      progress: "✅ Pagamento  →  ↩️ Reembolso"
+    },
+    review: {
+      color: 0xfee75c,
+      title: "🛠️ Pedido em análise",
+      text: "O pedido foi pausado para revisão de segurança.",
+      progress: "✅ Pagamento  →  🛠️ Análise"
+    }
   } as const;
   const config = configs[params.status];
 
@@ -465,6 +500,8 @@ export async function notifyCartStatus(params: {
       color: config.color,
       title: config.title,
       description: [
+        `**${config.progress}**`,
+        "",
         `Pedido: **${params.orderNumber}**`,
         config.text,
         params.details ? `\n${params.details}` : null
