@@ -9,7 +9,12 @@ import {
   getAvailableUserCoupon,
   getListing,
   getRewardProfile,
+  releaseListingReservation,
+  releaseListingReservationByUser,
   releaseOrderEvent,
+  reserveListingForCheckout,
+  attachListingReservation,
+  extendListingReservation,
   reserveNexusCredit,
   reserveUserCoupon
 } from "./nexusData";
@@ -119,7 +124,30 @@ export async function createFortniteOrder(params: {
   const existing = await db<any[]>(
     `orders?select=*&idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`
   );
-  if (existing?.[0]) return { order: existing[0], listing, created: false };
+  if (existing?.[0]) {
+    await reserveListingForCheckout({
+      nexusId: listing.nexus_id,
+      discordUserId: params.discordUserId,
+      minutes: 15
+    }).catch(() => false);
+    await attachListingReservation({
+      nexusId: listing.nexus_id,
+      discordUserId: params.discordUserId,
+      orderNumber: existing[0].order_number,
+      minutes: 15
+    }).catch(() => false);
+    return { order: existing[0], listing, created: false };
+  }
+
+  const reserved = await reserveListingForCheckout({
+    nexusId: listing.nexus_id,
+    discordUserId: params.discordUserId,
+    minutes: 15
+  });
+
+  if (!reserved) {
+    throw new Error("Essa conta já está sendo finalizada por outro cliente. Tente novamente em alguns minutos ou escolha outra.");
+  }
 
   const cost = Number(listing.cost_brl || 0);
   const minimumSaleForMargin = cost > 0 ? cost / 0.7 : 0;
@@ -186,7 +214,28 @@ export async function createFortniteOrder(params: {
   });
 
   const created = createdRows?.[0];
-  if (!created) throw new Error("Não foi possível criar o pedido Fortnite.");
+  if (!created) {
+    await releaseListingReservationByUser({
+      nexusId: listing.nexus_id,
+      discordUserId: params.discordUserId
+    }).catch(() => false);
+    throw new Error("Não foi possível criar o pedido Fortnite.");
+  }
+
+  const attached = await attachListingReservation({
+    nexusId: listing.nexus_id,
+    discordUserId: params.discordUserId,
+    orderNumber: created.order_number,
+    minutes: 15
+  }).catch(() => false);
+
+  if (!attached) {
+    await releaseListingReservationByUser({
+      nexusId: listing.nexus_id,
+      discordUserId: params.discordUserId
+    }).catch(() => false);
+    throw new Error("Não foi possível reservar essa conta para o checkout.");
+  }
 
   let appliedCoupon: any = null;
   if (couponDiscount > 0 && coupon?.id) {
@@ -317,8 +366,9 @@ export async function createFortniteCart(params: {
           nexusCredit > 0 ? `💜 **Saldo Nexus usado: -${money(nexusCredit)}**` : null,
           `### ${money(price)}`,
           "",
-          "🔄 A disponibilidade e o preço foram revalidados antes de abrir este carrinho.",
-          "🔐 O fornecedor e o custo original ficam visíveis apenas para a administração.",
+          "🔒 Esta conta fica reservada para você durante a etapa inicial do checkout.",
+          "🔄 Antes de gerar o Pix, a Nexus valida estoque, preço e margem novamente.",
+          "📱 No celular, use **Ver imagens** para conferir o locker sem carregar vários cards de uma vez.",
           "⏳ Após o pagamento, a equipe valida a conta e abre o ticket de entrega."
         ].filter(Boolean).join("\n"),
         image: {
@@ -358,6 +408,79 @@ export async function createFortniteCart(params: {
   });
 
   return { channelId: cart.channelId, orderNumber: order.order_number, listing };
+}
+
+export async function revalidateOrderForPayment(orderNumber: string, discordUserId: string) {
+  const data = await getOrderForAdmin(orderNumber);
+  if (!data?.order) throw new Error("Pedido não encontrado.");
+
+  const orderUserId = String(data.user?.discord_user_id || "");
+  if (orderUserId && orderUserId !== discordUserId) {
+    throw new Error("Este pedido não pertence a você.");
+  }
+
+  const nexusId = String(data.order.fulfillment_data?.nexus_id || "");
+  if (!nexusId) throw new Error("Pedido sem Nexus ID.");
+
+  const validation = await revalidateListing(nexusId);
+  if (!validation.available || !validation.listing) {
+    await releaseListingReservation(orderNumber).catch(() => false);
+    throw new Error("Essa conta foi vendida antes do pagamento. A Nexus não gerou nenhuma cobrança.");
+  }
+
+  const listing = validation.listing;
+  const sale = Number(data.order.total_price_brl || 0);
+  const cost = Number(listing.cost_brl || 0);
+  const margin = sale > 0 && cost > 0 ? (sale - cost) / sale : 0;
+
+  if (!Number.isFinite(sale) || sale <= 0 || !Number.isFinite(cost) || cost <= 0 || margin < 0.30) {
+    await releaseListingReservation(orderNumber).catch(() => false);
+    throw new Error("O preço do fornecedor mudou e essa compra não atende mais a margem segura da Nexus. Escolha outra oferta.");
+  }
+
+  const reserved = await reserveListingForCheckout({
+    nexusId,
+    discordUserId,
+    minutes: 35
+  });
+  if (!reserved) {
+    throw new Error("Essa conta está reservada por outro cliente.");
+  }
+
+  const attached = await attachListingReservation({
+    nexusId,
+    discordUserId,
+    orderNumber,
+    minutes: 35
+  });
+  if (!attached) throw new Error("Não foi possível manter a reserva dessa conta.");
+
+  await extendListingReservation({
+    orderNumber,
+    status: "pix_created",
+    minutes: 35
+  }).catch(() => false);
+
+  const fulfillment = {
+    ...(data.order.fulfillment_data || {}),
+    supplier_cost_brl: cost,
+    margin_percent: margin * 100,
+    last_payment_revalidation_at: new Date().toISOString()
+  };
+
+  await db(
+    `orders?id=eq.${encodeURIComponent(data.order.id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        fulfillment_data: fulfillment,
+        updated_at: new Date().toISOString()
+      })
+    }
+  ).catch(() => null);
+
+  return { available: true as const, listing, marginPercent: margin * 100 };
 }
 
 export async function getOrderForAdmin(orderNumber: string) {
@@ -591,6 +714,8 @@ export async function setOrderDelivered(orderNumber: string) {
         : null
     ].filter(Boolean).join("\n")
   }).catch(() => null);
+
+  await releaseListingReservation(orderNumber).catch(() => false);
 
   await nexusLog({
     level: "success",
