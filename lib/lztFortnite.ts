@@ -588,7 +588,11 @@ export async function revalidateListing(nexusId: string) {
     if (!refreshed) {
       await markListingStatus(nexusId, "sold");
       const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
-      await notifyFavoriteUnavailable({ ...listing, status: "sold" }).catch(() => null);
+      const { removeCatalogListing } = await import("./nexusCatalog");
+      await Promise.allSettled([
+        notifyFavoriteUnavailable({ ...listing, status: "sold" }),
+        removeCatalogListing(nexusId)
+      ]);
       return { available: false as const, listing: null };
     }
     if (listing.supplier_user_id && refreshed.supplier_user_id && listing.supplier_user_id !== refreshed.supplier_user_id) {
@@ -602,7 +606,11 @@ export async function revalidateListing(nexusId: string) {
     if ([403,404].includes(Number(error?.status))) {
       await markListingStatus(nexusId, "sold");
       const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
-      await notifyFavoriteUnavailable({ ...listing, status: "sold" }).catch(() => null);
+      const { removeCatalogListing } = await import("./nexusCatalog");
+      await Promise.allSettled([
+        notifyFavoriteUnavailable({ ...listing, status: "sold" }),
+        removeCatalogListing(nexusId)
+      ]);
       return { available: false as const, listing: null };
     }
     throw error;
