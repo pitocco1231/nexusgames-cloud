@@ -21,6 +21,7 @@ type ChannelConfig = {
   aliases: readonly string[];
   topic: string;
   type?: 0 | 2;
+  readOnly?: boolean;
 };
 
 type GroupConfig = {
@@ -71,6 +72,7 @@ const GROUPS: readonly GroupConfig[] = [
     aliases: ["🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦"],
     channels: [
       { target: "🔎・buscar-conta", aliases: ["🔎・buscar-conta"], topic: "Canal principal para pesquisar contas Fortnite por skin, picareta, emote, asa-delta e filtros." },
+      { target: "📚・todas-as-contas", aliases: ["📚・todas-as-contas"], topic: "Catálogo público com todas as contas Fortnite disponíveis nos fornecedores aprovados.", readOnly: true },
       { target: "🧩・como-pesquisar", aliases: ["🧩・como-pesquisar"], topic: "Exemplos e dicas para encontrar a conta certa usando os filtros Nexus." },
       { target: "🔥・contas-em-destaque", aliases: ["🔥・contas-em-destaque"], topic: "Melhores oportunidades encontradas pela NexusGames." },
       { target: "🆕・novas-contas", aliases: ["🆕・novas-contas"], topic: "Novas contas encontradas nos fornecedores autorizados." },
@@ -222,6 +224,19 @@ const PANELS = [
     marker: "nexus-status-v1",
     title: "🟢 STATUS NEXUS",
     description: publicSystemStatusDescription()
+  },
+  {
+    channel: "📚・todas-as-contas",
+    marker: "nexus-catalog-v1",
+    title: "📚 TODAS AS CONTAS",
+    description: [
+      "> Catálogo atualizado das contas Fortnite disponíveis na NexusGames.",
+      "",
+      "Cada publicação abaixo representa uma conta disponível em um fornecedor aprovado.",
+      "Use **Ver detalhes** para conferir as imagens e **Comprar** para abrir seu carrinho privado.",
+      "",
+      "🔄 Preço e disponibilidade são revalidados novamente antes do pagamento."
+    ].join("\n")
   },
   {
     channel: "🔎・buscar-conta",
@@ -505,7 +520,12 @@ async function ensureChannel(existing: Channel[], parentId: string, config: Chan
         name: config.target,
         type: desiredType,
         parent_id: parentId,
-        ...(desiredType === 0 ? { topic: config.topic } : {})
+        ...(desiredType === 0 ? { topic: config.topic } : {}),
+        ...(desiredType === 0 && config.readOnly ? {
+          permission_overwrites: [
+            { id: GUILD_ID, type: 0, allow: "66560", deny: "2048" }
+          ]
+        } : {})
       })
     }) as Channel;
     existing.push(channel);
@@ -516,6 +536,11 @@ async function ensureChannel(existing: Channel[], parentId: string, config: Chan
   if (channel.name !== config.target) changes.name = config.target;
   if (channel.parent_id !== parentId) changes.parent_id = parentId;
   if (desiredType === 0 && channel.topic !== config.topic) changes.topic = config.topic;
+  if (desiredType === 0 && config.readOnly) {
+    changes.permission_overwrites = [
+      { id: GUILD_ID, type: 0, allow: "66560", deny: "2048" }
+    ];
+  }
 
   if (Object.keys(changes).length) {
     channel = await discord(`/channels/${channel.id}`, {
@@ -614,6 +639,7 @@ export async function getFortniteStoreNavigation() {
   const channels = await discord(`/guilds/${GUILD_ID}/channels`) as Channel[];
   const items = [
     { key: "buscar", label: "Buscar conta", emoji: "🔎", names: ["🔎・buscar-conta"] },
+    { key: "catalogo", label: "Todas as contas", emoji: "📚", names: ["📚・todas-as-contas"] },
     { key: "destaques", label: "Contas em destaque", emoji: "🔥", names: ["🔥・contas-em-destaque"] },
     { key: "novas", label: "Novas contas", emoji: "🆕", names: ["🆕・novas-contas"] },
     { key: "procurando", label: "Procurando conta", emoji: "🎯", names: ["🎯・procurando-conta"] },
