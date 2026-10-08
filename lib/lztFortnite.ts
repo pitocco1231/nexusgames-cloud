@@ -487,10 +487,41 @@ export async function fetchAllSupplierListings() {
     .filter((listing) => listing.status === "available")
     .sort((a, b) => Number(a.sale_price_brl || 0) - Number(b.sale_price_brl || 0));
 
+  const previousRows = await getListingsByIds(listings.map((item) => item.nexus_id)).catch(() => []);
+  const previous = new Map(previousRows.map((item) => [item.nexus_id, item]));
+  const newListings = listings.filter((listing) => !previous.has(listing.nexus_id));
+
   await upsertListings(listings);
+
+  if (listings.length) {
+    const { notifyFavoriteChanges, notifyMatchingWatches, publishDiscoveredListings } = await import("./nexusNotifications");
+    const rankedForAnnouncements = listings
+      .map((listing) => ({
+        listing,
+        score: scoreListing(listing, {
+          discordUserId: "system",
+          itemType: "best",
+          itemQuery: null,
+          maxPriceBrl: 500,
+          minSkins: 0,
+          changeEmail: "nomatter"
+        } as NexusSearchInput)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    await Promise.allSettled([
+      notifyMatchingWatches(listings),
+      notifyFavoriteChanges({ previous, current: listings }),
+      newListings.length
+        ? publishDiscoveredListings({ newListings, ranked: rankedForAnnouncements })
+        : Promise.resolve(null)
+    ]);
+  }
 
   return {
     listings,
+    newListings,
     completedSuppliers,
     failedSuppliers,
     complete: failedSuppliers.length === 0
