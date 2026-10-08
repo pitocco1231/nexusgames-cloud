@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await maybeRunInventoryMonitor(true);
+    const result = await maybeRunInventoryMonitor(false);
     return Response.json({ ok: true, result });
   } catch (error) {
     return Response.json({
