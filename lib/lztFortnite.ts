@@ -401,6 +401,92 @@ export function getFinderConfigurationStatus() {
   };
 }
 
+export async function fetchAllSupplierListings() {
+  const sellers = supplierIds();
+  if (!sellers.length) {
+    throw new Error("O catálogo da Nexus está temporariamente indisponível.");
+  }
+
+  const minMargin = Math.max(
+    0.3,
+    Math.min(0.5, asNumber(process.env.NEXUS_MIN_MARGIN_PERCENT, 30) / 100)
+  );
+  const reserve = Math.max(
+    0,
+    Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 5) / 100)
+  );
+  const supplierMax = Math.floor(500 * (1 - minMargin) / (1 + reserve));
+  const maxPages = Math.max(
+    1,
+    Math.min(10, Math.floor(asNumber(process.env.NEXUS_CATALOG_MAX_PAGES, 6)))
+  );
+
+  const collected: NexusListing[] = [];
+  const completedSuppliers: string[] = [];
+  const failedSuppliers: string[] = [];
+
+  for (let sellerIndex = 0; sellerIndex < sellers.length; sellerIndex += 1) {
+    const sellerId = sellers[sellerIndex];
+    let sellerOk = true;
+    let previousFingerprint = "";
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const params = new URLSearchParams();
+      params.set("epicgames_game[]", "fortnite");
+      params.set("user_id", sellerId);
+      params.set("currency", "BRL");
+      params.set("pmax", String(Math.max(1, supplierMax)));
+      params.set("order_by", "price_to_up");
+      params.set("change_email", "nomatter");
+      params.set("page", String(page));
+      params.append("origin[]", "personal");
+      params.append("origin[]", "resale");
+
+      try {
+        const payload = await lzt(`/epicgames?${params.toString()}`);
+        const items = flattenItems(payload);
+        if (!items.length) break;
+
+        const ids = items.map(itemId).filter(Boolean);
+        const fingerprint = ids.join(",");
+        if (page > 1 && fingerprint && fingerprint === previousFingerprint) break;
+        previousFingerprint = fingerprint;
+
+        for (const item of items) {
+          const listing = listingFromItem(item, 500);
+          if (!listing) continue;
+          if (listing.supplier_user_id && listing.supplier_user_id !== sellerId) continue;
+          collected.push(listing);
+        }
+
+        if (page < maxPages) await sleep(250);
+      } catch (error) {
+        sellerOk = false;
+        console.error("Nexus catalog supplier scan error", sellerId, page, error);
+        break;
+      }
+    }
+
+    if (sellerOk) completedSuppliers.push(sellerId);
+    else failedSuppliers.push(sellerId);
+
+    if (sellerIndex < sellers.length - 1) await sleep(3100);
+  }
+
+  const listings = [...new Map(collected.map((item) => [item.nexus_id, item])).values()]
+    .filter((listing) => listing.status === "available")
+    .sort((a, b) => Number(a.sale_price_brl || 0) - Number(b.sale_price_brl || 0));
+
+  await upsertListings(listings);
+
+  return {
+    listings,
+    completedSuppliers,
+    failedSuppliers,
+    complete: failedSuppliers.length === 0
+  };
+}
+
 export async function searchFortniteAccounts(input: NexusSearchInput): Promise<FinderResult[]> {
   const sellers = supplierIds();
   if (!sellers.length) {
@@ -450,9 +536,11 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
 
   if (unique.length) {
     const { notifyFavoriteChanges, notifyMatchingWatches } = await import("./nexusNotifications");
+    const { syncCatalogListings } = await import("./nexusCatalog");
     await Promise.allSettled([
       notifyMatchingWatches(unique),
-      notifyFavoriteChanges({ previous, current: unique })
+      notifyFavoriteChanges({ previous, current: unique }),
+      syncCatalogListings(unique)
     ]);
   }
 
