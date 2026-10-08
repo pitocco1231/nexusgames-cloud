@@ -1128,9 +1128,11 @@ export async function POST(request: Request) {
         typeof customId === "string" &&
         (
           customId.startsWith("nexus:details:") ||
+          customId.startsWith("nexus:image:") ||
           customId.startsWith("nexus:favorite:") ||
           customId.startsWith("nexus:compare:") ||
           customId === "nexus:compare-clear" ||
+          customId.startsWith("catalog:") ||
           customId === "finder:favorites" ||
           customId === "finder:watches" ||
           customId === "finder:compare" ||
