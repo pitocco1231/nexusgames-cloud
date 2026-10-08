@@ -717,7 +717,7 @@ export async function handleFinderAction(params: {
     if (!["skins","pickaxes","dances","gliders"].includes(imageType) || !nexusId) {
       return { type: 4, data: { flags: 64, content: "❌ Imagem inválida." } };
     }
-    return { type: 4, data: { flags: 64, ...(await detailsPayload(nexusId, imageType)) } };
+    return { type: 7, data: { ...(await detailsPayload(nexusId, imageType)) } };
   }
 
   if (id.startsWith("nexus:favorite:")) {
