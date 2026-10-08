@@ -33,6 +33,7 @@ import {
   watchesPayload
 } from "../../../../lib/nexusFinderDiscord";
 import {
+  cancelFortniteOrder,
   getOrderForAdmin,
   notifyFortnitePaidSale,
   postPurchaseTicketSummary,
@@ -938,6 +939,26 @@ export async function POST(request: Request) {
         interactionToken: interaction.token
       }));
       return json({ type: 5, data: { flags: 64 } });
+    }
+
+    if (earlyCustomId.startsWith("fortnite:cancel:")) {
+      if (!actor?.id) {
+        return json({ type: 4, data: { flags: 64, content: "❌ Não consegui identificar seu pedido." } });
+      }
+      const orderNumber = earlyCustomId.slice("fortnite:cancel:".length);
+      try {
+        await cancelFortniteOrder(orderNumber, actor.id);
+        return json({
+          type: 4,
+          data: {
+            flags: 64,
+            content: "🔒 Pedido cancelado. A reserva da conta foi liberada."
+          }
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro inesperado";
+        return json({ type: 4, data: { flags: 64, content: `❌ ${message}` } });
+      }
     }
 
     if (earlyCustomId.startsWith("fortnite:open-ticket:")) {
