@@ -14,6 +14,7 @@ import {
   reserveUserCoupon
 } from "./nexusData";
 import { revalidateListing } from "./lztFortnite";
+import { nexusLog } from "./nexusLogger";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
@@ -249,6 +250,23 @@ export async function createFortniteOrder(params: {
     fulfillment_data: fulfillmentData
   };
 
+  await nexusLog({
+    level: "info",
+    action: "order.created",
+    entityType: "order",
+    entityId: String(order.order_number || created.order_number || ""),
+    actorDiscordUserId: params.discordUserId,
+    title: "🛒 Pedido Fortnite criado",
+    message: "Um novo carrinho de conta Fortnite foi criado.",
+    metadata: {
+      nexus_id: listing.nexus_id,
+      total_brl: finalPrice,
+      coupon_discount_brl: actualCouponDiscount,
+      nexus_credit_brl: reservedCredit,
+      margin_percent: Number(finalMargin.toFixed(2))
+    }
+  }).catch(() => null);
+
   return { order, listing, created: true };
 }
 
@@ -383,7 +401,7 @@ export async function notifyFortnitePaidSale(orderNumber: string) {
   const supplierUrl = String(fulfillment.supplier_url || listing?.private_snapshot?.supplier_url || "");
 
   try {
-    return await discord(`/channels/${channel.id}/messages`, {
+    const result = await discord(`/channels/${channel.id}/messages`, {
     method: "POST",
     body: JSON.stringify({
       allowed_mentions: { parse: [] },
@@ -434,6 +452,24 @@ export async function notifyFortnitePaidSale(orderNumber: string) {
       ]
     })
     });
+
+    await nexusLog({
+      level: "success",
+      action: "payment.approved",
+      entityType: "order",
+      entityId: data.order.order_number,
+      actorDiscordUserId: userId || null,
+      title: "💠 Pagamento aprovado",
+      message: "Pagamento confirmado e venda enviada para a fila administrativa.",
+      metadata: {
+        nexus_id: nexusId || null,
+        total_brl: sale,
+        gross_profit_brl: Number(profit.toFixed(2)),
+        margin_percent: Number(margin.toFixed(2))
+      }
+    }).catch(() => null);
+
+    return result;
   } catch (error) {
     await releaseOrderEvent(orderNumber, "admin_paid_sale").catch(() => null);
     throw error;
@@ -554,6 +590,22 @@ export async function setOrderDelivered(orderNumber: string) {
         ? `🎟️ Novo cupom pessoal: **${reward.coupon.code}** (${Number(reward.coupon.discount_percent || 0)}% de desconto, limitado a ${money(Number(reward.coupon.max_discount_brl || 0))}).`
         : null
     ].filter(Boolean).join("\n")
+  }).catch(() => null);
+
+  await nexusLog({
+    level: "success",
+    action: "order.delivered",
+    entityType: "order",
+    entityId: orderNumber,
+    actorDiscordUserId: userId || null,
+    title: "✅ Pedido entregue",
+    message: "A equipe marcou o pedido como entregue.",
+    metadata: {
+      total_brl: total,
+      cashback_brl: Number(reward?.cashback || 0),
+      vip_level: reward?.vip_level || null,
+      coupon_created: Boolean(reward?.coupon?.code)
+    }
   }).catch(() => null);
 
   return { order: rows?.[0] || data.order, user: data.user, reward };
