@@ -618,8 +618,7 @@ export async function markReviewPublished(reviewId: string) {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
-        published: true,
-        updated_at: new Date().toISOString()
+        published: true
       })
     }
   ).catch(() => []);
