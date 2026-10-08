@@ -328,6 +328,92 @@ export async function releaseNexusCredit(orderNumber: string) {
   return Number(result || 0);
 }
 
+export async function reserveListingForCheckout(params: {
+  nexusId: string;
+  discordUserId: string;
+  minutes?: number;
+}) {
+  const result = await rpc<boolean>("reserve_nexus_listing", {
+    p_nexus_id: params.nexusId,
+    p_discord_user_id: params.discordUserId,
+    p_minutes: Math.max(2, Math.min(180, params.minutes || 15))
+  });
+  return Boolean(result);
+}
+
+export async function attachListingReservation(params: {
+  nexusId: string;
+  discordUserId: string;
+  orderNumber: string;
+  minutes?: number;
+}) {
+  const result = await rpc<boolean>("attach_nexus_listing_reservation", {
+    p_nexus_id: params.nexusId,
+    p_discord_user_id: params.discordUserId,
+    p_order_number: params.orderNumber,
+    p_minutes: Math.max(2, Math.min(180, params.minutes || 15))
+  });
+  return Boolean(result);
+}
+
+export async function extendListingReservation(params: {
+  orderNumber: string;
+  status: "reserved" | "pix_created" | "paid";
+  minutes: number;
+}) {
+  const result = await rpc<boolean>("extend_nexus_listing_reservation", {
+    p_order_number: params.orderNumber,
+    p_status: params.status,
+    p_minutes: Math.max(2, Math.min(360, params.minutes))
+  }).catch(() => false);
+  return Boolean(result);
+}
+
+export async function releaseListingReservation(orderNumber: string) {
+  const result = await rpc<boolean>("release_nexus_listing_reservation", {
+    p_order_number: orderNumber
+  }).catch(() => false);
+  return Boolean(result);
+}
+
+export async function releaseListingReservationByUser(params: {
+  nexusId: string;
+  discordUserId: string;
+}) {
+  const result = await rpc<boolean>("release_nexus_listing_reservation_by_user", {
+    p_nexus_id: params.nexusId,
+    p_discord_user_id: params.discordUserId
+  }).catch(() => false);
+  return Boolean(result);
+}
+
+export async function tryAcquireBackgroundJob(params: {
+  jobName: string;
+  minIntervalSeconds?: number;
+  leaseSeconds?: number;
+}) {
+  const result = await rpc<boolean>("try_acquire_nexus_job", {
+    p_job_name: params.jobName,
+    p_min_interval_seconds: Math.max(30, params.minIntervalSeconds || 180),
+    p_lease_seconds: Math.max(30, params.leaseSeconds || 120)
+  }).catch(() => false);
+  return Boolean(result);
+}
+
+export async function finishBackgroundJob(jobName: string, result: Record<string, unknown> = {}) {
+  await rpc("finish_nexus_job", {
+    p_job_name: jobName,
+    p_result: result
+  }).catch(() => null);
+}
+
+export async function failBackgroundJob(jobName: string, result: Record<string, unknown> = {}) {
+  await rpc("fail_nexus_job", {
+    p_job_name: jobName,
+    p_result: result
+  }).catch(() => null);
+}
+
 export async function listUserCoupons(discordUserId: string) {
   return request<any[]>(
     `nexus_user_coupons?select=*&discord_user_id=eq.${encodeURIComponent(discordUserId)}&active=eq.true&order=created_at.desc&limit=20`
