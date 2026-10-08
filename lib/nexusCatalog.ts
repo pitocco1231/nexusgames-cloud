@@ -40,6 +40,11 @@ async function discord(path: string, init: RequestInit = {}) {
     const body = await response.text();
     const error = new Error(`Discord ${response.status}: ${body.slice(0, 300)}`);
     (error as any).status = response.status;
+    try {
+      const parsed = JSON.parse(body);
+      (error as any).code = parsed?.code;
+      (error as any).retryAfter = Number(parsed?.retry_after || 0);
+    } catch {}
     throw error;
   }
 
@@ -298,6 +303,8 @@ export async function syncCatalogListings(listings: NexusListing[]) {
     const messagePayload = payload(listing);
     let message: any = null;
 
+    let replaceOldMessage = false;
+
     if (existing && existing.discord_channel_id === channel.id) {
       try {
         message = await discord(
@@ -308,7 +315,30 @@ export async function syncCatalogListings(listings: NexusListing[]) {
           }
         );
       } catch (error: any) {
-        if (Number(error?.status) !== 404) throw error;
+        const status = Number(error?.status || 0);
+        const code = Number(error?.code || 0);
+
+        if (status === 404) {
+          message = null;
+        } else if (status === 429 && code === 30046) {
+          // Discord limita a quantidade de edições de mensagens antigas.
+          // Recriar a vitrine é mais confiável do que abortar a sincronização inteira.
+          replaceOldMessage = true;
+          message = null;
+        } else if (status === 429 && Number(error?.retryAfter || 0) > 0) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.min(5000, Math.ceil(Number(error.retryAfter) * 1000)))
+          );
+          message = await discord(
+            `/channels/${channel.id}/messages/${existing.discord_message_id}`,
+            {
+              method: "PATCH",
+              body: JSON.stringify(messagePayload)
+            }
+          );
+        } else {
+          throw error;
+        }
       }
     }
 
@@ -317,6 +347,13 @@ export async function syncCatalogListings(listings: NexusListing[]) {
         method: "POST",
         body: JSON.stringify(messagePayload)
       });
+
+      if (replaceOldMessage && existing?.discord_message_id) {
+        await discord(
+          `/channels/${channel.id}/messages/${existing.discord_message_id}`,
+          { method: "DELETE" }
+        ).catch(() => null);
+      }
     }
 
     await saveRow({
@@ -413,10 +450,26 @@ async function syncFeaturedDeal(listings: NexusListing[]) {
   };
 
   if (current) {
-    await discord(`/channels/${channel.id}/messages/${current.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(dealPayload)
-    });
+    try {
+      await discord(`/channels/${channel.id}/messages/${current.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(dealPayload)
+      });
+    } catch (error: any) {
+      if (Number(error?.status || 0) === 429 && Number(error?.code || 0) === 30046) {
+        const replacement = await discord(`/channels/${channel.id}/messages`, {
+          method: "POST",
+          body: JSON.stringify(dealPayload)
+        });
+        if (replacement) {
+          await discord(`/channels/${channel.id}/messages/${current.id}`, {
+            method: "DELETE"
+          }).catch(() => null);
+        }
+      } else {
+        throw error;
+      }
+    }
   } else {
     await discord(`/channels/${channel.id}/messages`, {
       method: "POST",
