@@ -15,6 +15,7 @@ import {
 } from "../../../../lib/mercadopago";
 import { grantCustomerRole } from "../../../../lib/roles";
 import { syncMercadoPagoOrder } from "../../../../lib/supabase";
+import { nexusLog, nexusLogError } from "../../../../lib/nexusLogger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,22 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
           orderNumber: synced.order.order_number,
           status: "paid"
         }).catch(() => null);
+
+        await nexusLog({
+          level: "success",
+          action: "mercadopago.paid",
+          entityType: "payment",
+          entityId: String(dataId),
+          actorDiscordUserId: synced.discordUserId || null,
+          title: "💠 Pix aprovado",
+          message: "O Mercado Pago confirmou o pagamento do pedido.",
+          metadata: {
+            order_number: synced.order.order_number,
+            mode,
+            product_id: synced.order.product_id,
+            total_brl: Number(synced.order.total_price_brl || 0)
+          }
+        }).catch(() => null);
       } else if (["CANCELLED", "FAILED"].includes(String(synced.order.status || ""))) {
         await Promise.allSettled([
           releaseReservedCoupon(synced.order.order_number),
@@ -56,6 +73,21 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
           status: "failed",
           details: `Status do pagamento: ${synced.order.status}`
         }).catch(() => null);
+
+        await nexusLog({
+          level: "warning",
+          action: "mercadopago.failed",
+          entityType: "payment",
+          entityId: String(dataId),
+          actorDiscordUserId: synced.discordUserId || null,
+          title: "⚠️ Pagamento não concluído",
+          message: "O Mercado Pago retornou o pedido como cancelado ou falhou.",
+          metadata: {
+            order_number: synced.order.order_number,
+            mode,
+            status: synced.order.status
+          }
+        }).catch(() => null);
       } else if (String(synced.order.status || "") === "REFUNDED") {
         await Promise.allSettled([
           releaseReservedCoupon(synced.order.order_number),
@@ -64,6 +96,20 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
           status: "refunded"
+        }).catch(() => null);
+
+        await nexusLog({
+          level: "warning",
+          action: "mercadopago.refunded",
+          entityType: "payment",
+          entityId: String(dataId),
+          actorDiscordUserId: synced.discordUserId || null,
+          title: "↩️ Pagamento reembolsado",
+          message: "O Mercado Pago marcou o pagamento como reembolsado.",
+          metadata: {
+            order_number: synced.order.order_number,
+            mode
+          }
         }).catch(() => null);
       }
     }
@@ -96,6 +142,15 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
       `NexusGames: falha no processamento assincrono do webhook ${mode}`,
       error instanceof Error ? error.message : error
     );
+    await nexusLogError({
+      action: "mercadopago.webhook_error",
+      entityType: "payment",
+      entityId: dataId,
+      title: "Erro no webhook Mercado Pago",
+      message: "Falha ao processar uma atualização de pagamento.",
+      metadata: { mode },
+      error
+    }).catch(() => null);
   }
 }
 
@@ -133,11 +188,30 @@ export async function POST(request: Request) {
     });
 
     if (!valid) {
+      await nexusLog({
+        level: "warning",
+        action: "mercadopago.invalid_signature",
+        entityType: "webhook",
+        entityId: dataId,
+        title: "Assinatura inválida no webhook",
+        message: "Uma chamada do webhook foi rejeitada por assinatura inválida.",
+        metadata: { mode, request_id_present: Boolean(requestId) },
+        discord: false
+      }).catch(() => null);
       return Response.json({ ok: false, reason: "invalid_signature" }, { status: 401 });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";
     console.error(`NexusGames Mercado Pago ${mode} webhook validation error`, message);
+    await nexusLogError({
+      action: "mercadopago.validation_error",
+      entityType: "webhook",
+      entityId: dataId,
+      title: "Erro de validação Mercado Pago",
+      message: "O webhook não pôde ser validado.",
+      metadata: { mode },
+      error
+    }).catch(() => null);
 
     if (message.includes("WEBHOOK_SECRET")) {
       return Response.json({ ok: false, reason: "webhook_not_configured", mode }, { status: 503 });
