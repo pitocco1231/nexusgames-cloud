@@ -1,9 +1,11 @@
 import { after } from "next/server";
 import { notifyCartStatus } from "../../../../lib/cart";
-import { notifyFortnitePaidSale } from "../../../../lib/fortniteOrders";
+import { notifyFortnitePaidSale, revalidateOrderListing } from "../../../../lib/fortniteOrders";
 import {
   consumeNexusCredit,
   consumeReservedCoupon,
+  extendListingReservation,
+  releaseListingReservation,
   releaseNexusCredit,
   releaseReservedCoupon
 } from "../../../../lib/nexusData";
@@ -41,7 +43,12 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
       if (synced.isPaid) {
         await Promise.allSettled([
           consumeReservedCoupon(synced.order.order_number),
-          consumeNexusCredit(synced.order.order_number)
+          consumeNexusCredit(synced.order.order_number),
+          extendListingReservation({
+            orderNumber: synced.order.order_number,
+            status: "paid",
+            minutes: 180
+          })
         ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
@@ -66,7 +73,8 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
       } else if (["CANCELLED", "FAILED"].includes(String(synced.order.status || ""))) {
         await Promise.allSettled([
           releaseReservedCoupon(synced.order.order_number),
-          releaseNexusCredit(synced.order.order_number)
+          releaseNexusCredit(synced.order.order_number),
+          releaseListingReservation(synced.order.order_number)
         ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
@@ -91,7 +99,8 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
       } else if (String(synced.order.status || "") === "REFUNDED") {
         await Promise.allSettled([
           releaseReservedCoupon(synced.order.order_number),
-          releaseNexusCredit(synced.order.order_number)
+          releaseNexusCredit(synced.order.order_number),
+          releaseListingReservation(synced.order.order_number)
         ]);
         await notifyCartStatus({
           orderNumber: synced.order.order_number,
@@ -122,6 +131,27 @@ async function processOrder(dataId: string, mode: MercadoPagoMode) {
 
     if (synced?.isPaid && synced.order?.id) {
       if (synced.order.product_id === "fortnite-account") {
+        const postPaymentValidation = await revalidateOrderListing(synced.order.order_number).catch(() => null);
+
+        if (!postPaymentValidation?.available) {
+          await notifyCartStatus({
+            orderNumber: synced.order.order_number,
+            status: "paid",
+            details: "Pagamento confirmado. A conta escolhida ficou indisponível durante a confirmação; a equipe vai oferecer alternativas equivalentes ou tratar o reembolso."
+          }).catch(() => null);
+
+          await nexusLog({
+            level: "warning",
+            action: "order.paid_listing_unavailable",
+            entityType: "order",
+            entityId: synced.order.order_number,
+            actorDiscordUserId: synced.discordUserId || null,
+            title: "⚠️ Conta indisponível após pagamento",
+            message: "O pagamento foi aprovado, mas a oferta não passou na revalidação pós-pagamento.",
+            metadata: { provider: "mercadopago", mode }
+          }).catch(() => null);
+        }
+
         await notifyFortnitePaidSale(synced.order.order_number).catch((error) => {
           console.error(
             "NexusGames: pagamento Fortnite aprovado, mas aviso administrativo falhou",
