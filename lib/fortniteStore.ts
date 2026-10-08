@@ -272,16 +272,35 @@ const PANELS = [
   },
   {
     channel: "📚・todas-as-contas",
-    marker: "nexus-catalog-v1",
+    marker: "nexus-catalog-v2",
     title: "📚 TODAS AS CONTAS",
     description: [
       "> Catálogo atualizado das contas Fortnite disponíveis na NexusGames.",
       "",
-      "Cada publicação abaixo representa uma conta disponível em um fornecedor aprovado.",
-      "Use **Ver detalhes** para conferir as imagens e **Comprar** para abrir seu carrinho privado.",
+      "📱 **No celular:** use os filtros abaixo para evitar ficar rolando dezenas de anúncios.",
+      "Cada conta tem foto, preço e botões de detalhes/compra.",
       "",
       "🔄 Preço e disponibilidade são revalidados novamente antes do pagamento."
-    ].join("\n")
+    ].join("\n"),
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 1, custom_id: "catalog:under100", label: "Até R$100", emoji: { name: "💸" } },
+          { type: 2, style: 1, custom_id: "catalog:100to200", label: "R$100–200", emoji: { name: "💰" } },
+          { type: 2, style: 1, custom_id: "catalog:200to350", label: "R$200–350", emoji: { name: "💰" } },
+          { type: 2, style: 1, custom_id: "catalog:350to500", label: "R$350–500", emoji: { name: "💎" } }
+        ]
+      },
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 2, custom_id: "catalog:email", label: "E-mail alterável", emoji: { name: "📧" } },
+          { type: 2, style: 2, custom_id: "catalog:skins", label: "Mais skins", emoji: { name: "🎨" } },
+          { type: 2, style: 3, custom_id: "finder:open:best", label: "Melhor escolha", emoji: { name: "🔥" } }
+        ]
+      }
+    ]
   },
   {
     channel: "🔎・buscar-conta",
