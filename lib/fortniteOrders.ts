@@ -377,7 +377,8 @@ export async function createFortniteCart(params: {
         ].filter(Boolean).join("\n"),
         image: {
           url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
-        }
+        },
+        footer: { text: `${listing.nexus_id} • Pedido ${order.order_number}` }
       }
     ],
     components: [
@@ -415,8 +416,7 @@ export async function createFortniteCart(params: {
           }
         ]
       }
-    ],
-    footer: { text: `${listing.nexus_id} • Pedido ${order.order_number}` }
+    ]
   });
 
   return { channelId: cart.channelId, orderNumber: order.order_number, listing };
