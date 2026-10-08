@@ -37,6 +37,7 @@ import {
   notifyFortnitePaidSale,
   postPurchaseTicketSummary,
   publicSaleReceipt,
+  revalidateOrderForPayment,
   revalidateOrderListing,
   setOrderDelivered
 } from "../../../../lib/fortniteOrders";
@@ -438,7 +439,7 @@ async function processDeferredSandboxPix(params: { customId: string; userId: str
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
 
     if (localOrder.product_id === "fortnite-account" && isCreate) {
-      const validation = await revalidateOrderListing(localOrder.order_number);
+      const validation = await revalidateOrderForPayment(localOrder.order_number, params.userId);
       if (!validation.available) {
         const nexusId = String(localOrder.fulfillment_data?.nexus_id || "");
         const alternatives = nexusId
@@ -510,7 +511,7 @@ async function processDeferredLivePix(params: {
     if (!localOrder?.id) throw new Error("Pedido não encontrado.");
 
     if (localOrder.product_id === "fortnite-account" && !params.refresh) {
-      const validation = await revalidateOrderListing(localOrder.order_number);
+      const validation = await revalidateOrderForPayment(localOrder.order_number, params.userId);
       if (!validation.available) {
         const nexusId = String(localOrder.fulfillment_data?.nexus_id || "");
         const alternatives = nexusId
