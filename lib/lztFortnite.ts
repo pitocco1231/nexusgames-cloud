@@ -7,6 +7,7 @@ import {
   type NexusListing,
   type NexusSearchInput
 } from "./nexusData";
+import { nexusLog, nexusLogError } from "./nexusLogger";
 
 const API = "https://api.lzt.market";
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
@@ -463,6 +464,15 @@ export async function fetchAllSupplierListings() {
       } catch (error) {
         sellerOk = false;
         console.error("Nexus catalog supplier scan error", sellerId, page, error);
+        await nexusLogError({
+          action: "supplier.catalog_scan_error",
+          entityType: "supplier",
+          entityId: sellerId,
+          title: "Falha ao atualizar fornecedor",
+          message: "A Nexus não conseguiu concluir a varredura de estoque de um fornecedor.",
+          metadata: { page },
+          error
+        }).catch(() => null);
         break;
       }
     }
@@ -524,6 +534,18 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
       }
     } catch (error) {
       console.error("Nexus Finder supplier search error", sellers[i], error);
+      await nexusLogError({
+        action: "supplier.search_error",
+        entityType: "supplier",
+        entityId: sellers[i],
+        title: "Falha no Nexus Finder",
+        message: "Uma busca não conseguiu consultar um dos fornecedores aprovados.",
+        metadata: {
+          item_type: input.itemType,
+          max_price_brl: input.maxPriceBrl
+        },
+        error
+      }).catch(() => null);
     }
 
     if (i < sellers.length - 1) await sleep(3100);
@@ -549,6 +571,25 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
     filter_value: filterValue,
     configured: true
   });
+
+  await nexusLog({
+    level: "info",
+    action: "finder.search",
+    entityType: "search",
+    entityId: null,
+    title: "🔎 Busca no Finder",
+    message: "Uma busca de contas Fortnite foi processada.",
+    metadata: {
+      item_type: input.itemType,
+      query: input.itemQuery || null,
+      max_price_brl: input.maxPriceBrl,
+      min_skins: input.minSkins || 0,
+      change_email: input.changeEmail || "nomatter",
+      suppliers_checked: sellers.length,
+      results: unique.length
+    },
+    discord: false
+  }).catch(() => null);
 
   const ranked = unique
     .filter((listing) => asNumber(listing.sale_price_brl) <= input.maxPriceBrl)
