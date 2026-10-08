@@ -5,6 +5,7 @@ import {
   createWatch,
   getListing,
   getRewardProfile,
+  listAvailableListings,
   listComparison,
   listFavorites,
   listUserCoupons,
@@ -463,6 +464,50 @@ export async function detailsPayload(nexusId: string, imageType: "skins" | "pick
   };
 }
 
+export async function catalogFilterPayload(filter: "under100" | "100to200" | "200to350" | "350to500" | "email" | "skins") {
+  const listings = await listAvailableListings(200);
+
+  let filtered = listings;
+  if (filter === "under100") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) < 100);
+  if (filter === "100to200") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 100 && Number(l.sale_price_brl || 0) < 200);
+  if (filter === "200to350") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 200 && Number(l.sale_price_brl || 0) < 350);
+  if (filter === "350to500") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 350 && Number(l.sale_price_brl || 0) <= 500);
+  if (filter === "email") filtered = listings.filter((l) => effectiveChangeEmail(l) === "yes");
+  if (filter === "skins") filtered = [...listings].sort((a,b) => effectiveCount(b, "skin") - effectiveCount(a, "skin"));
+
+  filtered = filtered.slice(0, 5);
+
+  const labels = {
+    under100: "Até R$100",
+    "100to200": "R$100–200",
+    "200to350": "R$200–350",
+    "350to500": "R$350–500",
+    email: "E-mail alterável",
+    skins: "Mais skins"
+  };
+
+  return {
+    embeds: [{
+      color: 0x7c3aed,
+      title: `📚 Catálogo • ${labels[filter]}`,
+      description: filtered.length
+        ? filtered.map((listing, index) => [
+            `**${index + 1}. ${displayListingTitle(listing)}**`,
+            `${money(Number(listing.sale_price_brl || 0))} • ${effectiveCount(listing, "skin") || "?"} skins`,
+            effectiveChangeEmail(listing) === "yes" ? "📧 e-mail alterável" : null
+          ].filter(Boolean).join("\n")).join("\n\n")
+        : "Nenhuma conta disponível nesse filtro agora."
+    }],
+    components: filtered.map((listing) => ({
+      type: 1,
+      components: [
+        { type: 2, style: 1, custom_id: `nexus:details:${listing.nexus_id}`, label: "Ver", emoji: { name: "🖼️" } },
+        { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
+      ]
+    }))
+  };
+}
+
 export async function favoritesPayload(userId: string) {
   const rows = await listFavorites(userId, 10);
   const listings = rows.map((row) => row.nexus_account_cache).filter(Boolean);
@@ -610,8 +655,25 @@ export async function metricsPayload() {
         `**VIP/Elite:** ${m.vipCustomers}`,
         `**Tickets abertos:** ${m.openTickets}`,
         `**Tickets sem atendente:** ${m.unclaimedTickets}`,
+        `**Contas disponíveis:** ${m.availableListings}`,
+        `**Margem média:** ${m.avgMargin.toFixed(1)}%`,
         "",
-        "**Mais procurados:**",
+        "**Funil de hoje:**",
+        `🔎 Buscas: **${m.searchesToday}**`,
+        `🖼️ Detalhes: **${m.detailsToday}**`,
+        `❤️ Favoritos: **${m.favoritesToday}**`,
+        `🛒 Carrinhos: **${m.cartsToday}**`,
+        `📈 Busca → carrinho: **${m.searchToCart.toFixed(1)}%**`,
+        `💠 Carrinho → pago: **${m.cartToPaid.toFixed(1)}%**`,
+        "",
+        "**Fornecedores:**",
+        ...(m.supplierScores.length
+          ? m.supplierScores.slice(0, 5).map((s:any) =>
+              `• ID \`${s.id}\` • Score **${s.score}/100** • ${s.listings} contas • margem ${s.avgMargin.toFixed(1)}% • ${s.errors} erro(s)`
+            )
+          : ["Sem dados de fornecedores."]),
+        "",
+        "**Mais procurados:**
         ...(m.topQueries.length ? m.topQueries.map(([q,n],i) => `${i+1}. **${q}** — ${n} buscas`) : ["Sem dados ainda."]),
         "",
         "**Demanda sem resultado:**",
@@ -715,6 +777,14 @@ export async function handleFinderAction(params: {
   }
   if (id === "finder:compare") {
     return { type: 4, data: { flags: 64, ...(await comparePayload(params.userId)) } };
+  }
+
+  if (id.startsWith("catalog:")) {
+    const filter = id.slice("catalog:".length) as "under100" | "100to200" | "200to350" | "350to500" | "email" | "skins";
+    if (!["under100","100to200","200to350","350to500","email","skins"].includes(filter)) {
+      return { type: 4, data: { flags: 64, content: "❌ Filtro inválido." } };
+    }
+    return { type: 4, data: { flags: 64, ...(await catalogFilterPayload(filter)) } };
   }
 
   if (id.startsWith("watch:disable:")) {
