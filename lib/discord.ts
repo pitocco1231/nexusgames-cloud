@@ -1,5 +1,6 @@
 import { getFortniteStoreNavigation, migrateToFortniteAccountStore } from "./fortniteStore";
 import { getTicketState, patchTicketState, upsertTicketState } from "./nexusData";
+import { nexusLog } from "./nexusLogger";
 const DISCORD_API = "https://discord.com/api/v10";
 
 export const applicationId = "1547332142776975400";
@@ -723,6 +724,17 @@ export async function createSupportTicket(userId: string, username: string) {
     })
   });
 
+  await nexusLog({
+    level: "info",
+    action: "ticket.opened",
+    entityType: "ticket",
+    entityId: channel.id,
+    actorDiscordUserId: userId,
+    title: "🎟️ Ticket aberto",
+    message: "Um novo ticket de suporte foi criado.",
+    metadata: { username, source: "support" }
+  }).catch(() => null);
+
   return { channelId: channel.id, created: true };
 }
 
@@ -776,6 +788,17 @@ export async function claimSupportTicket(
     })
   });
 
+  await nexusLog({
+    level: "info",
+    action: "ticket.claimed",
+    entityType: "ticket",
+    entityId: channelId,
+    actorDiscordUserId: staffId,
+    title: "🙋 Ticket assumido",
+    message: "Um membro da equipe assumiu o atendimento.",
+    metadata: { owner_discord_id: ownerId, staff_username: staffUsername }
+  }).catch(() => null);
+
   return { ownerId, claimedBy: staffId, claimed: true, alreadyMine: true };
 }
 
@@ -812,6 +835,17 @@ export async function releaseSupportTicket(
     })
   });
 
+  await nexusLog({
+    level: "info",
+    action: "ticket.transferred",
+    entityType: "ticket",
+    entityId: channelId,
+    actorDiscordUserId: staffId,
+    title: "🔁 Ticket transferido",
+    message: "O ticket foi liberado para outro atendente.",
+    metadata: { owner_discord_id: ownerId }
+  }).catch(() => null);
+
   return { ownerId };
 }
 
@@ -839,6 +873,17 @@ export async function setSupportTicketWaiting(
       }]
     })
   });
+
+  await nexusLog({
+    level: "info",
+    action: "ticket.waiting_customer",
+    entityType: "ticket",
+    entityId: channelId,
+    actorDiscordUserId: staffId,
+    title: "⏳ Ticket aguardando cliente",
+    message: "O atendimento foi marcado como aguardando resposta do cliente.",
+    metadata: { owner_discord_id: match[1] }
+  }).catch(() => null);
 
   return { ownerId: match[1] };
 }
@@ -915,5 +960,21 @@ export async function closeSupportTicket(
   }).catch(() => null);
 
   await sendReviewRequest(ownerId, ticketState?.order_number || null);
+
+  await nexusLog({
+    level: "success",
+    action: "ticket.closed",
+    entityType: "ticket",
+    entityId: channelId,
+    actorDiscordUserId: userId,
+    title: "🔒 Ticket fechado",
+    message: "O atendimento foi encerrado.",
+    metadata: {
+      owner_discord_id: ownerId,
+      order_number: ticketState?.order_number || null,
+      closed_by_admin: userId !== ownerId
+    }
+  }).catch(() => null);
+
   return { ownerId };
 }
