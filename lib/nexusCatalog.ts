@@ -118,7 +118,7 @@ function displayTitle(listing: NexusListing) {
   const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const weak = !title || title.length < 10 || /^(fort|fortnite|epic|epic games|account|conta|full access)$/i.test(normalized);
 
-  if (!weak) return title.slice(0, 240);
+  if (!weak) return title.length > 96 ? title.slice(0, 93) + "…" : title;
 
   const skins = effectiveCount(listing, "skin");
   const vbucks = Number(listing.vbucks || 0);
@@ -127,7 +127,8 @@ function displayTitle(listing: NexusListing) {
     skins ? `${skins} skins` : null,
     vbucks ? `${vbucks.toLocaleString("pt-BR")} V-Bucks` : null,
     listing.change_email === "yes" ? "E-mail alterável" : null
-  ].filter(Boolean).join(" • ").slice(0, 240);
+  ].filter(Boolean).join(" • ");
+  return const generated.length > 96 ? generated.slice(0, 93) + "…" : generated;
 }
 
 function payload(listing: NexusListing) {
