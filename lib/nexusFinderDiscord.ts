@@ -15,6 +15,7 @@ import {
   type NexusSearchInput
 } from "./nexusData";
 import { createFortniteCart } from "./fortniteOrders";
+import { nexusLog } from "./nexusLogger";
 import {
   formatFortniteListingTitle,
   getFinderConfigurationStatus,
@@ -166,7 +167,7 @@ function displayListingTitle(listing: NexusListing) {
     raw.length < 12 ||
     /^(fort|fortnite|epic|epic games|account|conta|full access|alf|urk|mnk|nbd)$/i.test(normalized);
 
-  if (!looksWeak) return formatted;
+  if (!looksWeak) return formatted.length > 96 ? formatted.slice(0, 93) + "…" : formatted;
 
   const titleSkinMatch = raw.match(/\b(\d{1,4})\s*skins?\b/i);
   const skinCount = Number(listing.skin_count || titleSkinMatch?.[1] || 0);
@@ -180,7 +181,8 @@ function displayListingTitle(listing: NexusListing) {
     listing.change_email === "yes" ? "E-mail alterável" : null
   ].filter(Boolean);
 
-  return parts.length ? `Conta Fortnite • ${parts.join(" • ")}` : "Conta Fortnite";
+  const generated = parts.length ? `Conta Fortnite • ${parts.join(" • ")}` : "Conta Fortnite";
+  return generated.length > 96 ? generated.slice(0, 93) + "…" : generated;
 }
 
 function countInTitle(listing: NexusListing, kind: "skin" | "pickaxe" | "emote" | "glider") {
@@ -412,35 +414,52 @@ export async function alternativesForUnavailable(params: {
   };
 }
 
-export async function detailsPayload(nexusId: string) {
+export async function detailsPayload(nexusId: string, imageType: "skins" | "pickaxes" | "dances" | "gliders" = "skins") {
   const listing = await getListing(nexusId);
   if (!listing) return { content: "❌ Essa oferta não está mais disponível.", embeds: [], components: [] };
-  const base = listingDescription(listing);
-  const imageTypes: Array<["skins"|"pickaxes"|"dances"|"gliders", string]> = [
-    ["skins","Skins"],
-    ["pickaxes","Picaretas"],
-    ["dances","Emotes"],
-    ["gliders","Asas-delta"]
-  ];
+
+  const labels = {
+    skins: "Skins",
+    pickaxes: "Picaretas",
+    dances: "Emotes",
+    gliders: "Asas-delta"
+  } as const;
+
   return {
     content: "",
-    embeds: imageTypes.map(([type,label], index) => ({
+    embeds: [{
       color: 0x7c3aed,
-      title: index === 0 ? `🎮 ${displayListingTitle(listing)}` : `🖼️ ${label}`,
-      description: index === 0 ? base : undefined,
+      title: `🎮 ${displayListingTitle(listing)}`,
+      description: [
+        listingDescription(listing),
+        "",
+        `🖼️ **Visualizando:** ${labels[imageType]}`,
+        "📱 Use os botões abaixo para trocar de imagem sem carregar vários cards."
+      ].join("\n"),
       image: {
-        url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=${type}`
+        url: `https://nexusgames-cloud-main.vercel.app/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=${imageType}`
       },
-      footer: index === 0 ? { text: `${listing.nexus_id} • NexusGames` } : undefined
-    })),
-    components: [{
-      type: 1,
-      components: [
-        { type: 2, style: 2, custom_id: `nexus:favorite:${listing.nexus_id}`, label: "Favoritar", emoji: { name: "❤️" } },
-        { type: 2, style: 2, custom_id: `nexus:compare:${listing.nexus_id}`, label: "Comparar", emoji: { name: "⚖️" } },
-        { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
-      ]
-    }]
+      footer: { text: `${listing.nexus_id} • NexusGames` }
+    }],
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: imageType === "skins" ? 1 : 2, custom_id: `nexus:image:skins:${listing.nexus_id}`, label: "Skins", emoji: { name: "🎨" } },
+          { type: 2, style: imageType === "pickaxes" ? 1 : 2, custom_id: `nexus:image:pickaxes:${listing.nexus_id}`, label: "Picaretas", emoji: { name: "⛏️" } },
+          { type: 2, style: imageType === "dances" ? 1 : 2, custom_id: `nexus:image:dances:${listing.nexus_id}`, label: "Emotes", emoji: { name: "🎉" } },
+          { type: 2, style: imageType === "gliders" ? 1 : 2, custom_id: `nexus:image:gliders:${listing.nexus_id}`, label: "Asas", emoji: { name: "🪂" } }
+        ]
+      },
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 2, custom_id: `nexus:favorite:${listing.nexus_id}`, label: "Favoritar", emoji: { name: "❤️" } },
+          { type: 2, style: 2, custom_id: `nexus:compare:${listing.nexus_id}`, label: "Comparar", emoji: { name: "⚖️" } },
+          { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
+        ]
+      }
+    ]
   };
 }
 
@@ -611,12 +630,42 @@ export async function handleFinderAction(params: {
   const id = params.customId;
 
   if (id.startsWith("nexus:details:")) {
-    return { type: 4, data: { flags: 64, ...(await detailsPayload(id.slice("nexus:details:".length))) } };
+    const nexusId = id.slice("nexus:details:".length);
+    await nexusLog({
+      level: "info",
+      action: "funnel.details",
+      entityType: "listing",
+      entityId: nexusId,
+      actorDiscordUserId: params.userId,
+      title: "Detalhes visualizados",
+      metadata: { source: "discord" },
+      discord: false
+    }).catch(() => null);
+    return { type: 4, data: { flags: 64, ...(await detailsPayload(nexusId)) } };
+  }
+
+  if (id.startsWith("nexus:image:")) {
+    const parts = id.split(":");
+    const imageType = parts[2] as "skins" | "pickaxes" | "dances" | "gliders";
+    const nexusId = parts.slice(3).join(":");
+    if (!["skins","pickaxes","dances","gliders"].includes(imageType) || !nexusId) {
+      return { type: 4, data: { flags: 64, content: "❌ Imagem inválida." } };
+    }
+    return { type: 4, data: { flags: 64, ...(await detailsPayload(nexusId, imageType)) } };
   }
 
   if (id.startsWith("nexus:favorite:")) {
     const nexusId = id.slice("nexus:favorite:".length);
     const result = await toggleFavorite(params.userId, nexusId);
+    await nexusLog({
+      level: "info",
+      action: result.active ? "funnel.favorite" : "funnel.unfavorite",
+      entityType: "listing",
+      entityId: nexusId,
+      actorDiscordUserId: params.userId,
+      title: result.active ? "Conta favoritada" : "Conta removida dos favoritos",
+      discord: false
+    }).catch(() => null);
     return { type: 4, data: { flags: 64, content: result.active ? `❤️ ${nexusId} adicionado aos favoritos.` : `💔 ${nexusId} removido dos favoritos.` } };
   }
 
@@ -639,6 +688,16 @@ export async function handleFinderAction(params: {
       nexusId,
       interactionId: params.interactionId
     });
+    await nexusLog({
+      level: "info",
+      action: "funnel.cart",
+      entityType: "order",
+      entityId: cart.orderNumber,
+      actorDiscordUserId: params.userId,
+      title: "Carrinho Fortnite aberto",
+      metadata: { nexus_id: nexusId },
+      discord: false
+    }).catch(() => null);
     return {
       type: 4,
       data: {
