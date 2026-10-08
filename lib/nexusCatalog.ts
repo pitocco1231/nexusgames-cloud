@@ -450,6 +450,16 @@ async function syncFeaturedDeal(listings: NexusListing[]) {
   };
 
   if (current) {
+    const currentEmbed = current.embeds?.[0];
+    const nextEmbed = dealPayload.embeds[0];
+    if (
+      currentEmbed?.title === nextEmbed.title &&
+      currentEmbed?.description === nextEmbed.description &&
+      currentEmbed?.footer?.text === nextEmbed.footer.text
+    ) {
+      return { updated: false, unchanged: true, nexusId: listing.nexus_id };
+    }
+
     try {
       await discord(`/channels/${channel.id}/messages/${current.id}`, {
         method: "PATCH",
