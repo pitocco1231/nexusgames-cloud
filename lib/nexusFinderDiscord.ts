@@ -16,6 +16,7 @@ import {
   type NexusSearchInput
 } from "./nexusData";
 import { createFortniteCart } from "./fortniteOrders";
+import { getAutoBuyStatus } from "./nexusAutoBuy";
 import { nexusLog } from "./nexusLogger";
 import {
   formatFortniteListingTitle,
@@ -612,6 +613,7 @@ export async function profilePayload(userId: string, username?: string) {
 
 export async function providerStatusPayload() {
   const finder = getFinderConfigurationStatus();
+  const autoBuy = getAutoBuyStatus();
   const liveEnabled = process.env.NEXUS_REAL_PAYMENTS_ENABLED === "true";
   const botapixApi = Boolean(process.env.BOTAPIX_API_KEY);
   const botapixWebhook = Boolean(process.env.BOTAPIX_WEBHOOK_SECRET);
@@ -632,6 +634,8 @@ export async function providerStatusPayload() {
         `${finder.tokenConfigured ? "🟢" : "🔴"} **Token do fornecedor:** ${finder.tokenConfigured ? "configurado" : "ausente"}`,
         `${finder.supplierCount > 0 ? "🟢" : "🔴"} **Fornecedores aprovados:** ${finder.supplierCount}`,
         `${finder.configured ? "🟢" : "🟡"} **Nexus Finder:** ${finder.configured ? "pronto" : "aguardando configuração"}`,
+        `${autoBuy.enabled ? "🟢" : "🟡"} **AUTO BUY LZT:** ${autoBuy.enabled ? "habilitado com travas" : "preparado e desativado"}`,
+        `🛡️ **Limites AUTO BUY:** custo máx. ${money(autoBuy.maxCostBrl)} • margem mín. ${autoBuy.minMarginPercent}%`,
         "",
         primaryPayments
           ? "BotaPix está definido como provedor principal; Mercado Pago permanece como contingência."
