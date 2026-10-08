@@ -366,6 +366,25 @@ const PANELS = [
     ]
   },
   {
+    channel: "📋・logs",
+    marker: "nexus-logs-v2",
+    title: "📋 LOGS NEXUS",
+    description: [
+      "> Histórico operacional da NexusGames para auditoria e acompanhamento da equipe.",
+      "",
+      "**O QUE É REGISTRADO**",
+      "🛒 criação e atualização de pedidos",
+      "💠 pagamentos aprovados, recusados, cancelados e reembolsados",
+      "🎟️ abertura, atendimento, transferência e fechamento de tickets",
+      "📚 inclusão, atualização e remoção de contas do catálogo",
+      "🔎 falhas importantes do Finder e dos fornecedores",
+      "✅ entregas e ações administrativas relevantes",
+      "",
+      "🚨 Erros críticos e situações que exigem ação também são enviados para **🚨・alertas**.",
+      "🔐 Tokens, senhas, QR Codes, credenciais e links privados de fornecedor são removidos automaticamente dos logs."
+    ].join("\n")
+  },
+  {
     channel: "📊・metricas",
     marker: "nexus-admin-metrics-v1",
     title: "📊 NEXUS CONTROL",
