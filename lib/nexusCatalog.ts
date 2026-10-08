@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import type { NexusListing } from "./nexusData";
+import { nexusLog } from "./nexusLogger";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
@@ -253,6 +254,18 @@ export async function removeCatalogListing(nexusId: string) {
     method: "DELETE"
   }).catch(() => null);
   await removeRow(nexusId);
+
+  await nexusLog({
+    level: "info",
+    action: "catalog.removed",
+    entityType: "listing",
+    entityId: nexusId,
+    title: "📚 Conta removida do catálogo",
+    message: "Uma conta deixou de aparecer no catálogo público.",
+    metadata: { reason: "unavailable_or_sold" },
+    discord: false
+  }).catch(() => null);
+
   return { removed: true };
 }
 
@@ -314,6 +327,21 @@ export async function syncCatalogListings(listings: NexusListing[]) {
     synced += 1;
   }
 
+  if (synced > 0) {
+    await nexusLog({
+      level: "success",
+      action: "catalog.synced",
+      entityType: "catalog",
+      entityId: CHANNEL_NAME,
+      title: "📚 Catálogo atualizado",
+      message: "Contas do catálogo público foram publicadas ou atualizadas.",
+      metadata: {
+        updated_or_created: synced,
+        unchanged: skipped
+      }
+    }).catch(() => null);
+  }
+
   return { synced, skipped, channelMissing: false };
 }
 
@@ -345,6 +373,21 @@ export async function syncFullCatalog(listings: NexusListing[], scanComplete = f
     await removeCatalogListing(row.nexus_id).catch(() => null);
     removed += 1;
   }
+
+  await nexusLog({
+    level: removed > 0 ? "warning" : "success",
+    action: "catalog.full_sync",
+    entityType: "catalog",
+    entityId: CHANNEL_NAME,
+    title: "🔄 Sincronização completa do catálogo",
+    message: "A varredura completa do catálogo foi concluída.",
+    metadata: {
+      available: listings.length,
+      updated_or_created: result.synced,
+      unchanged: result.skipped,
+      removed
+    }
+  }).catch(() => null);
 
   return { ...result, removed };
 }
