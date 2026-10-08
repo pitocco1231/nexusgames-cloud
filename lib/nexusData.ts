@@ -611,6 +611,37 @@ export async function saveReview(params: {
   return rows?.[0] || null;
 }
 
+export async function markReviewPublished(reviewId: string) {
+  const rows = await request<any[]>(
+    `nexus_reviews?id=eq.${encodeURIComponent(reviewId)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        published: true,
+        updated_at: new Date().toISOString()
+      })
+    }
+  ).catch(() => []);
+  return rows?.[0] || null;
+}
+
+export async function getReviewStats() {
+  const rows = await request<any[]>(
+    "nexus_reviews?select=rating,published,order_number,created_at&order=created_at.desc&limit=500"
+  );
+  const verified = rows.filter((row) => row.published === true);
+  const count = verified.length;
+  const average = count
+    ? verified.reduce((sum, row) => sum + Number(row.rating || 0), 0) / count
+    : 0;
+  return {
+    count,
+    average,
+    fiveStars: verified.filter((row) => Number(row.rating || 0) === 5).length
+  };
+}
+
 export async function upsertTicketState(params: {
   channelId: string;
   ownerDiscordId: string;
