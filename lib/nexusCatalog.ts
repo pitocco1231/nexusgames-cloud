@@ -122,13 +122,13 @@ function displayTitle(listing: NexusListing) {
 
   const skins = effectiveCount(listing, "skin");
   const vbucks = Number(listing.vbucks || 0);
-  return [
+  const generated = [
     "Conta Fortnite",
     skins ? `${skins} skins` : null,
     vbucks ? `${vbucks.toLocaleString("pt-BR")} V-Bucks` : null,
     listing.change_email === "yes" ? "E-mail alterável" : null
   ].filter(Boolean).join(" • ");
-  return const generated.length > 96 ? generated.slice(0, 93) + "…" : generated;
+  return generated.length > 96 ? generated.slice(0, 93) + "…" : generated;
 }
 
 function payload(listing: NexusListing) {
