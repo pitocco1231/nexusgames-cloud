@@ -1,10 +1,9 @@
 import { POST as handleDiscordInteraction } from "./cartHandler";
-import { after } from "next/server";
 import { getCachedPixQr } from "../../../../lib/mercadopago";
-import { maybeRunInventoryMonitor } from "../../../../lib/nexusInventoryMonitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type NexusGlobal = typeof globalThis & {
   __nexusPixFetchPatched?: boolean;
@@ -103,10 +102,6 @@ if (!nexusGlobal.__nexusPixFetchPatched) {
 export async function POST(request: Request) {
   const clone = request.clone();
   const body = await clone.text();
-
-  after(() => maybeRunInventoryMonitor().catch((error) => {
-    console.warn("NexusGames: monitor de estoque oportunista falhou", error);
-  }));
 
   if (shouldPauseNewPix(body)) {
     return Response.json({
