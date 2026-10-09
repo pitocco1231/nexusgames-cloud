@@ -72,7 +72,7 @@ const GROUPS: readonly GroupConfig[] = [
     aliases: ["🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦"],
     channels: [
       { target: "🔎・buscar-conta", aliases: ["🔎・buscar-conta"], topic: "Canal principal para pesquisar contas Fortnite por skin, picareta, emote, asa-delta e filtros." },
-      { target: "📚・todas-as-contas", aliases: ["📚・todas-as-contas"], topic: "Catálogo público com todas as contas Fortnite disponíveis nos fornecedores aprovados.", readOnly: true },
+      { target: "📚・todas-as-contas", aliases: ["📚・todas-as-contas"], topic: "Catálogo público somente com contas Fortnite de e-mail alterável confirmadas pela Nexus.", readOnly: true },
       { target: "🧩・como-pesquisar", aliases: ["🧩・como-pesquisar"], topic: "Exemplos e dicas para encontrar a conta certa usando os filtros Nexus." },
       { target: "🔥・contas-em-destaque", aliases: ["🔥・contas-em-destaque"], topic: "Melhores oportunidades encontradas pela NexusGames." },
       { target: "🆕・novas-contas", aliases: ["🆕・novas-contas"], topic: "Novas contas encontradas nos fornecedores autorizados." },
@@ -275,12 +275,13 @@ const PANELS = [
     marker: "nexus-catalog-v2",
     title: "📚 TODAS AS CONTAS",
     description: [
-      "> Catálogo atualizado das contas Fortnite disponíveis na NexusGames.",
+      "> Catálogo atualizado somente com contas Fortnite de **e-mail alterável**.",
       "",
+      "📧 A Nexus não publica mais contas sem confirmação de troca de e-mail.",
       "📱 **No celular:** use os filtros abaixo para evitar ficar rolando dezenas de anúncios.",
       "Cada conta tem foto, preço e botões de detalhes/compra.",
       "",
-      "🔄 Preço e disponibilidade são revalidados novamente antes do pagamento."
+      "🔄 E-mail, preço e disponibilidade são revalidados novamente antes do pagamento."
     ].join("\n"),
     components: [
       {
@@ -313,7 +314,7 @@ const PANELS = [
       "🎭 Skin • ⛏️ Picareta • 💃 Emote • 🪂 Asa-delta",
       "💰 ou peça a melhor conta possível dentro do seu orçamento.",
       "",
-      "O Finder considera preço, quantidade de cosméticos, V-Bucks, troca de e-mail, qualidade da oferta e **Nexus Score**.",
+      "O Finder mostra somente contas com **e-mail alterável** e considera preço, quantidade de cosméticos, V-Bucks, qualidade da oferta e **Nexus Score**.",
       "",
       "💜 Você também pode favoritar, comparar e criar um alerta do **Nexus Watch**.",
       "💰 Limite público: **R$ 500**."
@@ -723,6 +724,7 @@ export async function getFortniteStoreNavigation() {
   const items = [
     { key: "buscar", label: "Buscar conta", emoji: "🔎", names: ["🔎・buscar-conta"] },
     { key: "catalogo", label: "Todas as contas", emoji: "📚", names: ["📚・todas-as-contas"] },
+    { key: "email", label: "E-mail alterável", emoji: "📧", names: ["📧・email-alteravel"] },
     { key: "destaques", label: "Contas em destaque", emoji: "🔥", names: ["🔥・contas-em-destaque"] },
     { key: "novas", label: "Novas contas", emoji: "🆕", names: ["🆕・novas-contas"] },
     { key: "procurando", label: "Procurando conta", emoji: "🎯", names: ["🎯・procurando-conta"] },
