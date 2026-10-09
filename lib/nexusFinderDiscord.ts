@@ -51,7 +51,7 @@ export function finderInputFromCommand(interaction: any): Omit<NexusSearchInput,
   const itemQuery = String(optionValue(interaction, "item") || "").trim();
   const maxPrice = Math.max(20, Math.min(500, Number(optionValue(interaction, "preco") || 500)));
   const minSkins = Math.max(0, Math.min(1000, Number(optionValue(interaction, "min_skins") || 0)));
-  const changeEmail = String(optionValue(interaction, "email") || "nomatter") as "yes" | "no" | "nomatter";
+  const changeEmail = "yes" as const;
   return { itemType, itemQuery: itemQuery || null, maxPriceBrl: maxPrice, minSkins, changeEmail };
 }
 
@@ -59,10 +59,9 @@ export function finderInputFromModal(interaction: any, itemType: NexusItemType):
   const itemQuery = modalValue(interaction, "finder_item");
   const maxPriceRaw = modalValue(interaction, "finder_price");
   const minSkinsRaw = modalValue(interaction, "finder_min_skins");
-  const emailRaw = modalValue(interaction, "finder_email").toLowerCase();
   const maxPrice = Math.max(20, Math.min(500, Number(maxPriceRaw || 500) || 500));
   const minSkins = Math.max(0, Math.min(1000, Number(minSkinsRaw || 0) || 0));
-  const changeEmail = emailRaw.startsWith("s") || emailRaw === "yes" ? "yes" : "nomatter";
+  const changeEmail = "yes" as const;
   return {
     itemType,
     itemQuery: itemType === "best" ? null : itemQuery || null,
@@ -123,19 +122,6 @@ export function finderModal(itemType: NexusItemType) {
       placeholder: "Ex.: 100"
     }]
   });
-  components.push({
-    type: 1,
-    components: [{
-      type: 4,
-      custom_id: "finder_email",
-      label: "Precisa trocar e-mail?",
-      style: 1,
-      required: false,
-      max_length: 12,
-      placeholder: "sim / tanto faz"
-    }]
-  });
-
   return {
     type: 9,
     data: {
@@ -388,7 +374,7 @@ export async function alternativesForUnavailable(params: {
     itemQuery: query,
     maxPriceBrl: Math.max(20, Math.min(500, Number(previous.sale_price_brl || 500))),
     minSkins: Math.max(0, Math.floor((previous.skin_count || 0) * 0.7)),
-    changeEmail: previous.change_email === "yes" ? "yes" : "nomatter"
+    changeEmail: "yes"
   };
 
   const results = (await searchFortniteAccounts(input))
@@ -468,13 +454,13 @@ export async function detailsPayload(nexusId: string, imageType: "skins" | "pick
 export async function catalogFilterPayload(filter: "under100" | "100to200" | "200to350" | "350to500" | "email" | "skins") {
   const listings = await listAvailableListings(200);
 
-  let filtered = listings;
-  if (filter === "under100") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) < 100);
-  if (filter === "100to200") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 100 && Number(l.sale_price_brl || 0) < 200);
-  if (filter === "200to350") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 200 && Number(l.sale_price_brl || 0) < 350);
-  if (filter === "350to500") filtered = listings.filter((l) => Number(l.sale_price_brl || 0) >= 350 && Number(l.sale_price_brl || 0) <= 500);
-  if (filter === "email") filtered = listings.filter((l) => effectiveChangeEmail(l) === "yes");
-  if (filter === "skins") filtered = [...listings].sort((a,b) => effectiveCount(b, "skin") - effectiveCount(a, "skin"));
+  let filtered = listings.filter((l) => effectiveChangeEmail(l) === "yes");
+  if (filter === "under100") filtered = filtered.filter((l) => Number(l.sale_price_brl || 0) < 100);
+  if (filter === "100to200") filtered = filtered.filter((l) => Number(l.sale_price_brl || 0) >= 100 && Number(l.sale_price_brl || 0) < 200);
+  if (filter === "200to350") filtered = filtered.filter((l) => Number(l.sale_price_brl || 0) >= 200 && Number(l.sale_price_brl || 0) < 350);
+  if (filter === "350to500") filtered = filtered.filter((l) => Number(l.sale_price_brl || 0) >= 350 && Number(l.sale_price_brl || 0) <= 500);
+  if (filter === "email") filtered = filtered.filter((l) => effectiveChangeEmail(l) === "yes");
+  if (filter === "skins") filtered = [...filtered].sort((a,b) => effectiveCount(b, "skin") - effectiveCount(a, "skin"));
 
   filtered = filtered.slice(0, 5);
 
