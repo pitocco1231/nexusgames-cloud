@@ -699,9 +699,11 @@ export async function revalidateListing(nexusId: string) {
       await markListingStatus(nexusId, "sold");
       const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
       const { removeCatalogListing } = await import("./nexusCatalog");
+      const { removeNoEmailCatalogListing } = await import("./nexusNoEmailCatalog");
       await Promise.allSettled([
         notifyFavoriteUnavailable({ ...listing, status: "sold" }),
-        removeCatalogListing(nexusId)
+        removeCatalogListing(nexusId),
+        removeNoEmailCatalogListing(nexusId)
       ]);
       return { available: false as const, listing: null };
     }
@@ -717,9 +719,11 @@ export async function revalidateListing(nexusId: string) {
       await markListingStatus(nexusId, "sold");
       const { notifyFavoriteUnavailable } = await import("./nexusNotifications");
       const { removeCatalogListing } = await import("./nexusCatalog");
+      const { removeNoEmailCatalogListing } = await import("./nexusNoEmailCatalog");
       await Promise.allSettled([
         notifyFavoriteUnavailable({ ...listing, status: "sold" }),
-        removeCatalogListing(nexusId)
+        removeCatalogListing(nexusId),
+        removeNoEmailCatalogListing(nexusId)
       ]);
       return { available: false as const, listing: null };
     }
