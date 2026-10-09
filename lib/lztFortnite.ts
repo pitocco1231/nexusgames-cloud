@@ -193,15 +193,6 @@ function sellerIdOf(item: any) {
   return String(firstValue(item, ["user_id", "seller.user_id", "seller.id", "owner_id"]) || "").trim();
 }
 
-function supplierRequiresNoEmailChange(sellerId: string) {
-  if (!sellerId) return false;
-  const configured = String(process.env.LZT_NO_EMAIL_SUPPLIER_USER_IDS || "")
-    .split(/[;,\s]+/)
-    .map((value) => value.trim())
-    .filter(Boolean);
-  return configured.includes(sellerId);
-}
-
 function normalizeChangeEmail(value: unknown) {
   const raw = normalizeText(value).toLowerCase();
   if (!raw) return null;
@@ -353,10 +344,9 @@ function listingFromItem(item: any, maxPriceBrl: number): NexusListing | null {
   const emoteCount = firstNumber(item, ["d_count", "dance_count", "dances_count", "emote_count", "account.emote_count"], 0) || countFromTitle(rawTitle, "emote");
   const gliderCount = firstNumber(item, ["glider_count", "gliders_count", "account.glider_count"], 0) || countFromTitle(rawTitle, "glider");
   const vbucks = firstNumber(item, ["vb", "vbucks", "v_bucks", "account.vbucks"], 0) || vbucksFromTitle(rawTitle);
-  const changeEmail = supplierRequiresNoEmailChange(sellerId)
-    ? "no"
-    : normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"])) ||
-      changeEmailFromTitle(rawTitle);
+  const changeEmail =
+    normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"])) ||
+    changeEmailFromTitle(rawTitle);
 
   return {
     nexus_id: nexusId,
@@ -449,7 +439,7 @@ export async function fetchAllSupplierListings() {
       params.set("currency", "BRL");
       params.set("pmax", String(Math.max(1, supplierMax)));
       params.set("order_by", "price_to_up");
-      params.set("change_email", "nomatter");
+      params.set("change_email", "yes");
       params.set("page", String(page));
       params.append("origin[]", "personal");
       params.append("origin[]", "resale");
@@ -468,6 +458,7 @@ export async function fetchAllSupplierListings() {
           const listing = listingFromItem(item, 500);
           if (!listing) continue;
           if (listing.supplier_user_id && listing.supplier_user_id !== sellerId) continue;
+          listing.change_email = "yes";
           collected.push(listing);
         }
 
@@ -548,6 +539,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
 
   const rankResults = (pool: NexusListing[]) => {
     const ranked = pool
+      .filter((listing) => listing.change_email === "yes")
       .filter((listing) => asNumber(listing.sale_price_brl) <= input.maxPriceBrl)
       .filter((listing) => asNumber(listing.skin_count) >= Math.max(0, input.minSkins || 0))
       .filter((listing) => {
@@ -622,7 +614,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
     params.set("pmax", String(Math.max(1, supplierMax)));
     params.set("order_by", "price_to_up");
     params.set("smin", String(Math.max(0, input.minSkins || 0)));
-    params.set("change_email", input.changeEmail || "nomatter");
+    params.set("change_email", "yes");
     params.append("origin[]", "personal");
     params.append("origin[]", "resale");
     if (filterParam && filterValue) params.append(filterParam, filterValue);
@@ -634,6 +626,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
         const listing = listingFromItem(item, input.maxPriceBrl);
         if (!listing) continue;
         if (listing.supplier_user_id && listing.supplier_user_id !== sellers[i]) continue;
+        listing.change_email = "yes";
         collected.push(listing);
       }
     } catch (error) {
@@ -722,6 +715,19 @@ export async function revalidateListing(nexusId: string) {
       return { available: false as const, listing: null };
     }
     refreshed.nexus_id = nexusId;
+    if (listing.change_email === "yes" && !refreshed.change_email) {
+      refreshed.change_email = "yes";
+    }
+    if (refreshed.change_email !== "yes") {
+      await markListingStatus(nexusId, "blocked");
+      const { removeCatalogListing } = await import("./nexusCatalog");
+      const { removeNoEmailCatalogListing } = await import("./nexusNoEmailCatalog");
+      await Promise.allSettled([
+        removeCatalogListing(nexusId),
+        removeNoEmailCatalogListing(nexusId)
+      ]);
+      return { available: false as const, listing: null };
+    }
     await upsertListings([refreshed]);
     return { available: true as const, listing: refreshed };
   } catch (error: any) {
