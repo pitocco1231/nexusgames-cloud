@@ -213,9 +213,9 @@ function roundPrice(value: number) {
 }
 
 export function calculateNexusPrice(costBrl: number, userMaxBrl = 500) {
-  const targetMargin = Math.max(0.3, Math.min(0.5, asNumber(process.env.NEXUS_TARGET_MARGIN_PERCENT, 40) / 100));
+  const targetMargin = Math.max(0.3, Math.min(0.5, asNumber(process.env.NEXUS_TARGET_MARGIN_PERCENT, 35) / 100));
   const minMargin = Math.max(0.3, Math.min(targetMargin, asNumber(process.env.NEXUS_MIN_MARGIN_PERCENT, 30) / 100));
-  const reserve = Math.max(0, Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 5) / 100));
+  const reserve = Math.max(0, Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 2) / 100));
   const effectiveCost = costBrl * (1 + reserve);
   let salePrice = roundPrice(effectiveCost / (1 - targetMargin));
   salePrice = Math.min(salePrice, 500, userMaxBrl);
@@ -415,7 +415,7 @@ export async function fetchAllSupplierListings() {
   );
   const reserve = Math.max(
     0,
-    Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 5) / 100)
+    Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 2) / 100)
   );
   const supplierMax = Math.floor(500 * (1 - minMargin) / (1 + reserve));
   const maxPages = Math.max(
@@ -598,7 +598,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
   const filterValue = await resolveFilterValue(input.itemType, input.itemQuery);
   const filterParam = searchParamName(input.itemType);
   const minMargin = Math.max(0.3, Math.min(0.5, asNumber(process.env.NEXUS_MIN_MARGIN_PERCENT, 30) / 100));
-  const reserve = Math.max(0, Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 5) / 100));
+  const reserve = Math.max(0, Math.min(0.15, asNumber(process.env.NEXUS_COST_RESERVE_PERCENT, 2) / 100));
   const supplierMax = Math.floor(input.maxPriceBrl * (1 - minMargin) / (1 + reserve));
 
   const collected: NexusListing[] = [];
