@@ -5,7 +5,8 @@ import { nexusLog } from "./nexusLogger";
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
 const CATEGORY_NAME = "🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦";
-const CHANNEL_NAME = "🔒・sem-troca-de-email";
+const CHANNEL_NAME = "📧・email-alteravel";
+const LEGACY_CHANNEL_NAME = "🔒・sem-troca-de-email";
 const TABLE_NAME = "nexus_no_email_catalog_messages";
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
 
@@ -107,13 +108,12 @@ function payload(listing: NexusListing) {
   return {
     allowed_mentions: { parse: [] },
     embeds: [{
-      color: 0xed4245,
-      title: `🔒 ${displayTitle(listing)}`,
+      color: 0x57f287,
+      title: `📧 ${displayTitle(listing)}`,
       description: [
         stats.length ? stats.join(" • ") : null,
         listing.vbucks ? `💠 **V-Bucks:** ${Number(listing.vbucks).toLocaleString("pt-BR")}` : null,
-        "📧 **E-mail alterável:** ❌ Não",
-        "⚠️ Esta oferta possui limitação de troca de e-mail. Confira os detalhes antes da compra.",
+        "📧 **E-mail alterável:** ✅ Sim",
         "",
         `## ${money(Number(listing.sale_price_brl || 0))}`
       ].filter(Boolean).join("\n"),
@@ -121,33 +121,15 @@ function payload(listing: NexusListing) {
         url: `${STORE_URL}/api/fortnite/image/${encodeURIComponent(listing.nexus_id)}?type=skins`
       },
       footer: {
-        text: `${listing.nexus_id} • NexusGames • preço, estoque e condição revalidados no checkout`
+        text: `${listing.nexus_id} • NexusGames • e-mail, preço e estoque revalidados no checkout`
       }
     }],
     components: [{
       type: 1,
       components: [
-        {
-          type: 2,
-          style: 1,
-          custom_id: `nexus:details:${listing.nexus_id}`,
-          label: "Ver detalhes",
-          emoji: { name: "🖼️" }
-        },
-        {
-          type: 2,
-          style: 2,
-          custom_id: `nexus:favorite:${listing.nexus_id}`,
-          label: "Favoritar",
-          emoji: { name: "❤️" }
-        },
-        {
-          type: 2,
-          style: 3,
-          custom_id: `nexus:buy:${listing.nexus_id}`,
-          label: "Comprar",
-          emoji: { name: "🛒" }
-        }
+        { type: 2, style: 1, custom_id: `nexus:details:${listing.nexus_id}`, label: "Ver detalhes", emoji: { name: "🖼️" } },
+        { type: 2, style: 2, custom_id: `nexus:favorite:${listing.nexus_id}`, label: "Favoritar", emoji: { name: "❤️" } },
+        { type: 2, style: 3, custom_id: `nexus:buy:${listing.nexus_id}`, label: "Comprar", emoji: { name: "🛒" } }
       ]
     }]
   };
@@ -167,24 +149,79 @@ function contentHash(listing: NexusListing) {
   })).digest("hex");
 }
 
-async function ensureChannel() {
-  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
-  const existing = channels.find((channel) => channel.type === 0 && channel.name === CHANNEL_NAME);
-  if (existing) {
-    await ensureIntro(existing.id);
-    return existing;
+async function ensureIntro(channelId: string) {
+  const messages = await discord(`/channels/${channelId}/messages?limit=50`) as any[];
+  const marker = "NexusGames • canal:email-alteravel-v1";
+  const legacyMarker = "NexusGames • canal:sem-troca-email-v1";
+  const current = messages.find((message) =>
+    message.author?.bot &&
+    message.embeds?.some((embed: any) => {
+      const footer = String(embed.footer?.text || "");
+      return footer.startsWith(marker) || footer.startsWith(legacyMarker);
+    })
+  );
+
+  const introPayload = {
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      color: 0x57f287,
+      title: "📧 CONTAS COM E-MAIL ALTERÁVEL",
+      description: [
+        "> A Nexus agora prioriza contas em que a troca do e-mail está liberada.",
+        "",
+        "✅ Os anúncios abaixo são filtrados para **E-mail alterável: Sim**.",
+        "🔄 A condição do e-mail, o estoque e o preço são revalidados antes do pagamento.",
+        "🛡️ Contas sem confirmação de troca de e-mail não entram neste catálogo."
+      ].join("\n"),
+      footer: { text: marker }
+    }]
+  };
+
+  if (current) {
+    await discord(`/channels/${channelId}/messages/${current.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(introPayload)
+    });
+    return;
   }
 
-  const category = channels.find((channel) => channel.type === 4 && channel.name === CATEGORY_NAME);
+  await discord(`/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify(introPayload)
+  });
+}
+
+async function ensureChannel() {
+  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  let channel = channels.find((item) =>
+    item.type === 0 && (item.name === CHANNEL_NAME || item.name === LEGACY_CHANNEL_NAME)
+  );
+
+  if (channel) {
+    const changes: Record<string, unknown> = {};
+    if (channel.name !== CHANNEL_NAME) changes.name = CHANNEL_NAME;
+    const topic = "Somente contas Fortnite com troca de e-mail confirmada pela Nexus antes do checkout.";
+    if (channel.topic !== topic) changes.topic = topic;
+    if (Object.keys(changes).length) {
+      channel = await discord(`/channels/${channel.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(changes)
+      }) as any;
+    }
+    await ensureIntro(channel.id);
+    return channel;
+  }
+
+  const category = channels.find((item) => item.type === 4 && item.name === CATEGORY_NAME);
   if (!category) return null;
 
-  const channel = await discord(`/guilds/${GUILD_ID}/channels`, {
+  channel = await discord(`/guilds/${GUILD_ID}/channels`, {
     method: "POST",
     body: JSON.stringify({
       name: CHANNEL_NAME,
       type: 0,
       parent_id: category.id,
-      topic: "Contas Fortnite em que a troca do e-mail não está disponível. Confira essa condição antes da compra.",
+      topic: "Somente contas Fortnite com troca de e-mail confirmada pela Nexus antes do checkout.",
       permission_overwrites: [
         { id: GUILD_ID, type: 0, allow: "66560", deny: "2048" }
       ]
@@ -193,37 +230,6 @@ async function ensureChannel() {
 
   await ensureIntro(channel.id);
   return channel;
-}
-
-async function ensureIntro(channelId: string) {
-  const messages = await discord(`/channels/${channelId}/messages?limit=50`) as any[];
-  const marker = "NexusGames • canal:sem-troca-email-v1";
-  const current = messages.find((message) =>
-    message.author?.bot &&
-    message.embeds?.some((embed: any) => String(embed.footer?.text || "").startsWith(marker))
-  );
-  if (current) return;
-
-  await discord(`/channels/${channelId}/messages`, {
-    method: "POST",
-    body: JSON.stringify({
-      allowed_mentions: { parse: [] },
-      embeds: [{
-        color: 0xed4245,
-        title: "🔒 CONTAS SEM TROCA DE E-MAIL",
-        description: [
-          "> Aqui ficam as contas em que a troca do e-mail não está disponível.",
-          "",
-          "⚠️ Confira essa limitação antes de comprar.",
-          "📧 Os anúncios abaixo aparecem como **E-mail alterável: ❌ Não**.",
-          "💸 Essas ofertas podem ter preços menores por causa dessa condição.",
-          "",
-          "🔄 Estoque, preço e condição do e-mail são revalidados antes do pagamento."
-        ].join("\n"),
-        footer: { text: marker }
-      }]
-    })
-  });
 }
 
 async function rowFor(nexusId: string) {
@@ -259,7 +265,6 @@ async function removeRow(nexusId: string) {
 export async function removeNoEmailCatalogListing(nexusId: string) {
   const row = await rowFor(nexusId);
   if (!row) return { removed: false };
-
   await discord(`/channels/${row.discord_channel_id}/messages/${row.discord_message_id}`, {
     method: "DELETE"
   }).catch(() => null);
@@ -272,7 +277,7 @@ export async function syncNoEmailCatalog(listings: NexusListing[], scanComplete 
   if (!channel) return { synced: 0, skipped: 0, removed: 0, channelMissing: true };
 
   const eligible = listings.filter(
-    (listing) => listing.status === "available" && String(listing.change_email || "").toLowerCase() === "no"
+    (listing) => listing.status === "available" && String(listing.change_email || "").toLowerCase() === "yes"
   );
 
   let synced = 0;
@@ -305,7 +310,6 @@ export async function syncNoEmailCatalog(listings: NexusListing[], scanComplete 
       } catch (error: any) {
         const status = Number(error?.status || 0);
         const code = Number(error?.code || 0);
-
         if (status === 404) {
           message = null;
         } else if (status === 429 && code === 30046) {
@@ -367,11 +371,11 @@ export async function syncNoEmailCatalog(listings: NexusListing[], scanComplete 
   if (synced > 0 || removed > 0) {
     await nexusLog({
       level: removed > 0 ? "warning" : "success",
-      action: "catalog.no_email_sync",
+      action: "catalog.changeable_email_sync",
       entityType: "catalog",
       entityId: CHANNEL_NAME,
-      title: "🔒 Catálogo sem troca de e-mail atualizado",
-      message: "A Nexus sincronizou as contas com e-mail não alterável.",
+      title: "📧 Catálogo de e-mail alterável atualizado",
+      message: "A Nexus sincronizou somente contas com troca de e-mail confirmada.",
       metadata: {
         available: eligible.length,
         updated_or_created: synced,
