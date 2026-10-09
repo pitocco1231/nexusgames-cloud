@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import {
   getListingsByIds,
+  listAvailableListings,
   markListingStatus,
   recordSearch,
   upsertListings,
@@ -529,9 +530,69 @@ export async function fetchAllSupplierListings() {
 }
 
 export async function searchFortniteAccounts(input: NexusSearchInput): Promise<FinderResult[]> {
+  const startedAt = Date.now();
   const sellers = supplierIds();
   if (!sellers.length) {
     throw new Error("O catálogo da Nexus está temporariamente indisponível.");
+  }
+
+  const rankResults = (pool: NexusListing[]) => {
+    const ranked = pool
+      .filter((listing) => asNumber(listing.sale_price_brl) <= input.maxPriceBrl)
+      .filter((listing) => asNumber(listing.skin_count) >= Math.max(0, input.minSkins || 0))
+      .filter((listing) => {
+        if (input.changeEmail === "yes") return listing.change_email === "yes";
+        if (input.changeEmail === "no") return listing.change_email === "no";
+        return true;
+      })
+      .map((listing) => ({ listing, score: scoreListing(listing, input), tag: "best_value" as const }))
+      .sort((a,b) => b.score - a.score || asNumber(a.listing.sale_price_brl) - asNumber(b.listing.sale_price_brl))
+      .slice(0, 5);
+
+    const special = tags(ranked.map((r) => r.listing));
+    return ranked.map((result, index) => ({
+      ...result,
+      tag:
+        result.listing.nexus_id === special.cheapest ? "cheapest" as const :
+        result.listing.nexus_id === special.complete ? "complete" as const :
+        result.listing.nexus_id === special.rare ? "rare" as const :
+        index === 0 ? "best_value" as const : result.tag
+    }));
+  };
+
+  // "Melhor pelo orçamento" usa o catálogo local, que já é atualizado a cada 5 minutos.
+  // Isso deixa o botão instantâneo e evita disputar limite da API do fornecedor com o monitor.
+  if (input.itemType === "best") {
+    const cached = await listAvailableListings(200);
+    const ranked = rankResults(cached);
+
+    await recordSearch(input, ranked.length, {
+      suppliers_checked: 0,
+      source: "cache",
+      configured: true
+    });
+
+    await nexusLog({
+      level: "info",
+      action: "finder.search",
+      entityType: "search",
+      entityId: null,
+      title: "🔎 Busca no Finder",
+      message: "Uma busca de contas Fortnite foi processada.",
+      metadata: {
+        item_type: input.itemType,
+        query: null,
+        max_price_brl: input.maxPriceBrl,
+        min_skins: input.minSkins || 0,
+        change_email: input.changeEmail || "nomatter",
+        source: "cache",
+        results: ranked.length,
+        elapsed_ms: Date.now() - startedAt
+      },
+      discord: false
+    }).catch(() => null);
+
+    return ranked;
   }
 
   const filterValue = await resolveFilterValue(input.itemType, input.itemQuery);
@@ -541,6 +602,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
   const supplierMax = Math.floor(input.maxPriceBrl * (1 - minMargin) / (1 + reserve));
 
   const collected: NexusListing[] = [];
+  let successfulSuppliers = 0;
 
   for (let i = 0; i < sellers.length; i += 1) {
     const params = new URLSearchParams();
@@ -557,6 +619,7 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
 
     try {
       const payload = await lzt(`/epicgames?${params.toString()}`);
+      successfulSuppliers += 1;
       for (const item of flattenItems(payload)) {
         const listing = listingFromItem(item, input.maxPriceBrl);
         if (!listing) continue;
@@ -582,24 +645,19 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
     if (i < sellers.length - 1) await sleep(3100);
   }
 
-  const unique = [...new Map(collected.map((item) => [item.nexus_id, item])).values()];
-  const previousRows = await getListingsByIds(unique.map((item) => item.nexus_id)).catch(() => []);
-  const previous = new Map(previousRows.map((item) => [item.nexus_id, item]));
-  await upsertListings(unique);
-
-  if (unique.length) {
-    const { notifyFavoriteChanges, notifyMatchingWatches } = await import("./nexusNotifications");
-    const { syncCatalogListings } = await import("./nexusCatalog");
-    await Promise.allSettled([
-      notifyMatchingWatches(unique),
-      notifyFavoriteChanges({ previous, current: unique }),
-      syncCatalogListings(unique)
-    ]);
+  if (successfulSuppliers === 0) {
+    throw new Error("Os fornecedores estão demorando para responder. Tente novamente em alguns segundos.");
   }
 
-  await recordSearch(input, unique.length, {
-    suppliers_checked: sellers.length,
+  const unique = [...new Map(collected.map((item) => [item.nexus_id, item])).values()];
+  await upsertListings(unique);
+
+  const ranked = rankResults(unique);
+
+  await recordSearch(input, ranked.length, {
+    suppliers_checked: successfulSuppliers,
     filter_value: filterValue,
+    source: "live",
     configured: true
   });
 
@@ -616,35 +674,15 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
       max_price_brl: input.maxPriceBrl,
       min_skins: input.minSkins || 0,
       change_email: input.changeEmail || "nomatter",
-      suppliers_checked: sellers.length,
-      results: unique.length
+      suppliers_checked: successfulSuppliers,
+      source: "live",
+      results: ranked.length,
+      elapsed_ms: Date.now() - startedAt
     },
     discord: false
   }).catch(() => null);
 
-  const ranked = unique
-    .filter((listing) => asNumber(listing.sale_price_brl) <= input.maxPriceBrl)
-    .map((listing) => ({ listing, score: scoreListing(listing, input), tag: "best_value" as const }))
-    .sort((a,b) => b.score - a.score || asNumber(a.listing.sale_price_brl) - asNumber(b.listing.sale_price_brl))
-    .slice(0, 5);
-
-  if (ranked.length) {
-    const { publishDiscoveredListings } = await import("./nexusNotifications");
-    await publishDiscoveredListings({
-      newListings: unique.filter((listing) => !previous.has(listing.nexus_id)),
-      ranked
-    }).catch(() => null);
-  }
-
-  const special = tags(ranked.map((r) => r.listing));
-  return ranked.map((result, index) => ({
-    ...result,
-    tag:
-      result.listing.nexus_id === special.cheapest ? "cheapest" :
-      result.listing.nexus_id === special.complete ? "complete" :
-      result.listing.nexus_id === special.rare ? "rare" :
-      index === 0 ? "best_value" : result.tag
-  }));
+  return ranked;
 }
 
 export async function revalidateListing(nexusId: string) {
