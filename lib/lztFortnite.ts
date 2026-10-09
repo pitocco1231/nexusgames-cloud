@@ -193,6 +193,15 @@ function sellerIdOf(item: any) {
   return String(firstValue(item, ["user_id", "seller.user_id", "seller.id", "owner_id"]) || "").trim();
 }
 
+function supplierRequiresNoEmailChange(sellerId: string) {
+  if (!sellerId) return false;
+  const configured = String(process.env.LZT_NO_EMAIL_SUPPLIER_USER_IDS || "")
+    .split(/[;,\s]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return configured.includes(sellerId);
+}
+
 function normalizeChangeEmail(value: unknown) {
   const raw = normalizeText(value).toLowerCase();
   if (!raw) return null;
@@ -344,9 +353,10 @@ function listingFromItem(item: any, maxPriceBrl: number): NexusListing | null {
   const emoteCount = firstNumber(item, ["d_count", "dance_count", "dances_count", "emote_count", "account.emote_count"], 0) || countFromTitle(rawTitle, "emote");
   const gliderCount = firstNumber(item, ["glider_count", "gliders_count", "account.glider_count"], 0) || countFromTitle(rawTitle, "glider");
   const vbucks = firstNumber(item, ["vb", "vbucks", "v_bucks", "account.vbucks"], 0) || vbucksFromTitle(rawTitle);
-  const changeEmail =
-    normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"])) ||
-    changeEmailFromTitle(rawTitle);
+  const changeEmail = supplierRequiresNoEmailChange(sellerId)
+    ? "no"
+    : normalizeChangeEmail(firstValue(item, ["change_email", "email_change", "can_change_email"])) ||
+      changeEmailFromTitle(rawTitle);
 
   return {
     nexus_id: nexusId,
