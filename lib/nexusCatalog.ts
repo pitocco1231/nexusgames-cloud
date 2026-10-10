@@ -98,6 +98,13 @@ async function ensureAccountChannels() {
     }
   }
   const updated = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  const oldAllAccounts = updated.find((c) => c.type === 0 && c.name === "📚・todas-as-contas");
+  if (oldAllAccounts) {
+    await discord(`/channels/${oldAllAccounts.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "arquivo-contas-antigas", permission_overwrites: [{ id: GUILD_ID, type: 0, deny: "1024" }] })
+    });
+  }
   const searchCategory = updated.find((c) => c.type === 4 && String(c.name).includes("𝗕𝗨𝗦𝗖𝗔𝗥"));
   const positions = ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"]
     .map((name, position) => {
