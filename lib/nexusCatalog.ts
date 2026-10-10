@@ -84,7 +84,7 @@ async function db<T>(path: string, init: RequestInit = {}) {
   return JSON.parse(text) as T;
 }
 
-async function ensureAccountChannels() {
+export async function ensureAccountChannels() {
   const categoryName = "🎮 CONTAS FORTNITE";
   const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
   let category = channels.find((c) => c.type === 4 && c.name === categoryName);
