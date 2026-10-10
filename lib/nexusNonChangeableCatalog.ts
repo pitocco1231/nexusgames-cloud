@@ -376,8 +376,8 @@ export async function syncNonChangeableCatalog(listings: NexusListing[], scanCom
       action: "catalog.nonchangeable_email_sync",
       entityType: "catalog",
       entityId: CHANNEL_NAME,
-      title: "📧 Catálogo de e-mail alterável atualizado",
-      message: "A Nexus sincronizou somente contas com troca de e-mail confirmada.",
+      title: "🔒 Catálogo de e-mail não alterável atualizado",
+      message: "A Nexus sincronizou somente contas marcadas pelo fornecedor como sem troca de e-mail.",
       metadata: {
         available: eligible.length,
         updated_or_created: synced,
