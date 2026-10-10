@@ -1,4 +1,5 @@
 import { maybeRunInventoryMonitor } from "../../../../lib/nexusInventoryMonitor";
+import { ensureAccountChannels } from "../../../../lib/nexusCatalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +21,9 @@ export async function GET(request: Request) {
   }
 
   try {
+    await ensureAccountChannels();
     const result = await maybeRunInventoryMonitor(false);
-    return Response.json({ ok: true, result });
+    return Response.json({ ok: true, channelsOrganized: true, result });
   } catch (error) {
     return Response.json({
       ok: false,
