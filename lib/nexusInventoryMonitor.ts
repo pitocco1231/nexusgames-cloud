@@ -6,6 +6,7 @@ import {
 import { fetchAllSupplierListings } from "./lztFortnite";
 import { syncFullCatalog } from "./nexusCatalog";
 import { syncNoEmailCatalog } from "./nexusNoEmailCatalog";
+import { syncNonChangeableCatalog } from "./nexusNonChangeableCatalog";
 import { nexusLog, nexusLogError } from "./nexusLogger";
 
 const JOB_NAME = "inventory_sync";
@@ -23,9 +24,10 @@ export async function maybeRunInventoryMonitor(force = false) {
 
   try {
     const scan = await fetchAllSupplierListings();
-    const [sync, noEmailSync] = await Promise.all([
+    const [sync, noEmailSync, nonChangeableSync] = await Promise.all([
       syncFullCatalog(scan.listings, scan.complete),
-      syncNoEmailCatalog(scan.listings, scan.complete)
+      syncNoEmailCatalog(scan.listings, scan.complete),
+      syncNonChangeableCatalog(scan.listings, scan.complete)
     ]);
     const result = {
       listings: scan.listings.length,
@@ -37,7 +39,8 @@ export async function maybeRunInventoryMonitor(force = false) {
       removed: Number(sync.removed || 0),
       featured: Boolean(sync.featured?.updated),
       noEmailCatalogUpdated: Number(noEmailSync.synced || 0),
-      noEmailCatalogRemoved: Number(noEmailSync.removed || 0)
+      noEmailCatalogRemoved: Number(noEmailSync.removed || 0),
+      nonChangeableCatalogUpdated: Number(nonChangeableSync.synced || 0)
     };
 
     await finishBackgroundJob(JOB_NAME, result);
