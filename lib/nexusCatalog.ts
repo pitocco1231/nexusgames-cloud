@@ -98,11 +98,25 @@ async function ensureAccountChannels() {
     }
   }
   const updated = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  // Keep the retired general catalog hidden without overwriting existing role permissions.
   const oldAllAccounts = updated.find((c) => c.type === 0 && c.name === "📚・todas-as-contas");
   if (oldAllAccounts) {
+    const overwrites = Array.isArray(oldAllAccounts.permission_overwrites) ? oldAllAccounts.permission_overwrites : [];
+    const everyone = overwrites.find((entry: any) => entry.id === GUILD_ID && entry.type === 0);
+    const viewChannel = BigInt(1024);
     await discord(`/channels/${oldAllAccounts.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ name: "arquivo-contas-antigas", permission_overwrites: [{ id: GUILD_ID, type: 0, deny: "1024" }] })
+      body: JSON.stringify({
+        name: "arquivo-contas-antigas",
+        permission_overwrites: [
+          ...overwrites.filter((entry: any) => !(entry.id === GUILD_ID && entry.type === 0)),
+          {
+            id: GUILD_ID, type: 0,
+            allow: String(BigInt(everyone?.allow || "0") & ~viewChannel),
+            deny: String(BigInt(everyone?.deny || "0") | viewChannel)
+          }
+        ]
+      })
     });
   }
   const accountNames = ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"];
