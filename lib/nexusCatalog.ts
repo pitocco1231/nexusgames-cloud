@@ -97,6 +97,22 @@ async function ensureAccountChannels() {
       await discord(`/guilds/${GUILD_ID}/channels`, { method: "POST", body: JSON.stringify({ name, type: 0, parent_id: category.id, topic: name.includes("nao-alteravel") ? "Contas sem troca de e-mail; anúncios apenas com condição verificada." : "Catálogo NexusGames atualizado automaticamente." }) });
     }
   }
+  const updated = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  const searchCategory = updated.find((c) => c.type === 4 && String(c.name).includes("𝗕𝗨𝗦𝗖𝗔𝗥"));
+  const positions = ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"]
+    .map((name, position) => {
+      const channel = updated.find((c) => c.type === 0 && c.name === name);
+      return channel ? { id: channel.id, position, parent_id: category.id } : null;
+    }).filter(Boolean);
+  if (positions.length) await discord(`/guilds/${GUILD_ID}/channels`, {
+    method: "PATCH", body: JSON.stringify(positions)
+  });
+  if (searchCategory && category.position >= searchCategory.position) {
+    await discord(`/guilds/${GUILD_ID}/channels`, {
+      method: "PATCH",
+      body: JSON.stringify([{ id: category.id, position: Math.max(0, searchCategory.position - 1) }])
+    });
+  }
   return category;
 }
 
