@@ -84,6 +84,22 @@ async function db<T>(path: string, init: RequestInit = {}) {
   return JSON.parse(text) as T;
 }
 
+async function ensureAccountChannels() {
+  const categoryName = "🎮 CONTAS FORTNITE";
+  const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
+  let category = channels.find((c) => c.type === 4 && c.name === categoryName);
+  if (!category) category = await discord(`/guilds/${GUILD_ID}/channels`, { method: "POST", body: JSON.stringify({ name: categoryName, type: 4 }) }) as any;
+  for (const name of ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"]) {
+    const channel = channels.find((c) => c.type === 0 && c.name === name);
+    if (channel) {
+      if (channel.parent_id !== category.id) await discord(`/channels/${channel.id}`, { method: "PATCH", body: JSON.stringify({ parent_id: category.id }) });
+    } else {
+      await discord(`/guilds/${GUILD_ID}/channels`, { method: "POST", body: JSON.stringify({ name, type: 0, parent_id: category.id, topic: name.includes("nao-alteravel") ? "Contas sem troca de e-mail; anúncios apenas com condição verificada." : "Catálogo NexusGames atualizado automaticamente." }) });
+    }
+  }
+  return category;
+}
+
 async function catalogChannel() {
   const channels = await discord(`/guilds/${GUILD_ID}/channels`) as any[];
   return channels.find((channel) => channel.type === 0 && channel.name === CHANNEL_NAME) || null;
@@ -385,7 +401,7 @@ export async function syncCatalogListings(listings: NexusListing[]) {
 
 async function syncFeaturedDeal(listings: NexusListing[]) {
   const available = listings
-    .filter((listing) => listing.status === "available")
+    .filter((listing) => listing.status === "available" && ["yes", "no"].includes(String(listing.change_email || "").toLowerCase()))
     .filter((listing) => Number(listing.margin_percent || 0) >= 30)
     .filter((listing) => Number(listing.sale_price_brl || 0) > 0 && Number(listing.sale_price_brl || 0) <= 500);
 
@@ -491,6 +507,7 @@ async function syncFeaturedDeal(listings: NexusListing[]) {
 }
 
 export async function syncFullCatalog(listings: NexusListing[], scanComplete = false) {
+  await ensureAccountChannels();
   const [result, featured] = await Promise.all([
     syncCatalogListings(listings),
     syncFeaturedDeal(listings).catch(() => ({ updated: false }))
