@@ -137,13 +137,16 @@ async function ensureAccountChannels() {
   // Moving the category to the first slot guarantees it precedes BUSCAR CONTAS.
   const categories = updated.filter((c) => c.type === 4 && c.id !== category.id)
     .sort((a, b) => a.position - b.position);
-  await discord(`/guilds/${GUILD_ID}/channels`, {
-    method: "PATCH",
-    body: JSON.stringify([
-      { id: category.id, position: 0 },
-      ...categories.map((item, index) => ({ id: item.id, position: index + 1 }))
-    ])
-  });
+  const expected = [
+    { id: category.id, position: 0 },
+    ...categories.map((item, index) => ({ id: item.id, position: index + 1 }))
+  ];
+  if (category.position !== 0 || categories.some((item, index) => item.position !== index + 1)) {
+    await discord(`/guilds/${GUILD_ID}/channels`, {
+      method: "PATCH",
+      body: JSON.stringify(expected)
+    });
+  }
   return category;
 }
 
