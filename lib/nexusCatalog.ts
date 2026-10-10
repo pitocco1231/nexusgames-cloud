@@ -127,7 +127,10 @@ async function ensureAccountChannels() {
   const siblingPositions = [...accountChannels, ...otherChildren].map((channel, position) => ({
     id: channel.id, position, parent_id: category.id
   }));
-  if (siblingPositions.length) {
+  if (siblingPositions.some((item) => {
+    const current = updated.find((channel) => channel.id === item.id);
+    return current && (current.position !== item.position || current.parent_id !== category.id);
+  })) {
     await discord(`/guilds/${GUILD_ID}/channels`, {
       method: "PATCH", body: JSON.stringify(siblingPositions)
     });
