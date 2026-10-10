@@ -4,7 +4,7 @@ import { nexusLog } from "./nexusLogger";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
-const CATEGORY_NAME = "🔎・𝗕𝗨𝗦𝗖𝗔𝗥 𝗖𝗢𝗡𝗧𝗔𝗦";
+const CATEGORY_NAME = "🎮 CONTAS FORTNITE";
 const CHANNEL_NAME = "📧・email-alteravel";
 const LEGACY_CHANNEL_NAME = "🔒・sem-troca-de-email";
 const TABLE_NAME = "nexus_no_email_catalog_messages";
@@ -200,6 +200,8 @@ async function ensureChannel() {
   if (channel) {
     const changes: Record<string, unknown> = {};
     if (channel.name !== CHANNEL_NAME) changes.name = CHANNEL_NAME;
+    const category = channels.find((item) => item.type === 4 && item.name === CATEGORY_NAME);
+    if (category && channel.parent_id !== category.id) changes.parent_id = category.id;
     const topic = "Somente contas Fortnite com troca de e-mail confirmada pela Nexus antes do checkout.";
     if (channel.topic !== topic) changes.topic = topic;
     if (Object.keys(changes).length) {
