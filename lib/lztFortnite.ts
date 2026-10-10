@@ -458,7 +458,6 @@ export async function fetchAllSupplierListings() {
           const listing = listingFromItem(item, 500);
           if (!listing) continue;
           if (listing.supplier_user_id && listing.supplier_user_id !== sellerId) continue;
-          listing.change_email = "yes";
           collected.push(listing);
         }
 
@@ -626,7 +625,6 @@ export async function searchFortniteAccounts(input: NexusSearchInput): Promise<F
         const listing = listingFromItem(item, input.maxPriceBrl);
         if (!listing) continue;
         if (listing.supplier_user_id && listing.supplier_user_id !== sellers[i]) continue;
-        listing.change_email = "yes";
         collected.push(listing);
       }
     } catch (error) {
@@ -715,9 +713,6 @@ export async function revalidateListing(nexusId: string) {
       return { available: false as const, listing: null };
     }
     refreshed.nexus_id = nexusId;
-    if (listing.change_email === "yes" && !refreshed.change_email) {
-      refreshed.change_email = "yes";
-    }
     if (refreshed.change_email !== "yes") {
       await markListingStatus(nexusId, "blocked");
       const { removeCatalogListing } = await import("./nexusCatalog");
