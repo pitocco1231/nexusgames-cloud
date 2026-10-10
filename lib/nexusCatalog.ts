@@ -555,10 +555,8 @@ async function syncFeaturedDeal(listings: NexusListing[]) {
 
 export async function syncFullCatalog(listings: NexusListing[], scanComplete = false) {
   await ensureAccountChannels();
-  const [result, featured] = await Promise.all([
-    syncCatalogListings(listings),
-    syncFeaturedDeal(listings).catch(() => ({ updated: false }))
-  ]);
+  const result = { synced: 0, skipped: listings.length, channelMissing: false };
+  const featured = await syncFeaturedDeal(listings).catch(() => ({ updated: false }));
   if (!scanComplete) return { ...result, removed: 0, featured };
 
   const rows = await db<CatalogRow[]>(
@@ -575,7 +573,7 @@ export async function syncFullCatalog(listings: NexusListing[], scanComplete = f
       const { revalidateListing } = await import("./lztFortnite");
       const check = await revalidateListing(row.nexus_id);
       if (check.available && check.listing) {
-        await syncCatalogListings([check.listing]);
+        // Only the email-specific catalogs publish public account listings.
         continue;
       }
     } catch {
