@@ -4,7 +4,7 @@ import { nexusLog } from "./nexusLogger";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const GUILD_ID = "1547332734794334319";
-const CHANNEL_NAME = "📚・todas-as-contas";
+const CHANNEL_NAME = "📧・email-alteravel";
 const STORE_URL = "https://nexusgames-cloud-main.vercel.app";
 
 type CatalogRow = {
