@@ -105,21 +105,31 @@ async function ensureAccountChannels() {
       body: JSON.stringify({ name: "arquivo-contas-antigas", permission_overwrites: [{ id: GUILD_ID, type: 0, deny: "1024" }] })
     });
   }
-  const searchCategory = updated.find((c) => c.type === 4 && String(c.name).includes("𝗕𝗨𝗦𝗖𝗔𝗥"));
-  const positions = ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"]
-    .map((name, position) => {
-      const channel = updated.find((c) => c.type === 0 && c.name === name);
-      return channel ? { id: channel.id, position, parent_id: category.id } : null;
-    }).filter(Boolean);
-  if (positions.length) await discord(`/guilds/${GUILD_ID}/channels`, {
-    method: "PATCH", body: JSON.stringify(positions)
-  });
-  if (searchCategory && category.position >= searchCategory.position) {
+  const accountNames = ["📧・email-alteravel", "🔒・email-nao-alteravel", "🔥・contas-em-destaque"];
+  const accountChannels = accountNames.map((name) => updated.find((c) => c.type === 0 && c.name === name)).filter(Boolean);
+  const otherChildren = updated
+    .filter((c) => c.type === 0 && c.parent_id === category.id && !accountChannels.some((account) => account.id === c.id))
+    .sort((a, b) => a.position - b.position);
+  const siblingPositions = [...accountChannels, ...otherChildren].map((channel, position) => ({
+    id: channel.id, position, parent_id: category.id
+  }));
+  if (siblingPositions.length) {
     await discord(`/guilds/${GUILD_ID}/channels`, {
-      method: "PATCH",
-      body: JSON.stringify([{ id: category.id, position: Math.max(0, searchCategory.position - 1) }])
+      method: "PATCH", body: JSON.stringify(siblingPositions)
     });
   }
+
+  // Discord treats category positions independently of the positions of text channels.
+  // Moving the category to the first slot guarantees it precedes BUSCAR CONTAS.
+  const categories = updated.filter((c) => c.type === 4 && c.id !== category.id)
+    .sort((a, b) => a.position - b.position);
+  await discord(`/guilds/${GUILD_ID}/channels`, {
+    method: "PATCH",
+    body: JSON.stringify([
+      { id: category.id, position: 0 },
+      ...categories.map((item, index) => ({ id: item.id, position: index + 1 }))
+    ])
+  });
   return category;
 }
 
